@@ -1,0 +1,97 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api";
+import { User, Employer } from "@/types";
+import { LayoutDashboard, Briefcase, BarChart3, Settings, Users, PlusCircle } from "lucide-react";
+import Link from "next/link";
+import { createBrowserSupabaseClient } from "@/lib/supabase-client";
+import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
+
+const employerNavGroups: NavGroup[] = [
+    {
+        title: "Workspace",
+        items: [
+            { label: "Overview", href: "/dashboard/employer", icon: LayoutDashboard },
+            { label: "Active Jobs", href: "/dashboard/employer/jobs", icon: Briefcase },
+            { label: "Candidates", href: "/dashboard/employer/candidates", icon: Users },
+            { label: "Analytics", href: "/dashboard/employer/analytics", icon: BarChart3 },
+        ]
+    },
+    {
+        title: "Configuration",
+        items: [
+            { label: "Settings", href: "/dashboard/employer/settings", icon: Settings },
+        ]
+    }
+];
+
+export default function EmployerLayout({ children }: { children: React.ReactNode }) {
+    const [user, setUser] = useState<User | null>(null);
+    const [employerProfile, setEmployerProfile] = useState<Employer | null>(null);
+    const [loading, setLoading] = useState(true);
+    const router = useRouter();
+    const supabase = createBrowserSupabaseClient();
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const res = await apiFetch("/api/me");
+                if (res.ok) {
+                    const data: User = await res.json();
+                    if (data.role !== "EMPLOYER") {
+                        router.push("/dashboard");
+                    } else {
+                        setUser(data);
+                        setEmployerProfile(data.employer ?? null);
+                    }
+                } else {
+                    router.push("/login");
+                }
+            } catch {
+                router.push("/login");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchUser();
+    }, [router]);
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        router.push("/login");
+    };
+
+    if (loading) return (
+        <div className="flex items-center justify-center min-h-screen bg-[#F8FAFC]">
+            <div className="w-12 h-12 border-4 border-amber-600 border-t-transparent rounded-full animate-spin shadow-xl shadow-amber-500/20" />
+        </div>
+    );
+
+    const companyName = employerProfile?.companyName || user?.email?.split("@")[0] || "Company";
+    const initials = companyName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
+
+    return (
+        <DashboardLayout
+            navGroups={employerNavGroups}
+            userFullName={companyName}
+            userInitials={initials}
+            userRoleLabel="Verified Employer"
+            onLogout={handleLogout}
+            topBarChildren={
+                <>
+                    <Link
+                        href="/dashboard/employer/jobs/new"
+                        className="h-9 px-4 sm:px-5 bg-amber-600 text-white text-xs sm:text-sm font-bold rounded-xl hover:bg-amber-700 transition-colors flex items-center gap-2 shadow-sm shadow-amber-600/20 whitespace-nowrap"
+                    >
+                        <PlusCircle size={18} />
+                        <span className="hidden sm:inline">Deploy Job</span><span className="sm:hidden">New Job</span>
+                    </Link>
+                </>
+            }
+        >
+            {children}
+        </DashboardLayout>
+    );
+}

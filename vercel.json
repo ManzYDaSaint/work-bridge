@@ -1,0 +1,10 @@
+{
+    "version": 2,
+    "framework": "nextjs",
+    "cleanUrls": true,
+    "regions": [
+        "sfo1"
+    ],
+    "installCommand": "npm install",
+    "buildCommand": "npm run build"
+}
