@@ -1,0 +1,276 @@
+
+> work-bridge-system@0.1.0 lint
+> eslint .
+
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\DashboardClient.tsx
+   8:70  warning  'Bell' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+  76:8   warning  React Hook useEffect has a missing dependency: 'supabase'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\admin\AdminDashboardClient.tsx
+   8:73  warning  'ArrowRight' is defined but never used                                                                                                    @typescript-eslint/no-unused-vars
+   9:18  warning  'AnimatePresence' is defined but never used                                                                                               @typescript-eslint/no-unused-vars
+  98:8   warning  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array                              react-hooks/exhaustive-deps
+  98:27  warning  React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked  react-hooks/exhaustive-deps
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\admin\audit\page.tsx
+   7:22  warning  'SectionCard' is defined but never used                                                                                                   @typescript-eslint/no-unused-vars
+  44:8   warning  React Hook useEffect has a missing dependency: 'fetchAuditLogs'. Either include it or remove the dependency array                         react-hooks/exhaustive-deps
+  44:22  warning  React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked  react-hooks/exhaustive-deps
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\admin\employers\page.tsx
+   5:10   warning  'Employer' is defined but never used  @typescript-eslint/no-unused-vars
+   6:95   warning  'Mail' is defined but never used      @typescript-eslint/no-unused-vars
+   6:101  warning  'Eye' is defined but never used       @typescript-eslint/no-unused-vars
+  23:18   warning  'error' is defined but never used     @typescript-eslint/no-unused-vars
+  52:18   warning  'error' is defined but never used     @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\admin\jobs\page.tsx
+   6:83  warning  'Eye' is defined but never used    @typescript-eslint/no-unused-vars
+  20:18  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  43:18  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  64:18  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\admin\page.tsx
+   5:28  warning  'ShieldCheck' is defined but never used                                                                                            @typescript-eslint/no-unused-vars
+  58:8   warning  React Hook useEffect has missing dependencies: 'fetchActivity' and 'supabase'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\admin\users\page.tsx
+   5:22  warning  'Badge' is defined but never used      @typescript-eslint/no-unused-vars
+   6:49  warning  'Shield' is defined but never used     @typescript-eslint/no-unused-vars
+   6:66  warning  'Filter' is defined but never used     @typescript-eslint/no-unused-vars
+   6:98  warning  'ShieldOff' is defined but never used  @typescript-eslint/no-unused-vars
+  24:22  warning  'error' is defined but never used      @typescript-eslint/no-unused-vars
+  47:18  warning  'error' is defined but never used      @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\employer\candidates\page.tsx
+  5:28  warning  'MapPin' is defined but never used        @typescript-eslint/no-unused-vars
+  5:36  warning  'Calendar' is defined but never used      @typescript-eslint/no-unused-vars
+  5:46  warning  'ExternalLink' is defined but never used  @typescript-eslint/no-unused-vars
+  8:8   warning  'Link' is defined but never used          @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\employer\jobs\new\page.tsx
+  8:36  warning  'DollarSign' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\employer\layout.tsx
+  8:8  warning  'Link' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\employer\page.tsx
+  6:45  warning  'Badge' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\employer\settings\page.tsx
+  8:10  warning  'Settings' is defined but never used  @typescript-eslint/no-unused-vars
+  8:20  warning  'Bell' is defined but never used      @typescript-eslint/no-unused-vars
+  8:49  warning  'Camera' is defined but never used    @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\seeker\RevealRequestCenter.tsx
+  5:22  warning  'X' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\seeker\VerificationCenter.tsx
+  4:62  warning  'FileText' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\seeker\actions.ts
+  46:23  warning  'cert' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\seeker\applications\page.tsx
+  7:10  warning  'ChevronRight' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\seeker\help\page.tsx
+  2:35  warning  'Card' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\seeker\layout.tsx
+  4:21  warning  'usePathname' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\seeker\page.tsx
+  10:19  warning  'Bookmark' is defined but never used          @typescript-eslint/no-unused-vars
+  11:45  warning  'Plus' is defined but never used              @typescript-eslint/no-unused-vars
+  11:61  warning  'Shield' is defined but never used            @typescript-eslint/no-unused-vars
+  47:12  warning  'loading' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\seeker\resume\page.tsx
+  5:35  warning  'Badge' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\seeker\saved\page.tsx
+  1:10  warning  'Bookmark' is defined but never used  @typescript-eslint/no-unused-vars
+  3:8   warning  'Link' is defined but never used      @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(app)\dashboard\seeker\settings\page.tsx
+  4:10  warning  'motion' is defined but never used   @typescript-eslint/no-unused-vars
+  5:30  warning  'Palette' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\(marketing)\page.tsx
+  5:10  warning  'Briefcase' is defined but never used  @typescript-eslint/no-unused-vars
+  5:28  warning  'Bell' is defined but never used       @typescript-eslint/no-unused-vars
+  5:69  warning  'Target' is defined but never used     @typescript-eslint/no-unused-vars
+  5:77  warning  'BarChart3' is defined but never used  @typescript-eslint/no-unused-vars
+  5:88  warning  'Globe' is defined but never used      @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\api\admin\jobs\route.ts
+  59:17  warning  'user' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\api\checkout\route.ts
+   5:28  warning  'req' is defined but never used    @typescript-eslint/no-unused-vars
+  29:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\api\employer\invite\route.ts
+  60:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\app\api\profile\certificate\route.ts
+  146:13  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-require-imports')
+
+D:\Projects\work-bridge\src\app\api\seeker\upgrade\route.ts
+  5:28  warning  'request' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\components\CheckoutButton.tsx
+  25:18  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\components\auth\LoginForm.tsx
+  28:17  warning  'data' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\components\auth\mfa\MFAEnrollment.tsx
+   6:55  warning  'QrCode' is defined but never used         @typescript-eslint/no-unused-vars
+   6:85  warning  'Copy' is defined but never used           @typescript-eslint/no-unused-vars
+  47:21  warning  'data' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\components\jobs\ApplicantManagementModal.tsx
+  26:18  warning  'AnimatePresence' is defined but never used                                                                         @typescript-eslint/no-unused-vars
+  27:10  warning  'cn' is defined but never used                                                                                      @typescript-eslint/no-unused-vars
+  61:45  warning  React Hook useEffect has a missing dependency: 'fetchApplicants'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Projects\work-bridge\src\components\jobs\EmployerWorkspace.tsx
+  9:18  warning  'AnimatePresence' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\components\jobs\JobBoard.tsx
+  10:7  warning  'containerVariants' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\components\layout\Footer.tsx
+  1:50  warning  'Github' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\components\layout\MobileNav.tsx
+  3:10  warning  'Briefcase' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\components\layout\Navbar.tsx
+   8:18  warning  'AnimatePresence' is defined but never used                                                                       @typescript-eslint/no-unused-vars
+  37:8   warning  React Hook useEffect has a missing dependency: 'supabase.auth'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Projects\work-bridge\src\components\layout\ThemeController.tsx
+   5:18  warning  'AnimatePresence' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+  19:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Projects\work-bridge\src\components\layout\ThemeController.tsx:19:9
+  17 |     useEffect(() => {
+  18 |         const savedTheme = localStorage.getItem("theme") || "cupcake";
+> 19 |         setTheme(savedTheme);
+     |         ^^^^^^^^ Avoid calling setState() directly within an effect
+  20 |         document.documentElement.setAttribute("data-theme", savedTheme);
+  21 |     }, []);
+  22 |  react-hooks/set-state-in-effect
+
+D:\Projects\work-bridge\src\components\marketing\HowItWorks.tsx
+  5:28  warning  'Send' is defined but never used          @typescript-eslint/no-unused-vars
+  5:34  warning  'Briefcase' is defined but never used     @typescript-eslint/no-unused-vars
+  7:7   warning  'Tag' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\components\marketing\LiveActivity.tsx
+  5:18  warning  'Briefcase' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\components\notifications\NotificationDropdown.tsx
+   92:27  error  Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+D:\Projects\work-bridge\src\components\notifications\NotificationDropdown.tsx:92:27
+  90 |     );
+  91 |
+> 92 |     if (isMobile) return <NotificationList />;
+     |                           ^^^^^^^^^^^^^^^^ This component is created during render
+  93 |
+  94 |     return (
+  95 |         <div className="relative">
+
+D:\Projects\work-bridge\src\components\notifications\NotificationDropdown.tsx:50:30
+  48 |     };
+  49 |
+> 50 |     const NotificationList = () => (
+     |                              ^^^^^^^
+> 51 |         <div className={cn("flex flex-col", !isMobile && "max-h-[400px] overflow-y-auto")}>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 52 |             {notifications.length === 0 ? (
+     ΓÇª
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 89 |         </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 90 |     );
+     | ^^^^^^ The component is created during render here
+  91 |
+  92 |     if (isMobile) return <NotificationList />;
+  93 |                                                                                                                                                                                                                                                                                                                                                                                            react-hooks/static-components
+  131:30  error  Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+D:\Projects\work-bridge\src\components\notifications\NotificationDropdown.tsx:131:30
+  129 |                                 )}
+  130 |                             </div>
+> 131 |                             <NotificationList />
+      |                              ^^^^^^^^^^^^^^^^ This component is created during render
+  132 |                             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800">
+  133 |                                 <button className="w-full py-2 text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest hover:underline">
+  134 |                                     View Repository History
+
+D:\Projects\work-bridge\src\components\notifications\NotificationDropdown.tsx:50:30
+  48 |     };
+  49 |
+> 50 |     const NotificationList = () => (
+     |                              ^^^^^^^
+> 51 |         <div className={cn("flex flex-col", !isMobile && "max-h-[400px] overflow-y-auto")}>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 52 |             {notifications.length === 0 ? (
+     ΓÇª
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 89 |         </div>
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 90 |     );
+     | ^^^^^^ The component is created during render here
+  91 |
+  92 |     if (isMobile) return <NotificationList />;
+  93 |  react-hooks/static-components
+
+D:\Projects\work-bridge\src\components\profile\EmployerProfile.tsx
+   6:31   warning  'Save' is defined but never used             @typescript-eslint/no-unused-vars
+   6:37   warning  'Sparkles' is defined but never used         @typescript-eslint/no-unused-vars
+   6:58   warning  'ExternalLink' is defined but never used     @typescript-eslint/no-unused-vars
+   6:79   warning  'Briefcase' is defined but never used        @typescript-eslint/no-unused-vars
+   6:90   warning  'Clock' is defined but never used            @typescript-eslint/no-unused-vars
+   6:97   warning  'X' is defined but never used                @typescript-eslint/no-unused-vars
+   6:100  warning  'Plus' is defined but never used             @typescript-eslint/no-unused-vars
+   6:106  warning  'Trash' is defined but never used            @typescript-eslint/no-unused-vars
+   7:18   warning  'AnimatePresence' is defined but never used  @typescript-eslint/no-unused-vars
+   8:10   warning  'cn' is defined but never used               @typescript-eslint/no-unused-vars
+   9:10   warning  'useForm' is defined but never used          @typescript-eslint/no-unused-vars
+  18:11   warning  'router' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\components\profile\SeekerProfile.tsx
+   6:41  warning  'Upload' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+   6:49  warning  'Save' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+   6:73  warning  'UserIcon' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+   6:83  warning  'ExternalLink' is defined but never used                                                                         @typescript-eslint/no-unused-vars
+   7:18  warning  'AnimatePresence' is defined but never used                                                                      @typescript-eslint/no-unused-vars
+   8:10  warning  'cn' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+  78:42  warning  React Hook useEffect has a missing dependency: 'fetchProfile'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Projects\work-bridge\src\lib\ai.ts
+  136:5  warning  'seekerBio' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\Projects\work-bridge\src\lib\matching.ts
+  20:5  warning  'jobDescription' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+Γ£û 105 problems (3 errors, 102 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

@@ -4,7 +4,7 @@ import { sendApplicationStatusEmail } from "@/lib/resend";
 
 export async function PATCH(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     const supabase = await createSupabaseServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -15,7 +15,7 @@ export async function PATCH(
 
     try {
         const { status } = await request.json();
-        const applicationId = params.id;
+        const { id: applicationId } = await params;
 
         // 1. Update the application status
         const { data: application, error: updateError } = await supabase
