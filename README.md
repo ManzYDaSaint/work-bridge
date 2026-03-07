@@ -28,7 +28,27 @@ We handle sensitive PII (Personally Identifiable Information) and professional c
 
 ---
 
-## 🗺️ User Experience Flows
+## � Data Protection & Backups (3-2-1 Strategy)
+
+WorkBridge employs a robust **3-2-1 Backup Strategy** to ensure no data is ever lost:
+
+1. **Primary Data (1)**: Live production database hosted on Supabase (PostgreSQL).
+2. **First Backup (2)**: Supabase's automated daily internal backups with Point-in-Time Recovery (PITR).
+3. **Offsite Backup (3)**: A recurring GitHub Action (`db-backup.yml`) runs nightly at 02:00 UTC. It securely connects to the database using `pg_dump`, compresses the data, and uploads it to an external AWS S3 bucket.
+
+### 🔄 Backup Retrieval Process
+If a catastrophic failure occurs and you need to restore the database from the offsite S3 backup:
+1. Navigate to your AWS S3 bucket and download the latest `db-backup-...sql.gz` file.
+2. Decompress the file: `gunzip db-backup-...sql.gz`.
+3. Restore the schema and data to your fresh database instance using `psql`:
+   ```bash
+   psql -U your_db_user -h your_db_host -d your_db_name < db-backup-...sql
+   ```
+4. Verify the database integrity.
+
+---
+
+## �🗺️ User Experience Flows
 
 WorkBridge follows a **Landing-First** strategy, building trust through early marketing value before account creation.
 
@@ -90,4 +110,4 @@ npm run check
 - [ ] Advanced "Semantic Match" visualizations for Employers.
 
 ---
-Built with ❤️ by **Antigravity** for the next generation of verified work.
+Built with ❤️ by **ManzYDaSaint** for the next generation of verified work.

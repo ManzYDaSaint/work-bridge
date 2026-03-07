@@ -1,0 +1,59 @@
+name: Daily Database Backup
+
+on:
+    schedule:
+        # Run at 02:00 UTC every day
+        - cron: "0 2 * * *"
+    # Allow manual trigger
+    workflow_dispatch:
+
+jobs:
+    backup:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Install PostgreSQL Client
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y postgresql-client
+
+            - name: Create Backup Directory
+              run: mkdir -p backups
+
+            - name: Generate Backup Name
+              id: backup_name
+              run: echo "FILE_NAME=db-backup-$(date +'%Y-%m-%d_%H-%M-%S').sql.gz" >> $GITHUB_ENV
+
+            - name: Dump Database
+              env:
+                  SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+              run: |
+                  if [ -z "$SUPABASE_DB_URL" ]; then
+                    echo "Error: SUPABASE_DB_URL secret is not set."
+                    exit 1
+                  fi
+                  # Using pg_dump to extract the database schema and data, then compressing it
+                  pg_dump "$SUPABASE_DB_URL" --format=custom | gzip > backups/${FILE_NAME}
+
+            - name: Configure AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-region: ${{ secrets.AWS_REGION }}
+
+            - name: Upload Backup to AWS S3
+              env:
+                  S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+              run: |
+                  if [ -z "$S3_BUCKET_NAME" ]; then
+                    echo "Error: S3_BUCKET_NAME secret is not set."
+                    exit 1
+                  fi
+                  aws s3 cp backups/${FILE_NAME} s3://${S3_BUCKET_NAME}/backups/${FILE_NAME}
+
+            # Optional: Prune old backups (keep last 30 days) if your S3 bucket doesn't have a lifecycle rule
+            # Note: It's better to configure a lifecycle rule directly in the S3 bucket settings.
