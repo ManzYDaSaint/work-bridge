@@ -213,3 +213,36 @@ export function generateAnonymizedSummary(bio: string): string {
         .replace(/\b[0-9]{10}\b/g, "[REDACTED PHONE]")
         .replace(/\b(My name is|I am) [A-Z][a-z]+ [A-Z][a-z]+\b/gi, "$1 [REDACTED NAME]");
 }
+
+/**
+ * Uses Gemini to generate a professional, anonymized 2-sentence summary.
+ */
+export async function generateAIAnonymizedSummary(bio: string, skills: string[] = []): Promise<string> {
+    try {
+        const prompt = `
+            Convert this job seeker's bio into a professional, high-impact 2-sentence summary for employers.
+            
+            STRICT RULES:
+            1. REMOVE all Personally Identifiable Information (Names, Emails, Phones, specific home addresses).
+            2. FOCUS on skills, years of experience, and professional value.
+            3. Length: Exactly 2 sentences.
+            4. Tone: Narrative, professional, and engaging.
+            5. Incorporate these skills if relevant: ${skills.join(", ")}.
+
+            BIO:
+            ---
+            ${bio}
+            ---
+
+            Respond ONLY with the 2-sentence summary.
+        `;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        return response.text().trim();
+    } catch (err) {
+        console.error("[AI Anonymization] Error:", err);
+        // Fallback to basic regex anonymization if AI fails
+        return generateAnonymizedSummary(bio).split(". ").slice(0, 2).join(". ") + ".";
+    }
+}

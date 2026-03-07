@@ -1,6 +1,7 @@
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { recordAuditLog } from "@/lib/audit";
+import { sendEmployerVerificationEmail } from "@/lib/resend";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -17,7 +18,6 @@ export async function GET() {
 
         if (error) throw error;
 
-        // Camelize response
         const formattedEmployers = employers.map(e => ({
             id: e.id,
             companyName: e.company_name,
@@ -46,14 +46,33 @@ export async function PATCH(request: Request) {
         const { employerId, status, notes } = await request.json();
         const { user } = auth;
 
-        const { error } = await supabase
+        // 1. Update employer status
+        const { data: updatedEmployer, error } = await supabase
             .from("employers")
             .update({ status })
-            .eq("id", employerId);
+            .eq("id", employerId)
+            .select("company_name")
+            .single();
 
         if (error) throw error;
 
-        // Record Audit Log
+        // 2. Fetch employer's registered email
+        const { data: employerUser } = await supabase
+            .from("users")
+            .select("email")
+            .eq("id", employerId)
+            .single();
+
+        // 3. Send email notification (APPROVED or REJECTED only — not for PENDING revokes)
+        if (employerUser?.email && (status === 'APPROVED' || status === 'REJECTED')) {
+            await sendEmployerVerificationEmail(employerUser.email, {
+                companyName: updatedEmployer?.company_name || "Your Company",
+                status,
+                notes
+            });
+        }
+
+        // 4. Record Audit Log
         await recordAuditLog({
             action: `EMPLOYER_VERIFICATION_${status}`,
             path: "/api/admin/employers",

@@ -1,13 +1,12 @@
+import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-    const supabase = await createSupabaseServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const auth = await validateAuth(["JOB_SEEKER"]);
+    if (auth.error) return auth.error;
 
-    if (authError || !user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const supabase = await createSupabaseServerClient();
 
     const { data, error } = await supabase
         .from("applications")
@@ -27,7 +26,7 @@ export async function GET() {
                 )
             )
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", auth.userId)
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -35,7 +34,6 @@ export async function GET() {
         return NextResponse.json({ error: "Failed to fetch applications" }, { status: 500 });
     }
 
-    // Map snake_case to camelCase
     const formattedData = data.map(app => ({
         id: app.id,
         jobId: app.job_id,

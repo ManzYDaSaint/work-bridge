@@ -71,3 +71,31 @@ export const PATCH = withAudit(async (request: Request) => {
         return NextResponse.json({ error: "Update failed", details: (error as any)?.message }, { status: 500 });
     }
 }, "ADMIN_JOB_MODERATION");
+
+export const DELETE = withAudit(async (request: Request) => {
+    const auth = await validateAuth(['ADMIN'], true);
+    if (auth.error) return auth.error;
+
+    const supabase = await createSupabaseServerClient();
+
+    try {
+        const { searchParams } = new URL(request.url);
+        const jobId = searchParams.get('jobId');
+
+        if (!jobId) {
+            return NextResponse.json({ error: "Job ID required" }, { status: 400 });
+        }
+
+        const { error } = await supabase
+            .from("jobs")
+            .delete()
+            .eq("id", jobId);
+
+        if (error) throw error;
+
+        return NextResponse.json({ success: true, metadata: { jobId } });
+    } catch (error) {
+        console.error("Admin job delete error:", error);
+        return NextResponse.json({ error: "Delete failed", details: (error as any)?.message }, { status: 500 });
+    }
+}, "ADMIN_JOB_DELETION");

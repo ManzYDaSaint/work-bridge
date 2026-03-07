@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { User, Employer } from "@/types";
-import { LayoutDashboard, Briefcase, BarChart3, Settings, Users, PlusCircle } from "lucide-react";
+import { LayoutDashboard, Briefcase, BarChart3, Settings, Users, PlusCircle, Lock } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
+
+import { PendingBanner } from "@/components/dashboard/employer/PendingBanner";
 
 const employerNavGroups: NavGroup[] = [
     {
@@ -69,6 +72,7 @@ export default function EmployerLayout({ children }: { children: React.ReactNode
         </div>
     );
 
+    const isApproved = employerProfile?.status === 'APPROVED';
     const companyName = employerProfile?.companyName || user?.email?.split("@")[0] || "Company";
     const initials = companyName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
@@ -77,20 +81,27 @@ export default function EmployerLayout({ children }: { children: React.ReactNode
             navGroups={employerNavGroups}
             userFullName={companyName}
             userInitials={initials}
-            userRoleLabel="Verified Employer"
+            userRoleLabel={isApproved ? "Verified Employer" : "Pending Verification"}
             onLogout={handleLogout}
             topBarChildren={
                 <>
-                    <Link
-                        href="/dashboard/employer/jobs/new"
-                        className="h-9 px-4 sm:px-5 bg-amber-600 text-white text-xs sm:text-sm font-bold rounded-xl hover:bg-amber-700 transition-colors flex items-center gap-2 shadow-sm shadow-amber-600/20 whitespace-nowrap"
+                    <button
+                        onClick={() => isApproved ? router.push("/dashboard/employer/jobs/new") : null}
+                        className={cn(
+                            "h-9 px-4 sm:px-5 text-white text-xs sm:text-sm font-bold rounded-xl transition-all flex items-center gap-2 shadow-sm whitespace-nowrap",
+                            isApproved
+                                ? "bg-amber-600 hover:bg-amber-700 shadow-amber-600/20"
+                                : "bg-slate-300 cursor-not-allowed opacity-80"
+                        )}
                     >
                         <PlusCircle size={18} />
                         <span className="hidden sm:inline">Deploy Job</span><span className="sm:hidden">New Job</span>
-                    </Link>
+                        {!isApproved && <Lock size={14} className="ml-1 opacity-60" />}
+                    </button>
                 </>
             }
         >
+            {!isApproved && <PendingBanner />}
             {children}
         </DashboardLayout>
     );

@@ -8,9 +8,14 @@ import { motion } from "framer-motion";
 import {
     MessageSquare, Send, Gift, Users,
     ChevronRight, Bookmark, DollarSign, TrendingUp,
-    Briefcase, Clock, CheckCircle2, Pencil, Plus, Sparkles
+    Briefcase, Clock, CheckCircle2, Pencil, Plus, Sparkles, Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { VerificationCenter } from "./VerificationCenter";
+import { RevealRequestCenter } from "./RevealRequestCenter";
+import { PremiumVerification } from "./PremiumVerification";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 // ─── Status badge config ─────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -40,6 +45,16 @@ export default function SeekerDashboardPage() {
     const [user, setUser] = useState<User | null>(null);
     const [applications, setApplications] = useState<Application[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        if (searchParams.get("payment") === "success") {
+            toast.success("Elite Verification Active!", {
+                description: "Your priority talent discovery status has been activated."
+            });
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -79,6 +94,12 @@ export default function SeekerDashboardPage() {
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
             {/* ── MAIN COLUMN ───────────────────────────────── */}
             <div className="flex-1 min-w-0 space-y-6">
+                {/* Premium Upgrade */}
+                <PremiumVerification />
+
+                {/* Privacy / Reveal Requests */}
+                <RevealRequestCenter />
+
                 {/* Greeting */}
                 <div>
                     <p className="text-sm text-slate-400 font-medium">{dateLabel}</p>
@@ -151,13 +172,18 @@ export default function SeekerDashboardPage() {
                         )}
                     </div>
 
-                    {/* Stats 2x2 */}
                     <div className="col-span-2 grid grid-cols-2 gap-4">
                         {stats.map((s) => (
                             <StatCard key={s.label} {...s} />
                         ))}
                     </div>
                 </div>
+
+                {/* Verification Center */}
+                <VerificationCenter
+                    topVerificationTier={user?.jobSeeker?.topVerificationTier ?? -1}
+                    fullName={fullName}
+                />
 
                 {/* Applied Projects */}
                 <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">

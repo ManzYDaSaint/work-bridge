@@ -1,5 +1,6 @@
 import { Facebook, Instagram, Twitter, Linkedin, Github } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Footer() {
     return (
@@ -8,7 +9,9 @@ export default function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
                     <div className="lg:col-span-1 space-y-6">
                         <div className='flex items-center gap-3'>
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-500/20">W</div>
+                            <div className="w-10 h-10 flex items-center justify-center">
+                                <Image src="/logo.svg" alt="WorkBridge" width={40} height={40} />
+                            </div>
                             <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">WorkBridge</span>
                         </div>
                         <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-sm font-medium">

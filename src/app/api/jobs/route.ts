@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-    const auth = await validateAuth(['EMPLOYER'], true);
+    const auth = await validateAuth(['EMPLOYER'], true, true);
     if (auth.error) return auth.error;
 
     const supabase = await createSupabaseServerClient();

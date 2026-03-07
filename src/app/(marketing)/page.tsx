@@ -11,30 +11,30 @@ import HowItWorks from "@/components/marketing/HowItWorks";
 
 const bentoFeatures = [
     {
-        title: "AI-Powered Matching",
-        description: "Our proprietary algorithm connects you with roles that perfectly align with your skill set and career goals.",
-        icon: Target,
+        title: "Semantic Discovery",
+        description: "Move beyond keywords. Our AI ranks talent based on the semantic intent and goals defined in your job requirements.",
+        icon: Sparkles,
         className: "md:col-span-2 md:row-span-2 bg-blue-600 text-white",
         iconClassName: "bg-white/20 text-white",
     },
     {
-        title: "Real-time Alerts",
-        description: "Never miss an opportunity with instant notifications.",
-        icon: Bell,
+        title: "Verified Trust",
+        description: "Hire with confidence. Backgrounds and certifications are verified by AI for absolute accuracy.",
+        icon: Shield,
         className: "md:col-span-1 md:row-span-1 bg-slate-900 text-white",
         iconClassName: "bg-blue-500/20 text-blue-400",
     },
     {
-        title: "Global Reach",
-        description: "Remote or local, we bridge the distance.",
-        icon: Globe,
+        title: "Privacy First",
+        description: "Profiles are anonymized until you approve. Redact PII while highlighting professional impact.",
+        icon: Users,
         className: "md:col-span-1 md:row-span-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-white",
         iconClassName: "bg-indigo-500/10 text-indigo-500",
     },
     {
-        title: "Verified Talent",
-        description: "Join a community of top-tier professionals vetted by industry experts.",
-        icon: Users,
+        title: "Secure Verification",
+        description: "Regional trust network and smart verification badges for elite talent recognition.",
+        icon: Zap,
         className: "md:col-span-2 md:row-span-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800",
         iconClassName: "bg-blue-500/10 text-blue-600",
     },
@@ -84,7 +84,7 @@ export default function LandingPage() {
                         </h1>
 
                         <p className="max-w-2xl mx-auto text-xl md:text-2xl text-slate-400 mb-14 leading-relaxed font-light">
-                            WorkBridge matches top-tier talent with world-class companies through AI-driven insights and a human-centric approach.
+                            WorkBridge establishes trust through AI-verified credentials and privacy-first matching. The most elite regional talent, discovered with purpose.
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-20">

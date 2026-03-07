@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, LogOut, MoreHorizontal } from "lucide-react";
+import { LogOut, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type NavItem = {
@@ -59,8 +60,8 @@ export default function DashboardLayout({
                 {/* Brand */}
                 <div className="h-16 px-6 flex items-center gap-3 border-b border-slate-100 flex-shrink-0">
                     <Link href="/dashboard" className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                            <Sparkles size={16} className="text-white" strokeWidth={2.5} />
+                        <div className="w-8 h-8 flex items-center justify-center">
+                            <Image src="/logo.svg" alt="WorkBridge" width={32} height={32} priority />
                         </div>
                         <span className="text-lg font-black text-slate-900 tracking-tight">
                             Work<span className="text-blue-600">Bridge</span>
@@ -140,8 +141,8 @@ export default function DashboardLayout({
                 <header className="h-16 bg-white/90 backdrop-blur-xl border-b border-slate-200 flex items-center justify-between px-4 sm:px-8 flex-shrink-0 z-10">
                     {/* Mobile: show brand logo */}
                     <Link href="/dashboard" className="flex items-center gap-2 md:hidden">
-                        <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
-                            <Sparkles size={13} className="text-white" strokeWidth={2.5} />
+                        <div className="w-7 h-7 flex items-center justify-center">
+                            <Image src="/logo.svg" alt="WorkBridge" width={28} height={28} priority />
                         </div>
                         <span className="text-base font-black text-slate-900">
                             Work<span className="text-blue-600">Bridge</span>

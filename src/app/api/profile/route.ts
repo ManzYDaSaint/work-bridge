@@ -1,5 +1,6 @@
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { generateAIAnonymizedSummary } from "@/lib/ai";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -59,6 +60,9 @@ export async function PUT(request: Request) {
         if (body.skills && body.skills.length > 0) completion += 20;
         if (body.experience && body.experience.length > 0) completion += 10;
 
+        // Generate Anonymized Summary using AI
+        const anonymizedSummary = await generateAIAnonymizedSummary(body.bio || "", body.skills || []);
+
         const { data, error } = await supabase
             .from("job_seekers")
             .upsert({
@@ -71,6 +75,7 @@ export async function PUT(request: Request) {
                 salary_expectation: body.salaryExpectation,
                 seniority_level: body.seniorityLevel,
                 employment_type: body.employmentType,
+                anonymized_summary: anonymizedSummary,
                 completion
             })
             .select()

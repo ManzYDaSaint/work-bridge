@@ -1,23 +1,13 @@
+import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
+    const auth = await validateAuth(["EMPLOYER"]);
+    if (auth.error) return auth.error;
+
     const supabase = await createSupabaseServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { data: employer, error: empError } = await supabase
-        .from("employers")
-        .select("id")
-        .eq("id", user.id)
-        .single();
-
-    if (empError || !employer) {
-        return NextResponse.json({ error: "Employer profile not found" }, { status: 404 });
-    }
+    const employerId = auth.userId;
 
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get("jobId");
@@ -35,14 +25,10 @@ export async function GET(request: Request) {
         `)
         .order("created_at", { ascending: false });
 
-    // Join with jobs table to filter by employer_id
     if (jobId) {
         query = query.eq("job_id", jobId);
     } else {
-        // This is a bit tricky with Supabase's direct JS client for cross-table filter on a separate join
-        // We'll use a subquery approach if possible or filter in JS if the volume is small.
-        // Better: user inner join style filter
-        query = query.filter("job.employer_id", "eq", employer.id);
+        query = query.filter("job.employer_id", "eq", employerId);
     }
 
     const { data, error } = await query;
@@ -52,7 +38,6 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Failed to fetch applications" }, { status: 500 });
     }
 
-    // Map to camelCase
     const formattedData = data.map(app => ({
         id: app.id,
         jobId: app.job_id,

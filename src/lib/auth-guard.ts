@@ -13,15 +13,17 @@ export interface AuthValidationResult {
 }
 
 /**
- * Validates the current session and optionally checks for specific roles and MFA status.
+ * Validates the current session and optionally checks for specific roles, MFA status, and Employer approval.
  * 
  * @param allowedRoles - Optional array of roles allowed to access the resource.
  * @param requireMFA - If true, ensures the session is AAL2 (MFA verified).
+ * @param requireApprovedEmployer - If true, ensures the employer's status is 'APPROVED'.
  * @returns An object containing user details or a pre-formatted NextResponse error.
  */
 export async function validateAuth(
     allowedRoles?: UserRole[],
-    requireMFA: boolean = false
+    requireMFA: boolean = false,
+    requireApprovedEmployer: boolean = false
 ): Promise<AuthValidationResult> {
     const supabase = await createSupabaseServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -80,6 +82,27 @@ export async function validateAuth(
                 error: `Access Denied. Required authorization levels: [${allowedRoles.join(", ")}]. Current: [${role}].`
             }, { status: 403 })
         };
+    }
+
+    // Check Employer Approval if required
+    if (requireApprovedEmployer && role === "EMPLOYER") {
+        const { data: employer, error: employerError } = await supabase
+            .from("employers")
+            .select("status")
+            .eq("id", user.id)
+            .single();
+
+        if (employerError || employer?.status !== 'APPROVED') {
+            return {
+                userId: user.id,
+                role,
+                user,
+                error: NextResponse.json({
+                    error: "Verification Pending. Your corporate account is currently being audited by our trust team.",
+                    code: "EMPLOYER_PENDING"
+                }, { status: 403 })
+            };
+        }
     }
 
     return {

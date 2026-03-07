@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import Link from "next/link";
-import { Sparkles, ArrowRight, Mail, CheckCircle2 } from "lucide-react";
+import Image from "next/image";
+import { ArrowRight, Mail, CheckCircle2 } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -42,9 +43,9 @@ export default function ForgotPasswordPage() {
                 <div className="flex flex-col items-center mb-10">
                     <motion.div
                         whileHover={{ rotate: 15 }}
-                        className="w-16 h-16 bg-blue-600 rounded-[2rem] flex items-center justify-center mb-6 shadow-2xl shadow-blue-500/20"
+                        className="w-16 h-16 flex items-center justify-center mb-6"
                     >
-                        <Sparkles className="w-9 h-9 text-white" />
+                        <Image src="/logo.svg" alt="WorkBridge" width={64} height={64} priority />
                     </motion.div>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tighter text-center">
                         Recover Access

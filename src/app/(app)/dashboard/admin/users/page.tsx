@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
-import { Users, Search, Mail, MapPin, Calendar, Shield, Loader2, Filter, ShieldAlert, UserCheck, ShieldOff } from "lucide-react";
+import { Users, Search, Mail, MapPin, Calendar, Shield, Loader2, Filter, ShieldAlert, UserCheck, ShieldOff, UserX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
@@ -12,6 +12,7 @@ export default function UserManagementPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [roleFilter, setRoleFilter] = useState("ALL");
+    const [actioning, setActioning] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -29,10 +30,25 @@ export default function UserManagementPage() {
         fetchUsers();
     }, []);
 
-    const handleShield = (email: string) => {
-        toast.info(`Shielding ${email}: Permission lockdown initiated.`, {
-            description: "Account functionality is being limited temporarily."
-        });
+    const handleDelete = async (userId: string, email: string) => {
+        if (!confirm(`Are you sure you want to completely ban and remove "${email}"? All their data (jobs, applications) will be deleted.`)) return;
+
+        setActioning(userId);
+        try {
+            const res = await apiFetch(`/api/admin/users?userId=${userId}`, {
+                method: "DELETE",
+            });
+            if (res.ok) {
+                setUsers(users.filter(u => u.id !== userId));
+                toast.success(`User ${email} has been permanently purged.`);
+            } else {
+                toast.error("Protocol Error: Deletion failed.");
+            }
+        } catch (error) {
+            toast.error("System Failure: Could not delete user account.");
+        } finally {
+            setActioning(null);
+        }
     };
 
     const filteredUsers = users.filter(u => {
@@ -145,10 +161,12 @@ export default function UserManagementPage() {
                                     Access Details
                                 </button>
                                 <button
-                                    onClick={() => handleShield(user.email)}
-                                    className="w-12 h-12 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center hover:text-orange-500 hover:bg-orange-50 transition-all border border-transparent hover:border-orange-100 active:scale-95"
+                                    onClick={() => handleDelete(user.id, user.email)}
+                                    disabled={actioning === user.id}
+                                    className="w-12 h-12 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center hover:text-rose-500 hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100 active:scale-95"
+                                    title="Ban & Purge User"
                                 >
-                                    <ShieldOff size={18} />
+                                    <UserX size={18} />
                                 </button>
                             </div>
                         </motion.div>

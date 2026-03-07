@@ -41,13 +41,18 @@ export const apiFetch = async (
 /**
  * Convenience wrapper that sets Content-Type to application/json automatically.
  */
-export const apiFetchJson = async (
+export const apiFetchJson = async <T = any>(
     path: string,
     options: RequestInit = {}
-): Promise<Response> => {
+): Promise<T> => {
     const headers = new Headers(options.headers as Record<string, string> ?? {});
     if (!headers.has("Content-Type")) {
         headers.set("Content-Type", "application/json");
     }
-    return apiFetch(path, { ...options, headers });
+    const res = await apiFetch(path, { ...options, headers });
+    if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.error || `Request failed with status ${res.status}`);
+    }
+    return res.json();
 };

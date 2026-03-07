@@ -12,6 +12,7 @@ export default function EmployerVerificationPage() {
     const [employers, setEmployers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
     const [actioning, setActioning] = useState<string | null>(null);
     const [selectedEmployer, setSelectedEmployer] = useState<any | null>(null);
 
@@ -55,10 +56,14 @@ export default function EmployerVerificationPage() {
         }
     };
 
-    const filteredEmployers = employers.filter(e =>
-        e.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (e.industry && e.industry.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const pendingCount = employers.filter(e => e.status === 'PENDING').length;
+
+    const filteredEmployers = employers.filter(e => {
+        const matchesSearch = e.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (e.industry && e.industry.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesStatus = statusFilter === 'ALL' || e.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -77,15 +82,38 @@ export default function EmployerVerificationPage() {
             />
 
             {/* Controls */}
-            <div className="relative w-full max-w-xl">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                    type="text"
-                    placeholder="Search by company or industry..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full h-14 pl-12 pr-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold shadow-sm"
-                />
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                <div className="relative w-full max-w-xl">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Search by company or industry..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full h-14 pl-12 pr-4 bg-white border border-slate-200 rounded-[1.5rem] text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold shadow-sm"
+                    />
+                </div>
+            </div>
+
+            {/* Status Filter Tabs */}
+            <div className="flex items-center gap-2 flex-wrap">
+                {(['PENDING', 'APPROVED', 'REJECTED', 'ALL'] as const).map(tab => (
+                    <button
+                        key={tab}
+                        onClick={() => setStatusFilter(tab)}
+                        className={`h-10 px-5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${statusFilter === tab
+                                ? 'bg-slate-900 text-white shadow-lg'
+                                : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-400'
+                            }`}
+                    >
+                        {tab}
+                        {tab === 'PENDING' && pendingCount > 0 && (
+                            <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center">
+                                {pendingCount}
+                            </span>
+                        )}
+                    </button>
+                ))}
             </div>
 
             {/* Employer Grid */}

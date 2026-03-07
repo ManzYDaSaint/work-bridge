@@ -17,7 +17,14 @@ CREATE TABLE public.job_seekers (
   skills TEXT[], -- Array of skills
   resume_url TEXT,
   completion INTEGER DEFAULT 0,
-  is_subscribed BOOLEAN DEFAULT FALSE
+  is_subscribed BOOLEAN DEFAULT FALSE,
+  experience JSONB[], -- Array of objects: { role, company, startDate, endDate, description }
+  salary_expectation TEXT,
+  seniority_level TEXT,
+  employment_type TEXT,
+  anonymized_summary TEXT,
+  top_verification_tier INTEGER DEFAULT -1,
+  highest_qualification_url TEXT
 );
 
 -- 3. Employers table
@@ -26,7 +33,11 @@ CREATE TABLE public.employers (
   company_name TEXT NOT NULL,
   industry TEXT,
   location TEXT,
-  status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED'))
+  logo_url TEXT,
+  website TEXT,
+  description TEXT,
+  status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+  profile_views INTEGER DEFAULT 0
 );
 
 -- 4. Jobs table
@@ -47,7 +58,7 @@ CREATE TABLE public.applications (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   job_id UUID REFERENCES public.jobs(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-  status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACCEPTED', 'REJECTED')),
+  status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACCEPTED', 'REJECTED', 'SHORTLISTED', 'INTERVIEWING', 'INVITED')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   UNIQUE(job_id, user_id) -- Prevent double applications
 );
@@ -94,7 +105,16 @@ CREATE TABLE public.subscriptions (
 );
 
 -- 10. Transactions table
--- ... (existing)
+CREATE TABLE public.transactions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  amount NUMERIC NOT NULL,
+  currency TEXT DEFAULT 'USD' NOT NULL,
+  status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'SUCCESS', 'FAILED')),
+  tx_ref TEXT UNIQUE NOT NULL,
+  payment_method TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
 -- 11. Certificates table (Job Seeker credentials)
 CREATE TABLE public.certificates (
@@ -109,6 +129,16 @@ CREATE TABLE public.certificates (
   verification_confidence NUMERIC,
   verification_summary TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 12. Profile Reveals table (Privacy management)
+CREATE TABLE public.profile_reveals (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  employer_id UUID REFERENCES public.employers(id) ON DELETE CASCADE NOT NULL,
+  seeker_id UUID REFERENCES public.job_seekers(id) ON DELETE CASCADE NOT NULL,
+  status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(employer_id, seeker_id)
 );
 
 -- Row Level Security (RLS)
@@ -131,9 +161,30 @@ ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profile_reveals ENABLE ROW LEVEL SECURITY;
 
 -- 11. RLS Policies
--- ... (existing policies)
+
+-- Job Seekers: Can always manage their own profile
+CREATE POLICY "Seekers can manage own profile" ON public.job_seekers
+  FOR ALL USING (auth.uid() = id);
+
+-- Everyone (Authenticated): Can view anonymized seeker data
+CREATE POLICY "Everyone can view anonymized seeker data" ON public.job_seekers
+  FOR SELECT TO authenticated USING (true);
+
+-- Employers: Can view FULL profile IF reveal is APPROVED
+CREATE POLICY "Approved employers can view full seeker profile" ON public.job_seekers
+  FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profile_reveals 
+      WHERE seeker_id = public.job_seekers.id 
+      AND employer_id = auth.uid() 
+      AND status = 'APPROVED'
+    )
+  );
+
 
 -- 12. Automated Auditing Triggers
 CREATE OR REPLACE FUNCTION public.audit_trigger_function()
@@ -209,3 +260,23 @@ DROP TRIGGER IF EXISTS audit_subscriptions_trigger ON public.subscriptions;
 CREATE TRIGGER audit_subscriptions_trigger
 AFTER INSERT OR UPDATE OR DELETE ON public.subscriptions
 FOR EACH ROW EXECUTE FUNCTION public.audit_trigger_function();
+
+DROP TRIGGER IF EXISTS audit_certificates_trigger ON public.certificates;
+CREATE TRIGGER audit_certificates_trigger
+AFTER INSERT OR UPDATE OR DELETE ON public.certificates
+FOR EACH ROW EXECUTE FUNCTION public.audit_trigger_function();
+
+DROP TRIGGER IF EXISTS audit_profile_reveals_trigger ON public.profile_reveals;
+CREATE TRIGGER audit_profile_reveals_trigger
+AFTER INSERT OR UPDATE OR DELETE ON public.profile_reveals
+FOR EACH ROW EXECUTE FUNCTION public.audit_trigger_function();
+
+-- RLS Policies for profile_reveals
+CREATE POLICY "Employers can manage own reveals" ON public.profile_reveals
+  FOR ALL USING (auth.uid() = employer_id);
+  
+CREATE POLICY "Seekers can view reveals for them" ON public.profile_reveals
+  FOR SELECT USING (auth.uid() = seeker_id);
+
+CREATE POLICY "Seekers can update reveals for them" ON public.profile_reveals
+  FOR UPDATE USING (auth.uid() = seeker_id);

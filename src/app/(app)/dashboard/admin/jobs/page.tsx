@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
-import { Briefcase, CheckCircle, XCircle, AlertTriangle, Search, Loader2, MapPin, Clock, Eye } from "lucide-react";
+import { Briefcase, CheckCircle, XCircle, Trash2, Search, Loader2, MapPin, Clock, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
@@ -42,6 +42,27 @@ export default function AdminJobsPage() {
             }
         } catch (error) {
             toast.error("System Failure: Could not update market status.");
+        } finally {
+            setActioning(null);
+        }
+    };
+
+    const handleDelete = async (jobId: string, title: string) => {
+        if (!confirm(`Are you sure you want to completely remove "${title}"? This cannot be undone.`)) return;
+
+        setActioning(jobId);
+        try {
+            const res = await apiFetch(`/api/admin/jobs?jobId=${jobId}`, {
+                method: "DELETE",
+            });
+            if (res.ok) {
+                setJobs(jobs.filter(j => j.id !== jobId));
+                toast.success(`Market Update: "${title}" has been permanently purged.`);
+            } else {
+                toast.error("Protocol Error: Deletion failed.");
+            }
+        } catch (error) {
+            toast.error("System Failure: Could not delete market listing.");
         } finally {
             setActioning(null);
         }
@@ -140,8 +161,13 @@ export default function AdminJobsPage() {
                                             Reject <XCircle size={14} />
                                         </button>
                                     )}
-                                    <button className="w-12 h-12 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center hover:text-blue-600 hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100 active:scale-95">
-                                        <Eye size={18} />
+                                    <button
+                                        onClick={() => handleDelete(job.id, job.title)}
+                                        disabled={actioning === job.id}
+                                        className="h-12 w-12 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 transition-all border border-transparent hover:border-rose-100 active:scale-95 shrink-0"
+                                        title="Purge Listing"
+                                    >
+                                        <Trash2 size={16} />
                                     </button>
                                 </div>
                             </div>

@@ -6,6 +6,8 @@ import { Briefcase, Users, Eye, TrendingUp, PlusCircle, ChevronRight, Loader2 } 
 import { PageHeader, StatCard, SectionCard, Badge } from "@/components/dashboard/ui";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { TalentDiscovery } from "./TalentDiscovery";
+import { TalentSearch } from "./TalentSearch";
 
 export default function EmployerOverviewPage() {
     const [stats, setStats] = useState({
@@ -15,19 +17,30 @@ export default function EmployerOverviewPage() {
         interviewsSet: 12,
     });
     const [loading, setLoading] = useState(true);
+    const [isApproved, setIsApproved] = useState(false);
+    const [searchResults, setSearchResults] = useState<any[] | null>(null);
 
     useEffect(() => {
-        const fetchStats = async () => {
+        const fetchData = async () => {
             try {
-                const res = await apiFetch("/api/employer/stats");
-                if (res.ok) {
-                    setStats(await res.json());
+                const [statsRes, userRes] = await Promise.all([
+                    apiFetch("/api/employer/stats"),
+                    apiFetch("/api/me")
+                ]);
+
+                if (statsRes.ok) {
+                    setStats(await statsRes.json());
+                }
+
+                if (userRes.ok) {
+                    const userData = await userRes.json();
+                    setIsApproved(userData.employer?.status === 'APPROVED');
                 }
             } finally {
                 setLoading(false);
             }
         };
-        fetchStats();
+        fetchData();
     }, []);
 
     const statItems = [
@@ -92,6 +105,12 @@ export default function EmployerOverviewPage() {
                     </motion.div>
                 ))}
             </div>
+
+            {/* Semantic Search Interface */}
+            <TalentSearch onResults={setSearchResults} isApproved={isApproved} />
+
+            {/* Talent Discovery Feed */}
+            <TalentDiscovery initialTalent={searchResults || undefined} isApproved={isApproved} />
 
             {/* Recent activity placeholder */}
             <motion.div

@@ -2,32 +2,32 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { UserPlus, Search, Send, Briefcase, CheckCircle, FileText, Zap, MessageSquare } from "lucide-react";
+import { UserPlus, Search, Send, Briefcase, CheckCircle, FileText, Zap, MessageSquare, Shield } from "lucide-react";
 
 const Tag = Search; // Using Search as a proxy for Tag/Match icon
 
 const seekerSteps = [
     {
         title: "Create Profile",
-        description: "Build a standout professional profile that highlights your skills and experience.",
+        description: "Build a premium professional profile that showcases your unique value.",
         icon: UserPlus,
         color: "bg-blue-500",
     },
     {
-        title: "AI Job Match",
-        description: "Our algorithm finds roles that perfectly align with your career aspirations.",
-        icon: Tag,
+        title: "Get Verified",
+        description: "Upload certificates and earn the AI-Verified Bio Badge to boost trust.",
+        icon: Shield,
         color: "bg-indigo-500",
     },
     {
-        title: "One-Click Apply",
-        description: "Send your application directly to employers with a single tap.",
-        icon: Send,
+        title: "Anonymized Match",
+        description: "Get discovered by employers through secure, privacy-first AI summaries.",
+        icon: Zap,
         color: "bg-sky-500",
     },
     {
-        title: "Get Hired",
-        description: "Chat directly with hiring managers and land your dream job.",
+        title: "Approve Reveal",
+        description: "You controlled your PII. Only reveal your identity when the interest is mutual.",
         icon: CheckCircle,
         color: "bg-emerald-500",
     },
@@ -35,26 +35,26 @@ const seekerSteps = [
 
 const employerSteps = [
     {
-        title: "Post a Role",
-        description: "Create detailed job listings to attract the best talent in the industry.",
+        title: "Define Goals",
+        description: "Post job requirements focusing on intent and long-term project goals.",
         icon: FileText,
         color: "bg-blue-600",
     },
     {
-        title: "Smart Sourcing",
-        description: "Access a curated pool of verified candidates matched to your requirements.",
-        icon: Zap,
+        title: "Semantic Discovery",
+        description: "Find verified talent matched by semantic alignment, not just keywords.",
+        icon: Search,
         color: "bg-indigo-600",
     },
     {
-        title: "Direct Chat",
-        description: "Connect instantly with top talent through our integrated messaging system.",
+        title: "Request Reveal",
+        description: "Connect with anonymous candidates by requesting full profile access.",
         icon: MessageSquare,
         color: "bg-sky-600",
     },
     {
-        title: "Scale Your Team",
-        description: "Hire with confidence and build the future of your company.",
+        title: "Secure Onboarding",
+        description: "Hire with absolute confidence in verified skills and credentials.",
         icon: CheckCircle,
         color: "bg-emerald-600",
     },

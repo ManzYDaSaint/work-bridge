@@ -1,13 +1,12 @@
+import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-    const supabase = await createSupabaseServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const auth = await validateAuth();
+    if (auth.error) return auth.error;
 
-    if (authError || !user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const supabase = await createSupabaseServerClient();
 
     // Fetch profile and role-specific data
     const { data: userData, error: userError } = await supabase
@@ -17,16 +16,12 @@ export async function GET() {
             jobSeeker:job_seekers(*),
             employer:employers(*)
         `)
-        .eq("id", user.id)
+        .eq("id", auth.userId)
         .single();
 
     if (userError || !userData) {
         return NextResponse.json({ error: "User profile not found" }, { status: 404 });
     }
-
-    // Map database snake_case to camelCase for the frontend if needed, 
-    // but the types/index.ts seems to expect camelCase.
-    // Let's ensure the mapping is consistent with the User interface.
 
     const profile = {
         id: userData.id,
@@ -46,7 +41,9 @@ export async function GET() {
             employmentType: userData.jobSeeker.employment_type,
             experience: userData.jobSeeker.experience || [],
             completion: userData.jobSeeker.completion,
-            isSubscribed: userData.jobSeeker.is_subscribed
+            isSubscribed: userData.jobSeeker.is_subscribed,
+            anonymizedSummary: userData.jobSeeker.anonymized_summary,
+            topVerificationTier: userData.jobSeeker.top_verification_tier
         } : undefined,
         employer: userData.employer ? {
             id: userData.employer.id,

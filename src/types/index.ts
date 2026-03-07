@@ -1,7 +1,7 @@
 export type UserRole = 'JOB_SEEKER' | 'EMPLOYER' | 'ADMIN';
 export type EmployerStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type JobType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP';
-export type ApplicationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'INVITED';
+export type ApplicationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SHORTLISTED' | 'INTERVIEWING' | 'INVITED';
 
 export interface Certificate {
     id: string;
@@ -33,6 +33,8 @@ export interface JobSeeker {
     }>;
     completion?: number;
     isSubscribed?: boolean;
+    anonymizedSummary?: string;
+    topVerificationTier?: number;
 }
 
 export interface Employer {
