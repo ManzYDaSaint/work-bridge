@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, KeyboardEvent } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { User, JobSeeker } from "@/types";
 import {
@@ -10,12 +11,15 @@ import {
 } from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
+import NotificationDropdown from "@/components/notifications/NotificationDropdown";
+import { toast } from "sonner";
 
 // Seeker-specific Navigation
 const seekerNavGroups: NavGroup[] = [
     {
         items: [
             { label: "Dashboard", href: "/dashboard/seeker", icon: LayoutDashboard },
+            { label: "Find Jobs", href: "/dashboard/seeker/jobs", icon: Briefcase },
             { label: "Resume", href: "/dashboard/seeker/resume", icon: FileText },
             { label: "Job Offers", href: "/dashboard/seeker/offers", icon: Zap },
             { label: "Applied Jobs", href: "/dashboard/seeker/applications", icon: Briefcase },
@@ -82,6 +86,19 @@ export default function SeekerLayout({ children }: { children: React.ReactNode }
     const fullName = seekerProfile?.fullName || user?.email?.split("@")[0] || "User";
     const initials = fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
+    const handleSearch = (e: KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            const query = e.currentTarget.value.trim();
+            if (query) {
+                toast.info(`Searching for "${query}"...`, {
+                    description: "Elite matching engine is processing your query."
+                });
+                // In a real implementation, we would redirect:
+                // router.push(`/dashboard/seeker/jobs?search=${encodeURIComponent(query)}`);
+            }
+        }
+    };
+
     return (
         <DashboardLayout
             navGroups={seekerNavGroups}
@@ -91,17 +108,20 @@ export default function SeekerLayout({ children }: { children: React.ReactNode }
             onLogout={handleLogout}
             topBarChildren={
                 <>
+                    <NotificationDropdown />
+                    <div className="h-6 w-px bg-slate-200/50 dark:bg-slate-800/50 hidden md:block"></div>
                     <div className="relative hidden md:block">
                         <input
                             type="text"
-                            placeholder="Search"
+                            placeholder="Search jobs..."
+                            onKeyDown={handleSearch}
                             className="h-9 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 w-48 lg:w-64 transition-all"
                         />
                         <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
                     </div>
-                    <button className="h-9 px-4 sm:px-5 bg-blue-600 text-white text-xs sm:text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm shadow-blue-600/20 whitespace-nowrap">
+                    <Link href="/dashboard/seeker/resume" className="h-9 px-4 sm:px-5 bg-blue-600 text-white text-xs sm:text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm shadow-blue-600/20 whitespace-nowrap">
                         <span className="text-lg leading-none">+</span> <span className="hidden sm:inline">Upload resume</span><span className="sm:hidden">Upload</span>
-                    </button>
+                    </Link>
                 </>
             }
         >

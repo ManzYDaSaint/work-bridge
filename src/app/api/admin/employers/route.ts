@@ -70,6 +70,16 @@ export async function PATCH(request: Request) {
                 status,
                 notes
             });
+
+            // Trigger Real-time notification for the employer
+            await supabase.from("notifications").insert({
+                user_id: employerId,
+                message: status === 'APPROVED'
+                    ? `Congratulations! ${updatedEmployer?.company_name} has been approved. You can now post jobs.`
+                    : `Security Notice: Your employer verification for ${updatedEmployer?.company_name} was not successful.`,
+                type: status === 'APPROVED' ? 'SUCCESS' : 'ERROR',
+                is_read: false
+            });
         }
 
         // 4. Record Audit Log

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { User, Application } from "@/types";
+import { User, Application, SavedJob } from "@/types";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -44,6 +44,7 @@ function StatCard({ label, value, color, icon: Icon }: {
 export default function SeekerDashboardPage() {
     const [user, setUser] = useState<User | null>(null);
     const [applications, setApplications] = useState<Application[]>([]);
+    const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
     const [loading, setLoading] = useState(true);
 
     const searchParams = useSearchParams();
@@ -59,12 +60,14 @@ export default function SeekerDashboardPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [meRes, appRes] = await Promise.all([
+                const [meRes, appRes, savedRes] = await Promise.all([
                     apiFetch("/api/me"),
                     apiFetch("/api/applications"),
+                    apiFetch("/api/seeker/saved-jobs"),
                 ]);
                 if (meRes.ok) setUser(await meRes.json());
                 if (appRes.ok) setApplications(await appRes.json());
+                if (savedRes.ok) setSavedJobs(await savedRes.json());
             } finally {
                 setLoading(false);
             }
@@ -110,13 +113,11 @@ export default function SeekerDashboardPage() {
                 <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
                     {/* Latest Resume */}
                     <div className="xl:col-span-1 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 flex flex-col justify-between">
-// ... existing Resume card content ...
                         <div className="flex justify-between items-start mb-3">
                             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Latest Resume</h3>
                             <button className="text-slate-400 hover:text-slate-600 text-lg leading-none">···</button>
                         </div>
-                        {/* (Simplified content for brevity in replace_file_content) */}
-                        {completion > 0 ? (
+                        {user?.jobSeeker?.resume_url ? (
                             <div className="flex items-center gap-4">
                                 <div className="relative w-14 h-14 flex-shrink-0">
                                     <svg className="w-full h-full -rotate-90">
@@ -131,11 +132,16 @@ export default function SeekerDashboardPage() {
                                 </div>
                                 <div className="min-w-0">
                                     <p className="font-bold text-slate-900 dark:text-white text-xs truncate">{fullName}</p>
-                                    <p className="text-[10px] text-slate-400 mt-0.5">Resume: Final.pdf</p>
+                                    <p className="text-[10px] text-slate-400 mt-0.5 truncate">
+                                        {user.jobSeeker.resume_url.split("/").pop()?.split("?")[0] || "Resume.pdf"}
+                                    </p>
                                 </div>
                             </div>
                         ) : (
-                            <Link href="/dashboard/seeker/resume" className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline text-center py-2">Create Resume</Link>
+                            <div className="flex flex-col items-center">
+                                <p className="text-[10px] text-slate-400 mb-2">No resume uploaded</p>
+                                <Link href="/dashboard/seeker/profile" className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline text-center py-2">Upload Resume</Link>
+                            </div>
                         )}
                     </div>
 
@@ -285,19 +291,46 @@ export default function SeekerDashboardPage() {
                 <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
                     <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                         <h3 className="text-sm font-bold text-slate-800">Saved job post</h3>
+                        {savedJobs.length > 0 && (
+                            <Link href="/dashboard/seeker/saved" className="text-xs font-bold text-blue-600 flex items-center gap-1 hover:underline">
+                                View all <ChevronRight size={14} />
+                            </Link>
+                        )}
                     </div>
-                    <div className="py-12 flex flex-col items-center gap-3 text-center px-10">
-                        <svg width="100" height="70" viewBox="0 0 100 70" fill="none" className="opacity-50">
-                            <rect x="5" y="10" width="60" height="50" rx="4" fill="#E2E8F0" />
-                            <rect x="13" y="22" width="35" height="4" rx="2" fill="#CBD5E1" />
-                            <rect x="13" y="32" width="25" height="4" rx="2" fill="#CBD5E1" />
-                            <circle cx="76" cy="36" r="18" fill="#FEF9C3" />
-                            <path d="M70 36 l4 4 8-8" stroke="#CA8A04" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        <p className="font-bold text-slate-700 text-sm">No Saved Jobs</p>
-                        <p className="text-xs text-slate-400">Bookmark jobs to review them later.</p>
-                        <Link href="/dashboard/seeker" className="text-sm font-bold text-blue-600 hover:underline mt-1">Explore jobs</Link>
-                    </div>
+
+                    {savedJobs.length === 0 ? (
+                        <div className="py-12 flex flex-col items-center gap-3 text-center px-10">
+                            <svg width="100" height="70" viewBox="0 0 100 70" fill="none" className="opacity-50">
+                                <rect x="5" y="10" width="60" height="50" rx="4" fill="#E2E8F0" />
+                                <rect x="13" y="22" width="35" height="4" rx="2" fill="#CBD5E1" />
+                                <rect x="13" y="32" width="25" height="4" rx="2" fill="#CBD5E1" />
+                                <circle cx="76" cy="36" r="18" fill="#FEF9C3" />
+                                <path d="M70 36 l4 4 8-8" stroke="#CA8A04" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            <p className="font-bold text-slate-700 text-sm">No Saved Jobs</p>
+                            <p className="text-xs text-slate-400">Bookmark jobs to review them later.</p>
+                            <Link href="/dashboard/seeker/jobs" className="text-sm font-bold text-blue-600 hover:underline mt-1">Explore jobs</Link>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-slate-100">
+                            {savedJobs.slice(0, 3).map((item) => (
+                                <div key={item.id} className="px-6 py-5 flex items-center justify-between hover:bg-slate-50 transition-colors group">
+                                    <div className="flex items-center gap-4 min-w-0">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-black text-sm flex-shrink-0">
+                                            {item.job.employer?.companyName?.[0] || "?"}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">{item.job.title}</p>
+                                            <p className="text-[10px] text-slate-400 font-medium truncate">{item.job.employer?.companyName} • {item.job.location}</p>
+                                        </div>
+                                    </div>
+                                    <Link href="/dashboard/seeker/jobs" className="p-2 text-slate-300 hover:text-blue-600 transition-all">
+                                        <ChevronRight size={18} />
+                                    </Link>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { apiFetch, apiFetchJson } from "@/lib/api";
 import { Job } from "@/types";
-import { X, User, FileText, MapPin, Star } from "lucide-react";
+import { X, User, FileText, MapPin, Star, MessageSquare } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface Applicant {
     id: string;
@@ -47,6 +48,8 @@ interface ApplicantManagementModalProps {
 export default function ApplicantManagementModal({ job, onClose }: ApplicantManagementModalProps) {
     const [applicants, setApplicants] = useState<Applicant[]>([]);
     const [loading, setLoading] = useState(true);
+    const [chatLoading, setChatLoading] = useState<string | null>(null);
+    const router = useRouter();
 
     const fetchApplicants = async () => {
         try {
@@ -66,6 +69,31 @@ export default function ApplicantManagementModal({ job, onClose }: ApplicantMana
             body: JSON.stringify({ status }),
         });
         if (res.ok) fetchApplicants();
+    };
+
+    const startChat = async (seekerId: string) => {
+        setChatLoading(seekerId);
+        try {
+            const res = await apiFetchJson("/conversations", {
+                method: "POST",
+                body: JSON.stringify({
+                    seekerId,
+                    employerId: job.employer.id // Ensure we have the employer ID
+                })
+            });
+
+            if (res.ok) {
+                // This is a bit of a hack since we don't have a global state for activeTab
+                // but we can use window events or refresh to the messages page
+                onClose();
+                // We'll rely on the user manually switching or implement a more robust sync
+                // For now, let's just alert or navigate if we were on a separate route
+                // Actually, DashboardClient handles tabs. We could use a query param.
+                window.location.href = "/dashboard?tab=messages";
+            }
+        } finally {
+            setChatLoading(null);
+        }
     };
 
     return (
@@ -160,6 +188,13 @@ export default function ApplicantManagementModal({ job, onClose }: ApplicantMana
                                                     <option value="REJECTED">Result: Archive</option>
                                                 </select>
                                             </div>
+
+                                            <button
+                                                onClick={() => startChat((app as any).userId || app.id)} // userId should be available on the join
+                                                disabled={chatLoading === ((app as any).userId || app.id)}
+                                                className="w-14 h-14 flex items-center justify-center bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl hover:bg-blue-600 dark:hover:bg-blue-500 hover:text-white dark:hover:text-white transition-all shadow-lg active:scale-90 disabled:opacity-50">
+                                                <MessageSquare size={24} />
+                                            </button>
 
                                             {app.jobSeeker.resumeUrl && (
                                                 <a href={app.jobSeeker.resumeUrl} target="_blank" rel="noreferrer"

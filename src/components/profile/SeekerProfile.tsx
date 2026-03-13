@@ -12,7 +12,6 @@ import { seekerProfileSchema, type SeekerProfileValues } from "@/lib/validations
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useFieldArray } from "react-hook-form";
-import MFAEnrollment from "../auth/mfa/MFAEnrollment";
 
 interface SeekerProfileData extends JobSeeker {
     completion: number;
@@ -228,9 +227,6 @@ export default function SeekerProfile() {
                             )}
                         </div>
                     </motion.div>
-
-                    {/* Security Subsystem */}
-                    <MFAEnrollment />
                 </div>
 
                 {/* Main Content Area */}
@@ -474,6 +470,6 @@ export default function SeekerProfile() {
                     )}
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

@@ -2,19 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Bell, Briefcase, CheckCircle2, MessageSquare, Zap, Loader2 } from "lucide-react";
+import { AppNotification } from "@/types";
 import { PageHeader, SectionCard } from "@/components/dashboard/ui";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 
-type Notification = {
-    id: string;
-    userId: string;
-    jobId?: string;
-    message: string;
-    isRead: boolean;
-    type?: string;
-    createdAt: string;
-};
+// Local type removed in favor of AppNotification from @/types
 
 // Map notification types to icons
 const getIcon = (type?: string) => {
@@ -39,14 +32,14 @@ const formatTimeAgo = (dateString: string) => {
 };
 
 export default function NotificationsPage() {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [loading, setLoading] = useState(true);
     const [applying, setApplying] = useState<string | null>(null);
 
     const fetchNotifications = async () => {
         try {
             const res = await apiFetch("/api/notifications");
-            const data: Notification[] = await res.json();
+            const data: AppNotification[] = await res.json();
             setNotifications(data || []);
         } finally {
             setLoading(false);
@@ -59,7 +52,7 @@ export default function NotificationsPage() {
 
     const markAllRead = async () => {
         // Optimistic UI update
-        setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+        setNotifications(notifications.map((n: AppNotification) => ({ ...n, isRead: true })));
     };
 
     const handleQuickApply = async (notificationId: string, jobId: string) => {
@@ -73,7 +66,7 @@ export default function NotificationsPage() {
 
             if (res.ok) {
                 // Remove or update the notification once applied
-                setNotifications(notifications.map(n =>
+                setNotifications(notifications.map((n: AppNotification) =>
                     n.id === notificationId ? { ...n, message: "Applied successfully! ✅", type: "APPLICATION_VIEWED", isRead: true } : n
                 ));
             }
@@ -112,7 +105,7 @@ export default function NotificationsPage() {
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {notifications.map((n) => {
+                        {notifications.map((n: AppNotification) => {
                             const ui = getIcon(n.type);
                             const isEliteMatch = n.type === 'SUCCESS' && n.jobId;
 

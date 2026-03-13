@@ -8,7 +8,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import MFAEnrollment from "../auth/mfa/MFAEnrollment";
 
 export default function EmployerProfile() {
     const [profile, setProfile] = useState<Employer | null>(null);
@@ -109,94 +108,83 @@ export default function EmployerProfile() {
                 </div>
             </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                {/* Side Panels */}
-                <div className="space-y-12">
-                    {/* Identity Subsystem */}
-                    <MFAEnrollment />
-                </div>
-
-                {/* Main Content Area */}
-                <div className="lg:col-span-2 space-y-12">
-                    {editing ? (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="glass-effect p-10 rounded-[3rem] border border-blue-500/30 shadow-2xl space-y-8"
-                        >
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Organization Editor</h3>
-                                <div className="flex gap-4">
-                                    <button type="button" onClick={() => setEditing(false)} className="px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">Cancel</button>
-                                    <button onClick={handleSave} disabled={saving} className="px-8 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 disabled:opacity-50 transition-all">
-                                        {saving ? "Updating..." : "Commit Entity Changes"}
-                                    </button>
-                                </div>
+            <div className="space-y-12">
+                {editing ? (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="glass-effect p-10 rounded-[3rem] border border-blue-500/30 shadow-2xl space-y-8"
+                    >
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Organization Editor</h3>
+                            <div className="flex gap-4">
+                                <button type="button" onClick={() => setEditing(false)} className="px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">Cancel</button>
+                                <button onClick={handleSave} disabled={saving} className="px-8 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 disabled:opacity-50 transition-all">
+                                    {saving ? "Updating..." : "Commit Entity Changes"}
+                                </button>
                             </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Company Name</label>
-                                    <input
-                                        value={profile.companyName}
-                                        onChange={(e) => setProfile({ ...profile, companyName: e.target.value })}
-                                        className="w-full h-16 px-8 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Industry Sector</label>
-                                    <input
-                                        value={profile.industry || ""}
-                                        onChange={(e) => setProfile({ ...profile, industry: e.target.value })}
-                                        className="w-full h-16 px-8 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">HQ Location</label>
-                                    <input
-                                        value={profile.location || ""}
-                                        onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-                                        className="w-full h-16 px-8 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Corporate Website</label>
-                                    <input
-                                        value={profile.website || ""}
-                                        onChange={(e) => setProfile({ ...profile, website: e.target.value })}
-                                        className="w-full h-16 px-8 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                    />
-                                </div>
-                                <div className="md:col-span-2 space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Mission Statement</label>
-                                    <textarea
-                                        rows={5}
-                                        value={profile.description || ""}
-                                        onChange={(e) => setProfile({ ...profile, description: e.target.value })}
-                                        className="w-full p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all resize-none"
-                                    />
-                                </div>
-                            </div>
-                        </motion.div>
-                    ) : (
-                        <div className="space-y-12">
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="glass-effect p-10 rounded-[3.5rem] border border-slate-200 dark:border-slate-800 shadow-xl"
-                            >
-                                <div className="flex justify-between items-center mb-8 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
-                                    <h3>Entity Overview</h3>
-                                </div>
-                                <div className="prose dark:prose-invert max-w-none">
-                                    <p className="text-lg text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
-                                        {profile.description || "The organization's mission has not been articulated yet."}
-                                    </p>
-                                </div>
-                            </motion.div>
                         </div>
-                    )}
-                </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Company Name</label>
+                                <input
+                                    value={profile.companyName}
+                                    onChange={(e) => setProfile({ ...profile, companyName: e.target.value })}
+                                    className="w-full h-16 px-8 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Industry Sector</label>
+                                <input
+                                    value={profile.industry || ""}
+                                    onChange={(e) => setProfile({ ...profile, industry: e.target.value })}
+                                    className="w-full h-16 px-8 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">HQ Location</label>
+                                <input
+                                    value={profile.location || ""}
+                                    onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+                                    className="w-full h-16 px-8 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Corporate Website</label>
+                                <input
+                                    value={profile.website || ""}
+                                    onChange={(e) => setProfile({ ...profile, website: e.target.value })}
+                                    className="w-full h-16 px-8 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                />
+                            </div>
+                            <div className="md:col-span-2 space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Mission Statement</label>
+                                <textarea
+                                    rows={5}
+                                    value={profile.description || ""}
+                                    onChange={(e) => setProfile({ ...profile, description: e.target.value })}
+                                    className="w-full p-8 rounded-[2rem] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all resize-none"
+                                />
+                            </div>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="glass-effect p-10 rounded-[3.5rem] border border-slate-200 dark:border-slate-800 shadow-xl"
+                    >
+                        <div className="flex justify-between items-center mb-8 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
+                            <h3>Entity Overview</h3>
+                        </div>
+                        <div className="prose dark:prose-invert max-w-none">
+                            <p className="text-lg text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
+                                {profile.description || "The organization's mission has not been articulated yet."}
+                            </p>
+                        </div>
+                    </motion.div>
+                )}
             </div>
         </div>
     );

@@ -48,6 +48,7 @@ export async function POST(request: Request) {
                 location: body.location,
                 type: body.type,
                 skills: body.skills || [],
+                salary_range: body.salaryRange,
             })
             .select()
             .single();
@@ -93,7 +94,8 @@ export async function POST(request: Request) {
 
             // Batch insert notifications
             if (notifications.length > 0) {
-                await supabase.from("notifications").insert(notifications);
+                const { error: notifyError } = await supabase.from("notifications").insert(notifications);
+                if (notifyError) console.error("Notification trigger error:", notifyError);
             }
         }
 

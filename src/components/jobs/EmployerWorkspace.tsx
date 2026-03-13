@@ -3,14 +3,12 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { Job } from "@/types";
-import { Plus, Users, MapPin, Clock, ChevronRight, Briefcase, Sparkles } from "lucide-react";
-import CreateJobModal from "./CreateJobModal";
+import { Users, MapPin, Clock, ChevronRight, Briefcase, Sparkles } from "lucide-react";
 import ApplicantManagementModal from "./ApplicantManagementModal";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function EmployerWorkspace() {
     const [jobs, setJobs] = useState<Job[]>([]);
-    const [showModal, setShowModal] = useState(false);
     const [selectedJob, setSelectedJob] = useState<Job | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -70,12 +68,6 @@ export default function EmployerWorkspace() {
                             <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center text-white">
                                 <Sparkles size={28} />
                             </div>
-                            <button
-                                onClick={() => setShowModal(true)}
-                                className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center transition-all active:scale-90"
-                            >
-                                <Plus size={20} strokeWidth={3} />
-                            </button>
                         </div>
                         <h4 className="text-3xl font-black mb-1 leading-tight">Grow Your Team</h4>
                         <p className="text-sm font-bold opacity-80 uppercase tracking-widest">New Broadcast</p>
@@ -96,15 +88,6 @@ export default function EmployerWorkspace() {
                         Precision engineering for your professional landscape. Analyze, manage, and scale your organizational pulse.
                     </p>
                 </div>
-                {jobs.length === 0 && (
-                    <button
-                        onClick={() => setShowModal(true)}
-                        className="mt-8 md:mt-0 bg-blue-600 text-white px-12 py-5 rounded-2xl flex items-center gap-4 hover:bg-blue-500 transition-all font-black shadow-2xl shadow-blue-500/30 active:scale-95 flex-shrink-0 group"
-                    >
-                        <Plus size={24} strokeWidth={3} className="group-hover:rotate-90 transition-transform" />
-                        Initiate Broadcast
-                    </button>
-                )}
             </motion.div>
 
             {/* Job List Container */}
@@ -126,14 +109,8 @@ export default function EmployerWorkspace() {
                         </div>
                         <h3 className="text-3xl font-black text-slate-900 dark:text-slate-200 mb-4 tracking-tight">System Idle</h3>
                         <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-12 font-medium text-lg leading-relaxed">
-                            Ready to attract elite talent? Broadcast your professional opening to our verified network.
+                            Ready to attract elite talent? Broadcast your professional opening to our verified network from the top Deploy Role button.
                         </p>
-                        <button
-                            onClick={() => setShowModal(true)}
-                            className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-10 py-4 rounded-2xl font-black hover:bg-blue-600 dark:hover:bg-blue-500 hover:text-white transition-all active:scale-95 shadow-xl uppercase tracking-widest text-sm"
-                        >
-                            Launch Post
-                        </button>
                     </motion.div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pb-20">
@@ -196,13 +173,6 @@ export default function EmployerWorkspace() {
                     </div>
                 )}
             </div>
-
-            {showModal && (
-                <CreateJobModal
-                    onClose={() => setShowModal(false)}
-                    onCreated={fetchMyJobs}
-                />
-            )}
 
             {selectedJob && (
                 <ApplicantManagementModal

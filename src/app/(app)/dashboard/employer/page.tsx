@@ -61,7 +61,6 @@ export default function EmployerOverviewPage() {
             <PageHeader
                 title="Workspace Intelligence"
                 subtitle="Your corporate acquisition strategy at a glance"
-                action={{ label: "Deploy Role", icon: PlusCircle, href: "/dashboard/employer/jobs/new" }}
             />
 
             {/* Stats grid */}
@@ -124,11 +123,8 @@ export default function EmployerOverviewPage() {
                         </div>
                         <div className="space-y-1">
                             <p className="text-lg font-black text-slate-800 uppercase tracking-tight">Signal Silence</p>
-                            <p className="text-xs font-medium text-slate-400 max-w-[280px]">Deploy your tactical job requirements to begin intercepting candidate signals.</p>
+                            <p className="text-xs font-medium text-slate-400 max-w-[280px]">Deploy your tactical job requirements from the top right button to begin intercepting candidate signals.</p>
                         </div>
-                        <Link href="/dashboard/employer/jobs/new" className="mt-4 px-10 py-4 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/10 active:scale-95">
-                            Launch Job Posting
-                        </Link>
                     </div>
                 </SectionCard>
             </motion.div>

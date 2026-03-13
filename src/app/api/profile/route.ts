@@ -25,7 +25,12 @@ export async function GET() {
             bio: "",
             location: "",
             skills: [],
-            completion: 0
+            completion: 0,
+            emailAlias: "",
+            privacyLevel: "VERIFIED_ONLY",
+            newJobAlerts: true,
+            appStatusPulse: true,
+            marketingInsights: false
         });
     }
 
@@ -40,7 +45,12 @@ export async function GET() {
         employmentType: profile.employment_type,
         experience: profile.experience || [],
         completion: profile.completion,
-        isSubscribed: profile.is_subscribed
+        isSubscribed: profile.is_subscribed,
+        emailAlias: profile.email_alias,
+        privacyLevel: profile.privacy_level ?? 'VERIFIED_ONLY',
+        newJobAlerts: profile.new_job_alerts ?? true,
+        appStatusPulse: profile.app_status_pulse ?? true,
+        marketingInsights: profile.marketing_insights ?? false
     });
 }
 
@@ -63,6 +73,10 @@ export async function PUT(request: Request) {
         // Generate Anonymized Summary using AI
         const anonymizedSummary = await generateAIAnonymizedSummary(body.bio || "", body.skills || []);
 
+        const new_job_alerts = body.newJobAlerts !== undefined ? body.newJobAlerts : true;
+        const app_status_pulse = body.appStatusPulse !== undefined ? body.appStatusPulse : true;
+        const marketing_insights = body.marketingInsights !== undefined ? body.marketingInsights : false;
+
         const { data, error } = await supabase
             .from("job_seekers")
             .upsert({
@@ -76,7 +90,12 @@ export async function PUT(request: Request) {
                 seniority_level: body.seniorityLevel,
                 employment_type: body.employmentType,
                 anonymized_summary: anonymizedSummary,
-                completion
+                completion,
+                email_alias: body.emailAlias,
+                privacy_level: body.privacyLevel,
+                new_job_alerts,
+                app_status_pulse,
+                marketing_insights
             })
             .select()
             .single();

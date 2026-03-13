@@ -11,9 +11,9 @@ const FAQ = [
 ];
 
 const RESOURCES = [
-    { icon: BookOpen, label: "Getting Started Guide", desc: "Learn the basics of using WorkBridge", href: "#" },
-    { icon: FileText, label: "Resume Writing Tips", desc: "Best practices for a standout resume", href: "/dashboard/seeker/resume" },
-    { icon: MessageSquare, label: "Contact Support", desc: "Chat with our support team", href: "#" },
+    { icon: BookOpen, label: "Getting Started Guide", desc: "Learn the basics of using WorkBridge", href: "/dashboard/seeker/help/get-started" },
+    { icon: FileText, label: "Resume Writing Tips", desc: "Best practices for a standout resume", href: "/dashboard/seeker/help/resume-tips" },
+    { icon: MessageSquare, label: "Contact Support", desc: "Get help from our support team", href: "mailto:support@workbridge.com" },
 ];
 
 export default function HelpPage() {

@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { User, Employer } from "@/types";
-import { LayoutDashboard, Briefcase, BarChart3, Settings, Users, PlusCircle, Lock } from "lucide-react";
+import { LayoutDashboard, Briefcase, BarChart3, Settings, Users, PlusCircle, Lock, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
+import NotificationDropdown from "@/components/notifications/NotificationDropdown";
 
 import { PendingBanner } from "@/components/dashboard/employer/PendingBanner";
 
@@ -19,6 +20,7 @@ const employerNavGroups: NavGroup[] = [
             { label: "Overview", href: "/dashboard/employer", icon: LayoutDashboard },
             { label: "Active Jobs", href: "/dashboard/employer/jobs", icon: Briefcase },
             { label: "Candidates", href: "/dashboard/employer/candidates", icon: Users },
+            { label: "Messages", href: "/dashboard/employer/messages", icon: MessageSquare },
             { label: "Analytics", href: "/dashboard/employer/analytics", icon: BarChart3 },
         ]
     },
@@ -85,6 +87,8 @@ export default function EmployerLayout({ children }: { children: React.ReactNode
             onLogout={handleLogout}
             topBarChildren={
                 <>
+                    <NotificationDropdown />
+                    <div className="h-6 w-px bg-slate-200/50 dark:bg-slate-800/50 hidden md:block"></div>
                     <button
                         onClick={() => isApproved ? router.push("/dashboard/employer/jobs/new") : null}
                         className={cn(
@@ -95,7 +99,7 @@ export default function EmployerLayout({ children }: { children: React.ReactNode
                         )}
                     >
                         <PlusCircle size={18} />
-                        <span className="hidden sm:inline">Deploy Job</span><span className="sm:hidden">New Job</span>
+                        <span className="hidden sm:inline">Deploy Role</span><span className="sm:hidden">Deploy Role</span>
                         {!isApproved && <Lock size={14} className="ml-1 opacity-60" />}
                     </button>
                 </>

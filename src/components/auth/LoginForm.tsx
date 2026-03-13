@@ -116,12 +116,14 @@ export default function LoginForm() {
         >
             {/* Header */}
             <div className="flex flex-col items-center mb-10">
-                <motion.div
-                    whileHover={{ rotate: 15 }}
-                    className="w-16 h-16 flex items-center justify-center mb-6"
-                >
-                    <Image src="/logo.svg" alt="WorkBridge" width={64} height={64} priority />
-                </motion.div>
+                <Link href="/">
+                    <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        className="w-16 h-16 flex items-center justify-center mb-6"
+                    >
+                        <Image src="/logo-black.svg" alt="WorkBridge" width={64} height={64} priority />
+                    </motion.div>
+                </Link>
                 <h2 className="text-4xl font-black text-slate-900 tracking-tighter text-center">
                     Welcome back
                 </h2>

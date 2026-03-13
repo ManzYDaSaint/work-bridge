@@ -1,11 +1,10 @@
-"use client";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
-import { Notification } from "@/types";
+import { AppNotification } from "@/types";
 import { Bell, Info, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 
 function getIcon(type?: string) {
     switch (type) {
@@ -21,15 +20,68 @@ interface NotificationDropdownProps {
 }
 
 export default function NotificationDropdown({ isMobile = false }: NotificationDropdownProps) {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [notifications, setNotifications] = useState<AppNotification[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [loaded, setLoaded] = useState(false);
+    const [isPulsing, setIsPulsing] = useState(false);
     const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+    useEffect(() => {
+        const supabase = createBrowserSupabaseClient();
+
+        // Initial fetch to show unread dot
+        fetchNotifications();
+
+        // Request notification permission
+        if ('Notification' in window && window.Notification.permission === 'default') {
+            window.Notification.requestPermission();
+        }
+
+        // Subscribe to real-time notifications for the current user
+        const channel = supabase
+            .channel('realtime_notifications')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'notifications'
+                },
+                (payload) => {
+                    const newNotification = {
+                        id: payload.new.id,
+                        userId: payload.new.user_id,
+                        message: payload.new.message,
+                        isRead: payload.new.is_read,
+                        type: payload.new.type,
+                        createdAt: payload.new.created_at
+                    } as AppNotification;
+
+                    setNotifications(prev => [newNotification, ...prev]);
+                    setIsPulsing(true);
+                    setTimeout(() => setIsPulsing(false), 2000);
+
+                    // Show browser notification if permitted
+                    if ('Notification' in window && window.Notification.permission === 'granted') {
+                        new window.Notification("WorkBridge Intelligence", {
+                            body: newNotification.message,
+                            icon: "/logo.png",
+                            badge: "/favicon.ico"
+                        });
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
 
     const fetchNotifications = async () => {
         try {
             const res = await apiFetch("/notifications");
-            const data: Notification[] = await res.json();
+            const data: AppNotification[] = await res.json();
             setNotifications(data);
             setLoaded(true);
         } catch { /* silent */ }
@@ -97,11 +149,15 @@ export default function NotificationDropdown({ isMobile = false }: NotificationD
                 onClick={handleOpen}
                 className={cn(
                     "relative p-3 rounded-xl transition-all group",
-                    isOpen ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30" : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-600"
+                    isOpen ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30" : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-blue-600",
+                    isPulsing && "ring-4 ring-blue-500/30"
                 )}
                 aria-label="Notifications"
             >
-                <Bell size={20} className={cn(isOpen ? "scale-110" : "group-hover:rotate-12 transition-transform")} />
+                <Bell size={20} className={cn(
+                    isOpen ? "scale-110" : "group-hover:rotate-12 transition-transform",
+                    isPulsing && "animate-bounce"
+                )} />
                 {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full border-2 border-white dark:border-slate-900 shadow-sm animate-pulse">
                         {unreadCount}

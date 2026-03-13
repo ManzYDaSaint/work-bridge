@@ -16,8 +16,7 @@ export async function GET() {
             created_at,
             employers (
                 id,
-                company_name,
-                logo_url
+                company_name
             )
         `)
         .eq("seeker_id", auth.userId)
@@ -35,8 +34,7 @@ export async function GET() {
         createdAt: r.created_at,
         employer: {
             id: (r.employers as any).id,
-            companyName: (r.employers as any).company_name,
-            logoUrl: (r.employers as any).logo_url
+            companyName: (r.employers as any).company_name
         }
     }));
 

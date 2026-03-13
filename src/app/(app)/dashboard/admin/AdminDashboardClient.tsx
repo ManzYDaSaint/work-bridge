@@ -8,9 +8,9 @@ import { AdminMetrics, AuditLog, AuditLogResponse, Employer, User } from "@/type
 import { CheckCircle, XCircle, Users, Briefcase, UserIcon, ShieldCheck, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import MFAEnrollment from "@/components/auth/mfa/MFAEnrollment";
+import NotificationDropdown from "@/components/notifications/NotificationDropdown";
 
-type AdminTab = "metrics" | "employers" | "users" | "audit" | "security";
+type AdminTab = "metrics" | "employers" | "users" | "audit";
 
 function MetricCard({ title, value, color, icon: Icon }: { title: string; value?: number; color: string; icon: any }) {
     return (
@@ -41,15 +41,11 @@ export default function AdminDashboardClient() {
     const [auditMeta, setAuditMeta] = useState({ total: 0, limit: 50, offset: 0 });
     const [auditFilters, setAuditFilters] = useState({ userId: "", action: "", method: "", path: "", minStatus: "", maxStatus: "" });
     const [fetchLoading, setFetchLoading] = useState(true);
-    const [isAAL2, setIsAAL2] = useState(false);
     const router = useRouter();
     const supabase = createBrowserSupabaseClient();
 
     const fetchData = async () => {
         try {
-            // Check AAL level
-            const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-            setIsAAL2(aal?.currentLevel === 'aal2');
 
             const searchParams = new URLSearchParams({ limit: String(auditMeta.limit), offset: String(auditMeta.offset) });
             Object.entries(auditFilters).forEach(([k, v]) => v && searchParams.set(k, v));
@@ -81,11 +77,7 @@ export default function AdminDashboardClient() {
     };
 
     useEffect(() => {
-        if (activeTab !== "security") {
-            fetchData();
-        } else {
-            setFetchLoading(false);
-        }
+        fetchData();
 
         // --- Live Pulse Polling (30s) ---
         const interval = setInterval(() => {
@@ -138,7 +130,7 @@ export default function AdminDashboardClient() {
         </div>
     );
 
-    const tabs: AdminTab[] = ["metrics", "employers", "users", "audit", "security"];
+    const tabs: AdminTab[] = ["metrics", "employers", "users", "audit"];
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-[#020617] transition-colors duration-500">
@@ -163,10 +155,13 @@ export default function AdminDashboardClient() {
                                                 : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
                                         )}
                                     >
-                                        {tab === "security" && <ShieldCheck size={14} />}
                                         {tab}
                                     </button>
                                 ))}
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <NotificationDropdown />
+                                <div className="h-6 w-px bg-slate-200/50 dark:bg-slate-800/50 hidden md:block"></div>
                             </div>
                             <button onClick={handleLogout} className="text-sm font-black text-slate-500 hover:text-red-600 uppercase tracking-widest transition-colors flex items-center gap-2">
                                 <XCircle size={18} />
@@ -198,27 +193,7 @@ export default function AdminDashboardClient() {
                             Global oversight of the WorkBridge ecosystem. Monitor metrics, validate credentials, and audit system integrity.
                         </p>
                     </div>
-                    {activeTab !== "security" && (
-                        <div className={cn(
-                            "mt-8 md:mt-0 px-6 py-3 rounded-2xl flex items-center gap-3 border transition-all",
-                            isAAL2
-                                ? "bg-green-500/10 border-green-500/20 text-green-600"
-                                : "bg-red-500/10 border-red-500/20 text-red-600 animate-pulse"
-                        )}>
-                            <ShieldCheck size={20} />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-                                {isAAL2 ? "MFA SECURED (AAL2)" : "MFA SETUP REQUIRED"}
-                            </span>
-                        </div>
-                    )}
                 </div>
-
-                {/* MFA SECURITY TAB */}
-                {activeTab === "security" && (
-                    <div className="max-w-4xl mx-auto">
-                        <MFAEnrollment />
-                    </div>
-                )}
 
                 {/* METRICS */}
                 {activeTab === "metrics" && metrics && (

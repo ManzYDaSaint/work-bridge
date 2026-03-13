@@ -3,19 +3,10 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { Job } from "@/types";
-import { Search, MapPin, Briefcase, ChevronRight, CheckCircle, Sparkles, Cog, DollarSign } from "lucide-react";
+import { Search, MapPin, Briefcase, ChevronRight, CheckCircle, Sparkles, Bookmark, BookmarkCheck, DollarSign } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-
-const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.1
-        }
-    }
-};
+import { toast } from "sonner";
 
 const itemVariants = {
     hidden: { y: 20, opacity: 0 },
@@ -26,39 +17,79 @@ const itemVariants = {
     }
 };
 
-export default function JobBoard() {
+export default function SeekerJobBoard() {
     const [jobs, setJobs] = useState<Job[]>([]);
+    const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
+    const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
-    const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
     const [search, setSearch] = useState("");
     const [filterType, setFilterType] = useState<string>("all");
 
     useEffect(() => {
-        const fetchJobs = async () => {
+        const fetchData = async () => {
             try {
-                const res = await apiFetch("/jobs");
-                const data: Job[] = await res.json();
-                setJobs(data);
-            } catch {
-                // silent
+                const [jobsRes, savedRes, appsRes] = await Promise.all([
+                    apiFetch("/api/jobs"),
+                    apiFetch("/api/seeker/saved-jobs"),
+                    apiFetch("/api/applications")
+                ]);
+
+                if (jobsRes.ok) setJobs(await jobsRes.json());
+                if (savedRes.ok) {
+                    const saved = await savedRes.json();
+                    setSavedJobIds(new Set(saved.map((s: any) => s.job_id)));
+                }
+                if (appsRes.ok) {
+                    const apps = await appsRes.json();
+                    setAppliedJobIds(new Set(apps.map((a: any) => a.job_id)));
+                }
+            } catch (error) {
+                console.error("Fetch error:", error);
             } finally {
                 setLoading(false);
             }
         };
-        fetchJobs();
+        fetchData();
     }, []);
 
     const handleApply = async (jobId: string) => {
         try {
-            const res = await apiFetch(`/jobs/${jobId}/apply`, { method: "POST" });
+            const res = await apiFetch(`/api/jobs/${jobId}/apply`, { method: "POST" });
             if (res.ok) {
-                setAppliedJobs((prev) => new Set([...prev, jobId]));
+                setAppliedJobIds((prev) => new Set([...prev, jobId]));
+                toast.success("Application sent successfully!");
             } else {
                 const err = await res.json();
-                alert(err.error || "Failed to apply");
+                toast.error(err.error || "Failed to apply");
             }
         } catch {
-            alert("An error occurred while applying.");
+            toast.error("An error occurred while applying.");
+        }
+    };
+
+    const handleToggleSave = async (jobId: string) => {
+        try {
+            const res = await apiFetch("/api/seeker/saved-jobs", {
+                method: "POST",
+                body: JSON.stringify({ jobId })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setSavedJobIds((prev) => {
+                    const next = new Set(prev);
+                    if (data.saved) {
+                        next.add(jobId);
+                        toast.success("Job saved to your bookmarks");
+                    } else {
+                        next.delete(jobId);
+                        toast.info("Job removed from bookmarks");
+                    }
+                    return next;
+                });
+            }
+        } catch {
+            toast.error("Failed to update saved jobs.");
         }
     };
 
@@ -71,68 +102,10 @@ export default function JobBoard() {
             (filterType === "all" || j.type.toLowerCase() === filterType.toLowerCase())
     );
 
-    const featuredJobs = jobs.filter(j => j.isNew).slice(0, 3);
-
     return (
-        <div className="space-y-16">
-            {/* Featured Section */}
-            {featuredJobs.length > 0 && !search && filterType === "all" && (
-                <section className="space-y-8">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-                                <Sparkles className="text-amber-500" size={32} />
-                                Featured Opportunities
-                            </h2>
-                            <p className="text-slate-500 dark:text-slate-400 font-medium">Handpicked roles from top-tier companies</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {featuredJobs.map((job) => (
-                            <motion.div
-                                key={`featured-${job.id}`}
-                                whileHover={{ y: -8, scale: 1.02 }}
-                                className="glass-effect p-8 rounded-[2.5rem] relative overflow-hidden group transition-all duration-500 hover:shadow-blue-500/20"
-                            >
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl -z-10 group-hover:bg-blue-500/20 transition-colors" />
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="w-14 h-14 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-lg text-blue-600 font-black text-xl border border-slate-100 dark:border-slate-700">
-                                        {job.employer.companyName[0]}
-                                    </div>
-                                    <span className="px-3 py-1 bg-blue-500/10 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-500/20">
-                                        Featured
-                                    </span>
-                                </div>
-                                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 leading-tight group-hover:text-blue-600 transition-colors">
-                                    {job.title}
-                                </h3>
-                                <p className="font-bold text-slate-500 dark:text-slate-400 mb-6">{job.employer.companyName}</p>
-                                <div className="flex items-center gap-4 text-sm font-bold text-slate-400 mb-8">
-                                    <span className="flex items-center gap-1.5">
-                                        <MapPin size={14} className="text-blue-500" />
-                                        {job.location}
-                                    </span>
-                                    <span className="flex items-center gap-1.5 capitalize">
-                                        <Briefcase size={14} className="text-indigo-500" />
-                                        {job.type}
-                                    </span>
-                                </div>
-                                <button
-                                    onClick={() => handleApply(job.id)}
-                                    className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black transition-all hover:bg-blue-600 dark:hover:bg-blue-500 hover:text-white active:scale-95 shadow-xl shadow-slate-900/10 dark:shadow-white/5"
-                                >
-                                    Quick Apply
-                                </button>
-                            </motion.div>
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {/* Advanced Search & Filtering */}
+        <div className="space-y-8">
             <div className="flex flex-col lg:flex-row gap-6 items-center">
                 <div className="relative group flex-1 w-full">
-                    <div className="absolute inset-0 bg-blue-600/5 blur-2xl rounded-[2rem] -z-10 group-focus-within:bg-blue-600/10 transition-colors" />
                     <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={22} />
                     <input
                         type="text"
@@ -160,7 +133,6 @@ export default function JobBoard() {
                 </div>
             </div>
 
-            {/* Job List */}
             <div className="space-y-8">
                 {loading ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -169,21 +141,13 @@ export default function JobBoard() {
                         ))}
                     </div>
                 ) : filtered.length === 0 ? (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-center py-32 glass-effect rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-800"
-                    >
-                        <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-8 text-slate-400">
-                            <Briefcase size={48} />
-                        </div>
-                        <h3 className="text-3xl font-black text-slate-900 dark:text-slate-200 mb-3 tracking-tight">No opportunities found</h3>
-                        <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto font-medium text-lg leading-relaxed">
-                            {search || filterType !== "all"
-                                ? "We couldn't find anything matching your current filters. Try broadening your search or switching categories."
-                                : "The board is currently clear. Check back later for new professional broadcasts."}
+                    <div className="text-center py-24 bg-white dark:bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
+                        <Briefcase size={48} className="mx-auto mb-6 text-slate-300" />
+                        <h3 className="text-2xl font-black text-slate-900 dark:text-slate-200 mb-2">No opportunities found</h3>
+                        <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto font-medium">
+                            Try adjusting your filters or search terms.
                         </p>
-                    </motion.div>
+                    </div>
                 ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <AnimatePresence mode="popLayout">
@@ -195,7 +159,6 @@ export default function JobBoard() {
                                     initial="hidden"
                                     animate="visible"
                                     exit={{ opacity: 0, scale: 0.95 }}
-                                    whileHover={{ y: -4 }}
                                     className="group glass-effect p-10 rounded-[3rem] shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 hover:border-blue-500/40 transition-all duration-500 flex flex-col justify-between"
                                 >
                                     <div>
@@ -249,31 +212,36 @@ export default function JobBoard() {
 
                                     <div className="flex items-center gap-4">
                                         <AnimatePresence mode="wait">
-                                            {appliedJobs.has(job.id) ? (
-                                                <motion.div
-                                                    initial={{ opacity: 0, scale: 0.9 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
-                                                    className="flex-1 flex items-center justify-center gap-2 text-green-600 dark:text-green-400 font-black px-6 py-5 bg-green-500/10 rounded-2xl border border-green-500/20 shadow-inner"
-                                                >
-                                                    <CheckCircle size={20} strokeWidth={3} />
-                                                    Success! Application Received
-                                                </motion.div>
+                                            {appliedJobIds.has(job.id) ? (
+                                                <div className="flex-1 flex items-center justify-center gap-2 text-green-600 dark:text-green-400 font-black px-6 py-5 bg-green-500/10 rounded-2xl border border-green-500/20">
+                                                    <CheckCircle size={20} />
+                                                    Applied
+                                                </div>
                                             ) : (
-                                                <>
-                                                    <motion.button
-                                                        whileTap={{ scale: 0.96 }}
-                                                        onClick={() => handleApply(job.id)}
-                                                        className="flex-1 bg-blue-600 text-white px-8 py-5 rounded-2xl font-black shadow-2xl shadow-blue-500/30 hover:bg-blue-500 transition-all flex items-center justify-center gap-3 group active:scale-95"
-                                                    >
-                                                        Apply with One-Click
-                                                        <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                                                    </motion.button>
-                                                    <button className="w-16 h-16 rounded-2xl border-2 border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:border-blue-500/50 transition-all active:scale-90 group">
-                                                        <Cog size={22} className="group-hover:rotate-45 transition-transform" />
-                                                    </button>
-                                                </>
+                                                <button
+                                                    onClick={() => handleApply(job.id)}
+                                                    className="flex-1 bg-blue-600 text-white px-8 py-5 rounded-2xl font-black shadow-lg hover:bg-blue-500 transition-all flex items-center justify-center gap-3 group active:scale-95"
+                                                >
+                                                    Apply Now
+                                                    <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                                </button>
                                             )}
                                         </AnimatePresence>
+                                        <button
+                                            onClick={() => handleToggleSave(job.id)}
+                                            className={cn(
+                                                "w-16 h-16 rounded-2xl border-2 flex items-center justify-center transition-all active:scale-90",
+                                                savedJobIds.has(job.id)
+                                                    ? "bg-yellow-500/10 border-yellow-500/50 text-yellow-600 shadow-inner"
+                                                    : "border-slate-200 dark:border-slate-800 text-slate-400 hover:text-yellow-500 hover:border-yellow-500/50"
+                                            )}
+                                        >
+                                            {savedJobIds.has(job.id) ? (
+                                                <BookmarkCheck size={24} fill="currentColor" />
+                                            ) : (
+                                                <Bookmark size={24} />
+                                            )}
+                                        </button>
                                     </div>
                                 </motion.div>
                             ))}

@@ -80,13 +80,13 @@ export function PremiumVerification() {
                 <div className="bg-white/5 backdrop-blur-3xl border border-white/10 p-8 rounded-[2rem] w-full md:w-auto text-center space-y-4 shadow-2xl">
                     <div className="space-y-1">
                         <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em]">One-Time Fee</p>
-                        <p className="text-4xl font-black text-white italic">$50.00</p>
+                        <p className="text-4xl font-black text-white italic">MK2,000</p>
                     </div>
 
                     <button
                         onClick={handleUpgrade}
                         disabled={loading}
-                        className="w-full h-16 bg-white text-slate-900 rounded-2xl flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-blue-400 hover:text-white transition-all active:scale-95 shadow-xl shadow-blue-500/10"
+                        className="w-full p-4 bg-white text-slate-900 rounded-2xl flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-blue-400 hover:text-white transition-all active:scale-95 shadow-xl shadow-blue-500/10"
                     >
                         {loading ? <Loader2 className="animate-spin" size={20} /> : (
                             <>

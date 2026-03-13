@@ -45,5 +45,15 @@ export function constructMetadata({
             follow: !noIndex,
         },
         metadataBase: new URL(process.env.NEXT_PUBLIC_URL || "http://localhost:3000"),
+        icons: {
+            icon: [
+                { url: "/favicon.ico" },
+                { url: "/logo.svg", type: "image/svg+xml" },
+            ],
+            shortcut: ["/logo.png"],
+            apple: [
+                { url: "/logo.png", sizes: "180x180", type: "image/png" },
+            ],
+        },
     };
 }

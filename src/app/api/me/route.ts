@@ -35,7 +35,6 @@ export async function GET() {
             location: userData.jobSeeker.location,
             skills: userData.jobSeeker.skills,
             resumeUrl: userData.jobSeeker.resume_url,
-            highestQualificationUrl: userData.jobSeeker.highest_qualification_url,
             salaryExpectation: userData.jobSeeker.salary_expectation,
             seniorityLevel: userData.jobSeeker.seniority_level,
             employmentType: userData.jobSeeker.employment_type,

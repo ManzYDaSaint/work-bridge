@@ -24,7 +24,11 @@ CREATE TABLE public.job_seekers (
   employment_type TEXT,
   anonymized_summary TEXT,
   top_verification_tier INTEGER DEFAULT -1,
-  highest_qualification_url TEXT
+  email_alias TEXT,
+  privacy_level TEXT DEFAULT 'VERIFIED_ONLY',
+  new_job_alerts BOOLEAN DEFAULT TRUE,
+  app_status_pulse BOOLEAN DEFAULT TRUE,
+  marketing_insights BOOLEAN DEFAULT FALSE
 );
 
 -- 3. Employers table
@@ -37,7 +41,10 @@ CREATE TABLE public.employers (
   website TEXT,
   description TEXT,
   status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
-  profile_views INTEGER DEFAULT 0
+  profile_views INTEGER DEFAULT 0,
+  application_alerts BOOLEAN DEFAULT TRUE,
+  hiring_velocity BOOLEAN DEFAULT TRUE,
+  candidate_privacy BOOLEAN DEFAULT FALSE
 );
 
 -- 4. Jobs table
@@ -49,6 +56,7 @@ CREATE TABLE public.jobs (
   location TEXT NOT NULL,
   type TEXT NOT NULL, -- e.g., 'FULL_TIME', 'PART_TIME', etc.
   skills TEXT[],
+  salary_range TEXT,
   status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -162,6 +170,12 @@ ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profile_reveals ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own notifications" ON public.notifications
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own notifications" ON public.notifications
+  FOR UPDATE USING (auth.uid() = user_id);
 
 -- 11. RLS Policies
 
@@ -280,3 +294,84 @@ CREATE POLICY "Seekers can view reveals for them" ON public.profile_reveals
 
 CREATE POLICY "Seekers can update reveals for them" ON public.profile_reveals
   FOR UPDATE USING (auth.uid() = seeker_id);
+
+-- 13. Conversations table
+CREATE TABLE public.conversations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  seeker_id UUID REFERENCES public.job_seekers(id) ON DELETE CASCADE NOT NULL,
+  employer_id UUID REFERENCES public.employers(id) ON DELETE CASCADE NOT NULL,
+  last_message TEXT,
+  last_message_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(seeker_id, employer_id)
+);
+
+-- 14. Messages table
+CREATE TABLE public.messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  conversation_id UUID REFERENCES public.conversations(id) ON DELETE CASCADE NOT NULL,
+  sender_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  content TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Row Level Security for Messaging
+ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own conversations" ON public.conversations
+  FOR SELECT USING (auth.uid() = seeker_id OR auth.uid() = employer_id);
+
+CREATE POLICY "Users can insert messages in their conversations" ON public.messages
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.conversations 
+      WHERE id = conversation_id 
+      AND (seeker_id = auth.uid() OR employer_id = auth.uid())
+    )
+  );
+
+CREATE POLICY "Users can view messages in their conversations" ON public.messages
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.conversations 
+      WHERE id = conversation_id 
+      AND (seeker_id = auth.uid() OR employer_id = auth.uid())
+    )
+  );
+
+-- Enable Supabase Realtime
+-- This is usually done via the Supabase Dashboard, but can be done via SQL
+-- Note: Realtime might not catch up immediately if the publication doesn't exist.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    CREATE PUBLICATION supabase_realtime;
+  END IF;
+END $$;
+
+ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
+
+-- 15. Saved Jobs table
+CREATE TABLE public.saved_jobs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  seeker_id UUID REFERENCES public.job_seekers(id) ON DELETE CASCADE NOT NULL,
+  job_id UUID REFERENCES public.jobs(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(seeker_id, job_id)
+);
+
+-- RLS for Saved Jobs
+ALTER TABLE public.saved_jobs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Seekers can manage own saved jobs" ON public.saved_jobs
+  FOR ALL USING (auth.uid() = seeker_id);
+
+-- Audit Trigger for Saved Jobs
+CREATE TRIGGER audit_saved_jobs_trigger
+AFTER INSERT OR UPDATE OR DELETE ON public.saved_jobs
+FOR EACH ROW EXECUTE FUNCTION public.audit_trigger_function();
+

@@ -12,10 +12,14 @@ export const seekerProfileSchema = z.object({
         endDate: z.string().optional(),
         description: z.string().min(1, "Description is required"),
     })).optional(),
-    highestQualificationUrl: z.string().optional(),
     salaryExpectation: z.string().optional(),
     seniorityLevel: z.string().optional(),
     employmentType: z.string().optional(),
+    emailAlias: z.string().email("Invalid email").optional().or(z.literal("")),
+    privacyLevel: z.string().optional(),
+    newJobAlerts: z.boolean().optional(),
+    appStatusPulse: z.boolean().optional(),
+    marketingInsights: z.boolean().optional(),
 });
 
 export type SeekerProfileValues = z.infer<typeof seekerProfileSchema>;

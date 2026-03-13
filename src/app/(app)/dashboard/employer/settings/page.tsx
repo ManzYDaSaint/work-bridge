@@ -22,10 +22,15 @@ function SettingRow({ label, desc, children }: { label: string; desc?: string; c
     );
 }
 
-function Toggle({ defaultChecked = false }: { defaultChecked?: boolean }) {
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
     return (
         <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" className="sr-only peer" defaultChecked={defaultChecked} />
+            <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={checked}
+                onChange={(e) => onChange(e.target.checked)}
+            />
             <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-checked:bg-blue-600 rounded-full transition-colors
                 after:content-[''] after:absolute after:top-[2px] after:left-[2px]
                 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all
@@ -40,8 +45,13 @@ export default function EmployerSettingsPage() {
     const [saveSuccess, setSaveSuccess] = useState(false);
     const router = useRouter();
 
-    const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<EmployerProfileValues>({
+    const { register, handleSubmit, reset, watch, setValue, formState: { errors, isDirty } } = useForm<EmployerProfileValues>({
         resolver: zodResolver(employerProfileSchema),
+        defaultValues: {
+            applicationAlerts: true,
+            hiringVelocity: true,
+            candidatePrivacy: false,
+        }
     });
 
     useEffect(() => {
@@ -56,6 +66,9 @@ export default function EmployerSettingsPage() {
                         location: data.location ?? "",
                         website: data.website ?? "",
                         description: data.description ?? "",
+                        applicationAlerts: data.applicationAlerts ?? true,
+                        hiringVelocity: data.hiringVelocity ?? true,
+                        candidatePrivacy: data.candidatePrivacy ?? false,
                     });
                 }
             } finally {
@@ -179,13 +192,22 @@ export default function EmployerSettingsPage() {
                 <div className="space-y-8">
                     <SectionCard title="Preferences">
                         <SettingRow label="Application Alerts" desc="Email when new candidates apply">
-                            <Toggle defaultChecked />
+                            <Toggle
+                                checked={watch("applicationAlerts") ?? true}
+                                onChange={(val) => setValue("applicationAlerts", val, { shouldDirty: true })}
+                            />
                         </SettingRow>
                         <SettingRow label="Hiring Velocity" desc="Show hiring speed badges on jobs">
-                            <Toggle defaultChecked />
+                            <Toggle
+                                checked={watch("hiringVelocity") ?? true}
+                                onChange={(val) => setValue("hiringVelocity", val, { shouldDirty: true })}
+                            />
                         </SettingRow>
                         <SettingRow label="Candidate Privacy" desc="Blur seeker names until shortlist">
-                            <Toggle />
+                            <Toggle
+                                checked={watch("candidatePrivacy") ?? false}
+                                onChange={(val) => setValue("candidatePrivacy", val, { shouldDirty: true })}
+                            />
                         </SettingRow>
                     </SectionCard>
 

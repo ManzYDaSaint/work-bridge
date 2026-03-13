@@ -24,6 +24,11 @@ export interface JobSeeker {
     salaryExpectation?: string;
     seniorityLevel?: string;
     employmentType?: string;
+    emailAlias?: string;
+    privacyLevel?: string;
+    newJobAlerts?: boolean;
+    appStatusPulse?: boolean;
+    marketingInsights?: boolean;
     experience?: Array<{
         role: string;
         company: string;
@@ -31,6 +36,7 @@ export interface JobSeeker {
         endDate?: string;
         description: string;
     }>;
+    resume_url?: string;
     completion?: number;
     isSubscribed?: boolean;
     anonymizedSummary?: string;
@@ -38,13 +44,20 @@ export interface JobSeeker {
 }
 
 export interface Employer {
-    id: string;
+    id: string; // References Users primary key
     companyName: string;
     industry?: string;
     location?: string;
     website?: string;
     description?: string;
     status: EmployerStatus;
+    profile_views: number;
+    applicationAlerts?: boolean;
+    hiringVelocity?: boolean;
+    candidatePrivacy?: boolean;
+    _count?: {
+        jobs: number;
+    };
 }
 
 export interface User {
@@ -63,6 +76,7 @@ export interface Job {
     location: string;
     type: JobType | string;
     skills: string[];
+    salary_range?: string;
     employer: {
         companyName: string;
         id?: string;
@@ -84,13 +98,14 @@ export interface Application {
     createdAt?: string;
 }
 
-export interface Notification {
+export interface AppNotification {
     id: string;
     userId: string;
     message: string;
     isRead: boolean;
     createdAt: string;
     type?: string;
+    jobId?: string;
 }
 
 export interface Note {
@@ -150,3 +165,34 @@ export interface AuditLogResponse {
     limit: number;
     offset: number;
 }
+
+export interface Conversation {
+    id: string;
+    seekerId: string;
+    employerId: string;
+    lastMessage?: string;
+    lastMessageAt?: string;
+    createdAt: string;
+    // Joined data
+    seeker?: JobSeeker;
+    employer?: Employer;
+    unreadCount?: number;
+}
+
+export interface Message {
+    id: string;
+    conversationId: string;
+    senderId: string;
+    content: string;
+    isRead: boolean;
+    createdAt: string;
+}
+
+export interface SavedJob {
+    id: string;
+    job_id: string;
+    seeker_id: string;
+    created_at: string;
+    job: Job;
+}
+

@@ -80,12 +80,14 @@ export default function RegisterPage() {
             >
                 {/* Header */}
                 <div className="flex flex-col items-center mb-10">
-                    <motion.div
-                        whileHover={{ rotate: -15 }}
-                        className="w-16 h-16 flex items-center justify-center mb-6"
-                    >
-                        <Image src="/logo.svg" alt="WorkBridge" width={64} height={64} priority />
-                    </motion.div>
+                    <Link href={"/"}>
+                        <motion.div
+                            whileHover={{ scale: 1.1 }}
+                            className="w-16 h-16 flex items-center justify-center mb-6"
+                        >
+                            <Image src="/logo-black.svg" alt="WorkBridge" width={64} height={64} priority />
+                        </motion.div>
+                    </Link>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tighter text-center">
                         Secure Onboarding
                     </h1>
@@ -134,7 +136,7 @@ export default function RegisterPage() {
                                     placeholder="Enter email address"
                                     required
                                     onChange={handleInputChange}
-                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-bold"
+                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-black placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-bold"
                                 />
                             </div>
 

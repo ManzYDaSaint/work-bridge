@@ -14,7 +14,6 @@ interface RevealRequest {
     employer: {
         id: string;
         companyName: string;
-        logoUrl?: string;
     };
 }
 

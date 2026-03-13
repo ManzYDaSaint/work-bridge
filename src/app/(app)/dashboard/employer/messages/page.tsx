@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MessageSquare, Search, Loader2, User as UserIcon, Building } from "lucide-react";
-import { PageHeader, Card } from "@/components/dashboard/ui";
+import { MessageSquare, Search, Loader2, User as UserIcon } from "lucide-react";
+import { PageHeader } from "@/components/dashboard/ui";
 import ChatWindow from "@/components/dashboard/ChatWindow";
 import { Conversation } from "@/types";
 import { apiFetch } from "@/lib/api";
@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 
-export default function SeekerMessagesPage() {
+export default function EmployerMessagesPage() {
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -21,7 +21,6 @@ export default function SeekerMessagesPage() {
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
-                // Get current user ID
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) setCurrentUserId(user.id);
 
@@ -37,32 +36,17 @@ export default function SeekerMessagesPage() {
 
         fetchInitialData();
 
-        // Subscribe to conversation updates (last message, unread counts)
         const channel = supabase
-            .channel('conversation_updates')
+            .channel('employer_conversation_updates')
             .on(
                 'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'conversations'
-                },
-                () => {
-                    // Refetch conversations when metadata changes
-                    fetchConversations();
-                }
+                { event: '*', schema: 'public', table: 'conversations' },
+                () => fetchConversations()
             )
             .on(
                 'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'messages'
-                },
-                () => {
-                    // Refetch to update unread counts and last message snippets
-                    fetchConversations();
-                }
+                { event: 'INSERT', schema: 'public', table: 'messages' },
+                () => fetchConversations()
             )
             .subscribe();
 
@@ -92,19 +76,19 @@ export default function SeekerMessagesPage() {
     return (
         <div className="h-[calc(100vh-140px)] flex flex-col space-y-6">
             <PageHeader
-                title="Transmissions"
-                subtitle="High-fidelity direct communication with recruiters"
+                title="Communications Hub"
+                subtitle="Direct interface with prospective talent"
             />
 
             <div className="flex-1 flex overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] shadow-sm">
-                {/* Conversation List Sidebar */}
+                {/* Sidebar */}
                 <aside className="w-full md:w-80 border-r border-slate-100 dark:border-slate-800 flex flex-col bg-slate-50/30 dark:bg-slate-900/50 backdrop-blur-xl">
                     <div className="p-6">
                         <div className="relative group">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={16} />
                             <input
                                 type="text"
-                                placeholder="Search Intel..."
+                                placeholder="Filter Candidates..."
                                 className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl py-3 pl-10 pr-4 text-xs font-bold outline-none ring-blue-500/10 focus:ring-4 transition-all"
                             />
                         </div>
@@ -129,12 +113,12 @@ export default function SeekerMessagesPage() {
                                     )}
                                 >
                                     <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-2xl flex items-center justify-center text-slate-400 flex-shrink-0">
-                                        <Building size={20} />
+                                        <UserIcon size={20} />
                                     </div>
                                     <div className="flex-1 min-w-0 text-left">
                                         <div className="flex justify-between items-start">
                                             <p className="font-black text-slate-900 dark:text-white truncate text-sm">
-                                                {conv.employer?.companyName || "Unknown Employer"}
+                                                {conv.seeker?.fullName || "Candidate"}
                                             </p>
                                             {(conv.unreadCount ?? 0) > 0 && (
                                                 <div className="w-5 h-5 bg-blue-600 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-lg shadow-blue-500/30">
@@ -143,7 +127,7 @@ export default function SeekerMessagesPage() {
                                             )}
                                         </div>
                                         <p className="text-xs text-slate-500 font-bold truncate mt-0.5 italic">
-                                            {conv.lastMessage || "Transmission initiated..."}
+                                            {conv.lastMessage || "Link established..."}
                                         </p>
                                     </div>
                                 </button>
@@ -152,7 +136,7 @@ export default function SeekerMessagesPage() {
                     </div>
                 </aside>
 
-                {/* Main Chat Area */}
+                {/* Chat Area */}
                 <main className="flex-1 hidden md:block">
                     <AnimatePresence mode="wait">
                         {selectedConversation && currentUserId ? (
@@ -176,8 +160,8 @@ export default function SeekerMessagesPage() {
                                 >
                                     <MessageSquare size={80} strokeWidth={1} />
                                 </motion.div>
-                                <p className="mt-8 font-black uppercase tracking-[0.3em] text-2xl">Terminal Standby</p>
-                                <p className="max-w-xs text-sm font-bold mt-2">Select a frequency from the left rail to begin direct link.</p>
+                                <p className="mt-8 font-black uppercase tracking-[0.3em] text-2xl">Awaiting Frequency</p>
+                                <p className="max-w-xs text-sm font-bold mt-2">Pick a transmission thread from the left rail to resume link.</p>
                             </div>
                         )}
                     </AnimatePresence>

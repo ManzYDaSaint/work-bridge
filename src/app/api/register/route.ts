@@ -53,6 +53,20 @@ export async function POST(request: Request) {
         // 3. Send Welcome Email
         await sendWelcomeEmail(email || user.email!, fullName || companyName || "New User");
 
+        // 4. Notify Administrators (Real-Time System Event)
+        if (role === "EMPLOYER") {
+            const { data: admins } = await supabase.from("users").select("id").eq("role", "ADMIN");
+            if (admins && admins.length > 0) {
+                const adminNotifications = admins.map(admin => ({
+                    user_id: admin.id,
+                    message: `Verification Required: ${companyName} has requested access to the platform.`,
+                    type: 'WARNING',
+                    is_read: false
+                }));
+                await supabase.from("notifications").insert(adminNotifications);
+            }
+        }
+
         return NextResponse.json({ success: true });
     } catch (error: any) {
         console.error("Registration API error:", error);
