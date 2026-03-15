@@ -213,18 +213,31 @@ export default function SeekerJobBoard() {
                                     <div className="flex items-center gap-4">
                                         <AnimatePresence mode="wait">
                                             {appliedJobIds.has(job.id) ? (
-                                                <div className="flex-1 flex items-center justify-center gap-2 text-green-600 dark:text-green-400 font-black px-6 py-5 bg-green-500/10 rounded-2xl border border-green-500/20">
+                                                <motion.div
+                                                    key="applied"
+                                                    initial={{ opacity: 0, scale: 0.9 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    className="flex-1 flex items-center justify-center gap-2 text-green-600 dark:text-green-400 font-black px-6 py-5 bg-green-500/10 rounded-2xl border border-green-500/20"
+                                                >
                                                     <CheckCircle size={20} />
                                                     Applied
-                                                </div>
+                                                </motion.div>
                                             ) : (
-                                                <button
-                                                    onClick={() => handleApply(job.id)}
-                                                    className="flex-1 bg-blue-600 text-white px-8 py-5 rounded-2xl font-black shadow-lg hover:bg-blue-500 transition-all flex items-center justify-center gap-3 group active:scale-95"
+                                                <motion.div
+                                                    key="unapplied"
+                                                    initial={{ opacity: 0, scale: 0.95 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.95 }}
+                                                    className="flex-1 flex items-center"
                                                 >
-                                                    Apply Now
-                                                    <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                                                </button>
+                                                    <button
+                                                        onClick={() => handleApply(job.id)}
+                                                        className="flex-1 bg-blue-600 text-white px-8 py-5 rounded-2xl font-black shadow-lg hover:bg-blue-500 transition-all flex items-center justify-center gap-3 group active:scale-95"
+                                                    >
+                                                        Apply Now
+                                                        <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                                    </button>
+                                                </motion.div>
                                             )}
                                         </AnimatePresence>
                                         <button

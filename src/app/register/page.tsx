@@ -223,7 +223,7 @@ export default function RegisterPage() {
                             disabled={isLoading}
                             className="w-full py-5 bg-slate-900 hover:bg-black disabled:opacity-50 text-white font-black rounded-2xl transition-all shadow-xl shadow-slate-900/10 text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 group active:scale-95 border-none mt-4"
                         >
-                            {isLoading ? "Broadcasting..." : "Establish Profile"}
+                            {isLoading ? "Creating account..." : "Create Account"}
                             <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                         </button>
                     </form>

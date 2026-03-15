@@ -42,7 +42,10 @@ export async function GET() {
             completion: userData.jobSeeker.completion,
             isSubscribed: userData.jobSeeker.is_subscribed,
             anonymizedSummary: userData.jobSeeker.anonymized_summary,
-            topVerificationTier: userData.jobSeeker.top_verification_tier
+            topVerificationTier: userData.jobSeeker.top_verification_tier,
+            avatarUrl: userData.jobSeeker.avatar_url,
+            hasBadge: userData.jobSeeker.has_badge ?? false,
+            badgeSeekerNumber: userData.jobSeeker.badge_seeker_number,
         } : undefined,
         employer: userData.employer ? {
             id: userData.employer.id,

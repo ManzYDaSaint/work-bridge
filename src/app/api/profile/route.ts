@@ -30,7 +30,9 @@ export async function GET() {
             privacyLevel: "VERIFIED_ONLY",
             newJobAlerts: true,
             appStatusPulse: true,
-            marketingInsights: false
+            marketingInsights: false,
+            hasBadge: false,
+            avatarUrl: null,
         });
     }
 
@@ -47,10 +49,13 @@ export async function GET() {
         completion: profile.completion,
         isSubscribed: profile.is_subscribed,
         emailAlias: profile.email_alias,
-        privacyLevel: profile.privacy_level ?? 'VERIFIED_ONLY',
+        privacyLevel: profile.privacy_level ?? "VERIFIED_ONLY",
         newJobAlerts: profile.new_job_alerts ?? true,
         appStatusPulse: profile.app_status_pulse ?? true,
-        marketingInsights: profile.marketing_insights ?? false
+        marketingInsights: profile.marketing_insights ?? false,
+        hasBadge: profile.has_badge ?? false,
+        avatarUrl: profile.avatar_url ?? null,
+        badgeSeekerNumber: profile.badge_seeker_number ?? null,
     });
 }
 
@@ -77,6 +82,28 @@ export async function PUT(request: Request) {
         const app_status_pulse = body.appStatusPulse !== undefined ? body.appStatusPulse : true;
         const marketing_insights = body.marketingInsights !== undefined ? body.marketingInsights : false;
 
+        // Check if this seeker should auto-receive a badge (first 100 free)
+        const { data: currentProfile } = await supabase
+            .from("job_seekers")
+            .select("has_badge, badge_seeker_number")
+            .eq("id", auth.userId)
+            .single();
+
+        let has_badge = currentProfile?.has_badge ?? false;
+        let badge_seeker_number = currentProfile?.badge_seeker_number ?? null;
+
+        if (!has_badge) {
+            const { count } = await supabase
+                .from("job_seekers")
+                .select("id", { count: "exact", head: true })
+                .eq("has_badge", true);
+
+            if ((count ?? 0) < 100) {
+                has_badge = true;
+                badge_seeker_number = (count ?? 0) + 1;
+            }
+        }
+
         const { data, error } = await supabase
             .from("job_seekers")
             .upsert({
@@ -95,7 +122,9 @@ export async function PUT(request: Request) {
                 privacy_level: body.privacyLevel,
                 new_job_alerts,
                 app_status_pulse,
-                marketing_insights
+                marketing_insights,
+                has_badge,
+                badge_seeker_number,
             })
             .select()
             .single();

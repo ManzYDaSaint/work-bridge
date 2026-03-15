@@ -23,7 +23,6 @@ export async function uploadAndVerifyCertificate(formData: FormData) {
 
     if (!user) throw new Error("Unauthorized");
 
-    // 1. Get Seeker's full name for verification
     const { data: seeker, error: seekerError } = await supabase
         .from("job_seekers")
         .select("full_name")
@@ -35,14 +34,11 @@ export async function uploadAndVerifyCertificate(formData: FormData) {
     }
 
     try {
-        // 2. Convert File to Buffer
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        // 3. Run AI Verification
         const verification = await verifyCertificateWithOCR(buffer, seeker.full_name);
 
-        // 4. Store Certificate in Database
         const { data: cert, error: certError } = await supabase
             .from("certificates")
             .insert([{
@@ -59,7 +55,6 @@ export async function uploadAndVerifyCertificate(formData: FormData) {
 
         if (certError) throw certError;
 
-        // 5. Update Seeker's top verification tier if this one is higher
         if (verification.isNameVerified) {
             const { data: currentSeeker } = await supabase
                 .from("job_seekers")
@@ -98,7 +93,7 @@ export async function respondToRevealRequest(revealId: string, status: "APPROVED
             .from("profile_reveals")
             .update({ status })
             .eq("id", revealId)
-            .eq("seeker_id", user.id) // Security check
+            .eq("seeker_id", user.id)
             .select(`
                 *,
                 employers (
@@ -114,7 +109,6 @@ export async function respondToRevealRequest(revealId: string, status: "APPROVED
         if (error) throw error;
         if (!data) throw new Error("Request not found or unauthorized.");
 
-        // Trigger Notification
         const employerEmail = (data.employers as any)?.users?.email;
         const employerName = (data.employers as any)?.company_name || "Employer";
         const seekerName = (data.job_seekers as any)?.full_name || "A candidate";
@@ -127,7 +121,6 @@ export async function respondToRevealRequest(revealId: string, status: "APPROVED
             });
         }
 
-        // Audit Log
         await recordAuditLog({
             action: `REVEAL_REQUEST_${status}`,
             path: "/dashboard/seeker/actions",
@@ -147,43 +140,89 @@ export async function respondToRevealRequest(revealId: string, status: "APPROVED
 }
 
 /**
- * Initializes a Flutterwave payment for Premium Verification.
+ * Initializes a Flutterwave payment for the WorkBridge Badge (one-time fee).
+ * First 100 seekers get it free — check hasBadge before calling this.
  */
-export async function initializeVerificationPayment() {
+export async function initializeBadgePayment() {
     const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) throw new Error("Unauthorized");
 
-    const tx_ref = `wb-verif-${Date.now()}-${user.id.slice(0, 8)}`;
+    // Verify the seeker doesn't already have a badge
+    const { data: seeker } = await supabase
+        .from("job_seekers")
+        .select("has_badge, full_name")
+        .eq("id", user.id)
+        .single();
 
-    try {
-        // In a real app, you'd call Flutterwave API here to get a payment link.
-        // For MVP, we'll return the configuration for the Flutterwave standard checkout.
-
-        return {
-            success: true,
-            config: {
-                public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || "FLWPUBK_TEST-SANDBOX-X",
-                tx_ref,
-                amount: 50, // Premium verification fee
-                currency: "USD",
-                payment_options: "card,mobilemoney,ussd",
-                customer: {
-                    email: user.email,
-                    name: user.user_metadata?.full_name || "Job Seeker",
-                },
-                customizations: {
-                    title: "WorkBridge Premium Verification",
-                    description: "Get the Verified Bio Badge and priority talent discovery.",
-                    logo: "https://workbridge.co/logo.png",
-                },
-                redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/seeker?payment=success&ref=${tx_ref}`,
-            }
-        };
-
-    } catch (err) {
-        console.error("[Payment Init] Error:", err);
-        return { error: "Failed to initialize payment gateway." };
+    if (seeker?.has_badge) {
+        return { error: "You already have the WorkBridge Badge." };
     }
+
+    const tx_ref = `wb-badge-${Date.now()}-${user.id.slice(0, 8)}`;
+
+    return {
+        success: true,
+        config: {
+            public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || "FLWPUBK_TEST-SANDBOX-X",
+            tx_ref,
+            amount: 3000,
+            currency: "MWK",
+            payment_options: "mobilemoneymw,card",
+            customer: {
+                email: user.email,
+                name: seeker?.full_name || user.user_metadata?.full_name || "Job Seeker",
+            },
+            customizations: {
+                title: "WorkBridge Badge",
+                description: "One-time fee to unlock full platform access and profile updates.",
+                logo: `${process.env.NEXT_PUBLIC_APP_URL}/logo.png`,
+            },
+            redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/seeker?payment=badge_success&ref=${tx_ref}`,
+        }
+    };
+}
+
+/**
+ * Initializes a Flutterwave payment for the AI Features monthly subscription.
+ */
+export async function initializeAISubscriptionPayment() {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("Unauthorized");
+
+    const { data: seeker } = await supabase
+        .from("job_seekers")
+        .select("is_subscribed, full_name")
+        .eq("id", user.id)
+        .single();
+
+    if (seeker?.is_subscribed) {
+        return { error: "You already have an active AI subscription." };
+    }
+
+    const tx_ref = `wb-ai-${Date.now()}-${user.id.slice(0, 8)}`;
+
+    return {
+        success: true,
+        config: {
+            public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || "FLWPUBK_TEST-SANDBOX-X",
+            tx_ref,
+            amount: 2000,
+            currency: "MWK",
+            payment_options: "mobilemoneymw,card",
+            customer: {
+                email: user.email,
+                name: seeker?.full_name || user.user_metadata?.full_name || "Job Seeker",
+            },
+            customizations: {
+                title: "WorkBridge AI Features",
+                description: "Monthly plan: AI matching, anonymized CV, priority discovery.",
+                logo: `${process.env.NEXT_PUBLIC_APP_URL}/logo.png`,
+            },
+            redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/seeker?payment=ai_success&ref=${tx_ref}`,
+        }
+    };
 }

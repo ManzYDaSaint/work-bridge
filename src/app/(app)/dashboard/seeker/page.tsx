@@ -50,9 +50,17 @@ export default function SeekerDashboardPage() {
     const searchParams = useSearchParams();
 
     useEffect(() => {
-        if (searchParams.get("payment") === "success") {
-            toast.success("Elite Verification Active!", {
-                description: "Your priority talent discovery status has been activated."
+        if (searchParams.get("payment") === "badge_success") {
+            toast.success("WorkBridge Badge Activated! 🏅", {
+                description: "Your profile is now fully unlocked. Welcome to the trusted network."
+            });
+        } else if (searchParams.get("payment") === "ai_success") {
+            toast.success("AI Features Activated! ✨", {
+                description: "AI matching, priority discovery and anonymized CV are now live."
+            });
+        } else if (searchParams.get("payment") === "success") {
+            toast.success("Payment successful!", {
+                description: "Your account has been upgraded."
             });
         }
     }, [searchParams]);
@@ -84,6 +92,11 @@ export default function SeekerDashboardPage() {
     const skills = (user?.jobSeeker as any)?.skills ?? [];
     const completion = user?.jobSeeker?.completion ?? 0;
 
+    const hasBadge = (user?.jobSeeker as any)?.hasBadge ?? false;
+    const isSubscribed = user?.jobSeeker?.isSubscribed ?? false;
+    const badgeSeekerNumber = (user?.jobSeeker as any)?.badgeSeekerNumber;
+    const avatarUrl = (user?.jobSeeker as any)?.avatarUrl;
+
     const stats = [
         { label: "Un-read Messages", value: 0, icon: MessageSquare, color: "bg-blue-50 text-blue-500" },
         { label: "Application Sent", value: applications.length, icon: Send, color: "bg-orange-50 text-orange-500" },
@@ -97,8 +110,12 @@ export default function SeekerDashboardPage() {
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
             {/* ── MAIN COLUMN ───────────────────────────────── */}
             <div className="flex-1 min-w-0 space-y-6">
-                {/* Premium Upgrade */}
-                <PremiumVerification />
+                {/* Premium Upgrade - with badge/AI subscription props */}
+                <PremiumVerification
+                    hasBadge={hasBadge}
+                    isSubscribed={isSubscribed}
+                    badgeSeekerNumber={badgeSeekerNumber}
+                />
 
                 {/* Privacy / Reveal Requests */}
                 <RevealRequestCenter />
@@ -339,14 +356,29 @@ export default function SeekerDashboardPage() {
                 {/* Avatar + basic info */}
                 <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center text-center">
                     <div className="relative mb-3">
-                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black shadow-lg">
-                            {initials}
-                        </div>
+                        {avatarUrl ? (
+                            <img
+                                src={avatarUrl}
+                                alt={fullName}
+                                className="w-20 h-20 rounded-full object-cover shadow-lg border-2 border-slate-100"
+                            />
+                        ) : (
+                            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-2xl font-black shadow-lg">
+                                {initials}
+                            </div>
+                        )}
                         <Link href="/dashboard/seeker/profile" className="absolute bottom-0 right-0 w-7 h-7 bg-white border border-slate-200 rounded-full flex items-center justify-center text-blue-600 shadow-sm hover:bg-blue-50 transition-colors">
                             <Pencil size={13} strokeWidth={2.5} />
                         </Link>
                     </div>
-                    <p className="font-black text-slate-900 text-base">{fullName}</p>
+                    <div className="flex items-center gap-2 justify-center">
+                        <p className="font-black text-slate-900 text-base">{fullName}</p>
+                        {hasBadge && (
+                            <span title={`WorkBridge Member #${badgeSeekerNumber}`}>
+                                <Shield size={16} className="text-blue-500 fill-blue-100" />
+                            </span>
+                        )}
+                    </div>
                     <p className="text-xs text-slate-400 font-medium">{(user?.jobSeeker as any)?.title ?? "Job Seeker"}</p>
                     <div className="mt-3 flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 rounded-full px-4 py-1.5 text-xs font-bold">
                         <CheckCircle2 size={13} />

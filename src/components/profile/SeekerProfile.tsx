@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch, apiFetchJson } from "@/lib/api";
 import { JobSeeker } from "@/types";
-import { FileText, MapPin, CheckCircle, Upload, Save, Sparkles, User as UserIcon, ExternalLink, Edit3, Briefcase, Clock, X, Plus, Trash } from "lucide-react";
+import { FileText, MapPin, CheckCircle, Upload, Save, Sparkles, User as UserIcon, ExternalLink, Edit3, Briefcase, Clock, X, Plus, Trash, Camera, ShieldCheck, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
@@ -23,6 +23,9 @@ export default function SeekerProfile() {
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [newSkill, setNewSkill] = useState("");
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [hasBadge, setHasBadge] = useState(false);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const router = useRouter();
 
     const {
@@ -59,6 +62,8 @@ export default function SeekerProfile() {
             const res = await apiFetch("/api/profile");
             const data: SeekerProfileData = await res.json();
             setProfile(data);
+            setAvatarUrl((data as any).avatarUrl ?? null);
+            setHasBadge((data as any).hasBadge ?? false);
             reset({
                 fullName: data.fullName ?? "",
                 bio: data.bio ?? "",
@@ -106,6 +111,28 @@ export default function SeekerProfile() {
         }
     };
 
+    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingAvatar(true);
+        try {
+            const formData = new FormData();
+            formData.append("avatar", file);
+            const res = await apiFetch("/api/profile/avatar", {
+                method: "POST",
+                body: formData,
+            });
+            const json = await res.json();
+            if (json.url) {
+                setAvatarUrl(json.url);
+            }
+        } catch (err) {
+            console.error("Avatar upload failed", err);
+        } finally {
+            setUploadingAvatar(false);
+        }
+    };
+
     if (loading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
             <motion.div
@@ -130,10 +157,37 @@ export default function SeekerProfile() {
             >
                 <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 blur-[120px] -z-10" />
                 <div className="flex flex-col md:flex-row items-center gap-10 md:gap-14">
+                    {/* Avatar with upload button */}
                     <div className="relative group">
-                        <div className="w-40 h-40 md:w-48 md:h-48 rounded-[3rem] bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white text-6xl font-black shadow-2xl shadow-blue-500/30 group-hover:scale-105 transition-transform duration-500">
-                            {profile.fullName?.[0] ?? "?"}
-                        </div>
+                        {avatarUrl ? (
+                            <img
+                                src={avatarUrl}
+                                alt={profile.fullName ?? "Profile"}
+                                className="w-40 h-40 md:w-48 md:h-48 rounded-[3rem] object-cover shadow-2xl shadow-blue-500/30 group-hover:scale-105 transition-transform duration-500"
+                            />
+                        ) : (
+                            <div className="w-40 h-40 md:w-48 md:h-48 rounded-[3rem] bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white text-6xl font-black shadow-2xl shadow-blue-500/30 group-hover:scale-105 transition-transform duration-500">
+                                {profile.fullName?.[0] ?? "?"}
+                            </div>
+                        )}
+                        {/* Upload button overlay */}
+                        <label
+                            htmlFor="avatar-input"
+                            className="absolute inset-0 flex items-center justify-center rounded-[3rem] bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        >
+                            {uploadingAvatar ? (
+                                <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <Camera size={32} className="text-white drop-shadow-lg" />
+                            )}
+                        </label>
+                        <input
+                            id="avatar-input"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleAvatarUpload}
+                        />
                         <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center text-green-500 shadow-xl border border-slate-100 dark:border-slate-700">
                             <CheckCircle size={32} />
                         </div>
@@ -143,7 +197,14 @@ export default function SeekerProfile() {
                             <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
                                 {profile.fullName || "Mysterious Professional"}
                             </h2>
-                            <button onClick={() => setEditing(!editing)} className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors shadow-sm self-center md:self-auto">
+                            <button
+                                onClick={() => hasBadge && setEditing(!editing)}
+                                title={hasBadge ? "Edit profile" : "Get the WorkBridge Badge to edit your profile"}
+                                className={`w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center transition-colors shadow-sm self-center md:self-auto ${hasBadge
+                                        ? "text-slate-400 hover:text-blue-600"
+                                        : "text-slate-200 cursor-not-allowed opacity-50"
+                                    }`}
+                            >
                                 <Edit3 size={20} />
                             </button>
                         </div>
@@ -231,7 +292,32 @@ export default function SeekerProfile() {
 
                 {/* Main Content Area */}
                 <div className="lg:col-span-2 space-y-12">
-                    {editing ? (
+                    {/* Badge Gate */}
+                    {!hasBadge && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="glass-effect p-8 rounded-[2.5rem] border border-amber-300/40 shadow-xl bg-amber-50/10 text-center space-y-4"
+                        >
+                            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mx-auto">
+                                <Lock size={28} className="text-amber-600 dark:text-amber-400" />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                                Profile Editing Locked
+                            </h3>
+                            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
+                                Get the <span className="text-blue-600 font-bold">WorkBridge Badge</span> to unlock profile editing, resume visibility, and employer discovery.
+                            </p>
+                            <a
+                                href="/dashboard/seeker"
+                                className="inline-flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 active:scale-95"
+                            >
+                                <ShieldCheck size={16} /> Get My Badge
+                            </a>
+                        </motion.div>
+                    )}
+
+                    {editing && hasBadge ? (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -423,7 +509,7 @@ export default function SeekerProfile() {
                         </motion.div>
                     ) : (
                         <div className="space-y-12">
-                            {/* Experience Timeline */}
+                            {/* Experience Timeline — visible to all (badge needed to EDIT) */}
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}

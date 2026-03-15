@@ -251,6 +251,7 @@ export default function JobBoard() {
                                         <AnimatePresence mode="wait">
                                             {appliedJobs.has(job.id) ? (
                                                 <motion.div
+                                                    key="applied"
                                                     initial={{ opacity: 0, scale: 0.9 }}
                                                     animate={{ opacity: 1, scale: 1 }}
                                                     className="flex-1 flex items-center justify-center gap-2 text-green-600 dark:text-green-400 font-black px-6 py-5 bg-green-500/10 rounded-2xl border border-green-500/20 shadow-inner"
@@ -259,7 +260,13 @@ export default function JobBoard() {
                                                     Success! Application Received
                                                 </motion.div>
                                             ) : (
-                                                <>
+                                                <motion.div
+                                                    key="unapplied"
+                                                    initial={{ opacity: 0, scale: 0.95 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.95 }}
+                                                    className="flex-1 flex items-center gap-4"
+                                                >
                                                     <motion.button
                                                         whileTap={{ scale: 0.96 }}
                                                         onClick={() => handleApply(job.id)}
@@ -271,7 +278,7 @@ export default function JobBoard() {
                                                     <button className="w-16 h-16 rounded-2xl border-2 border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:border-blue-500/50 transition-all active:scale-90 group">
                                                         <Cog size={22} className="group-hover:rotate-45 transition-transform" />
                                                     </button>
-                                                </>
+                                                </motion.div>
                                             )}
                                         </AnimatePresence>
                                     </div>

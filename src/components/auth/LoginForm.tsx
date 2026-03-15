@@ -15,10 +15,10 @@ export default function LoginForm() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [magicLoading, setMagicLoading] = useState(false);
-    const [showMfa, setShowMfa] = useState(false);
-    const [mfaCode, setMfaCode] = useState("");
-    const [mfaError, setMfaError] = useState<string | null>(null);
+    // const [magicLoading, setMagicLoading] = useState(false);
+    // const [showMfa, setShowMfa] = useState(false);
+    // const [mfaCode, setMfaCode] = useState("");
+    // const [mfaError, setMfaError] = useState<string | null>(null);
     const router = useRouter();
     const supabase = createBrowserSupabaseClient();
 
@@ -34,79 +34,79 @@ export default function LoginForm() {
         }
 
         // Check for MFA
-        const { data: aal, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        // const { data: aal, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
-        if (aalError) {
-            toast.error(aalError.message);
-            setIsLoading(false);
-            return;
-        }
+        // if (aalError) {
+        //     toast.error(aalError.message);
+        //     setIsLoading(false);
+        //     return;
+        // }
 
-        if (aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
-            setShowMfa(true);
-            setIsLoading(false);
-        } else {
-            router.push("/dashboard");
-            router.refresh();
-            setIsLoading(false);
-        }
+        // if (aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
+        //     setShowMfa(true);
+        //     setIsLoading(false);
+        // } else {
+        //     router.push("/dashboard");
+        //     router.refresh();
+        //     setIsLoading(false);
+        // }
     };
 
-    const handleMfaVerify = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setMfaError(null);
+    // const handleMfaVerify = async (e: React.FormEvent) => {
+    //     e.preventDefault();
+    //     setIsLoading(true);
+    //     setMfaError(null);
 
-        try {
-            const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
-            if (factorsError) throw factorsError;
+    //     try {
+    //         const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+    //         if (factorsError) throw factorsError;
 
-            const totpFactor = factors.totp[0];
-            if (!totpFactor) throw new Error("No MFA factor found");
+    //         const totpFactor = factors.totp[0];
+    //         if (!totpFactor) throw new Error("No MFA factor found");
 
-            const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
-                factorId: totpFactor.id
-            });
-            if (challengeError) throw challengeError;
+    //         const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+    //             factorId: totpFactor.id
+    //         });
+    //         if (challengeError) throw challengeError;
 
-            const { error: verifyError } = await supabase.auth.mfa.verify({
-                factorId: totpFactor.id,
-                challengeId: challengeData.id,
-                code: mfaCode
-            });
+    //         const { error: verifyError } = await supabase.auth.mfa.verify({
+    //             factorId: totpFactor.id,
+    //             challengeId: challengeData.id,
+    //             code: mfaCode
+    //         });
 
-            if (verifyError) throw verifyError;
+    //         if (verifyError) throw verifyError;
 
-            router.push("/dashboard");
-            router.refresh();
-        } catch (err: any) {
-            setMfaError(err.message || "Invalid verification code");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    //         router.push("/dashboard");
+    //         router.refresh();
+    //     } catch (err: any) {
+    //         setMfaError(err.message || "Invalid verification code");
+    //     } finally {
+    //         setIsLoading(false);
+    //     }
+    // };
 
-    const handleGoogleLogin = async () => {
-        await supabase.auth.signInWithOAuth({
-            provider: "google",
-            options: { redirectTo: `${window.location.origin}/auth/callback` },
-        });
-    };
+    // const handleGoogleLogin = async () => {
+    //     await supabase.auth.signInWithOAuth({
+    //         provider: "google",
+    //         options: { redirectTo: `${window.location.origin}/auth/callback` },
+    //     });
+    // };
 
-    const handleMagicLink = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setMagicLoading(true);
-        const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-        });
-        if (error) {
-            toast.error(error.message);
-        } else {
-            toast.success("Magic link sent! Check your email.");
-        }
-        setMagicLoading(false);
-    };
+    // const handleMagicLink = async (e: React.FormEvent<HTMLFormElement>) => {
+    //     e.preventDefault();
+    //     setMagicLoading(true);
+    //     const { error } = await supabase.auth.signInWithOtp({
+    //         email,
+    //         options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    //     });
+    //     if (error) {
+    //         toast.error(error.message);
+    //     } else {
+    //         toast.success("Magic link sent! Check your email.");
+    //     }
+    //     setMagicLoading(false);
+    // };
 
     return (
         <motion.div
@@ -149,7 +149,7 @@ export default function LoginForm() {
             {/* Form Card */}
             <div className="bg-white/90 backdrop-blur-3xl border border-white rounded-[2.5rem] p-10 shadow-2xl shadow-slate-200/50">
                 <AnimatePresence mode="wait">
-                    {showMfa ? (
+                    {/* {showMfa ? (
                         <motion.form
                             key="mfa"
                             initial={{ opacity: 0, x: 20 }}
@@ -199,62 +199,62 @@ export default function LoginForm() {
                             </button>
                         </motion.form>
                     ) : (
-                        <motion.form
-                            key="login"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            onSubmit={handlePasswordLogin}
-                            className="space-y-6"
+                    )} */}
+                    <motion.form
+                        key="login"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        onSubmit={handlePasswordLogin}
+                        className="space-y-6"
+                    >
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Email Address</label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="e.g. seeker@example.com"
+                                required
+                                className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-bold"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between items-end px-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Security Password</label>
+                                <Link href="/auth/forgot-password" title="forgot-password" className="text-[10px] text-blue-600 hover:text-blue-700 font-black uppercase tracking-widest transition-colors">
+                                    Reset?
+                                </Link>
+                            </div>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Enter password"
+                                required
+                                className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-bold"
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full py-5 cursor-pointer bg-slate-900 hover:bg-black disabled:opacity-50 text-white font-black rounded-2xl transition-all shadow-xl shadow-slate-900/10 text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 group active:scale-95 border-none"
                         >
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Email Address</label>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="e.g. seeker@example.com"
-                                    required
-                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-bold"
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <div className="flex justify-between items-end px-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Security Password</label>
-                                    <Link href="/auth/forgot-password" title="forgot-password" className="text-[10px] text-blue-600 hover:text-blue-700 font-black uppercase tracking-widest transition-colors">
-                                        Reset?
-                                    </Link>
-                                </div>
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Enter password"
-                                    required
-                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-bold"
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={isLoading}
-                                className="w-full py-5 bg-slate-900 hover:bg-black disabled:opacity-50 text-white font-black rounded-2xl transition-all shadow-xl shadow-slate-900/10 text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 group active:scale-95 border-none"
-                            >
-                                {isLoading ? "Signing in..." : "Authorize Access"}
-                                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                            </button>
-                        </motion.form>
-                    )}
+                            {isLoading ? "Signing in..." : "Authorize Access"}
+                            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                        </button>
+                    </motion.form>
                 </AnimatePresence>
 
                 {/* Divider */}
-                <div className="flex items-center my-10 px-4">
+                {/* <div className="flex items-center my-10 px-4">
                     <div className="flex-1 border-t border-slate-100" />
-                    <span className="mx-4 text-[9px] text-slate-300 uppercase font-black tracking-[0.3em]">Transition</span>
+                    <span className="mx-4 text-[9px] text-slate-300 uppercase font-black tracking-[0.3em]">Or</span>
                     <div className="flex-1 border-t border-slate-100" />
-                </div>
+                </div> */}
 
                 {/* Google OAuth */}
-                <button
+                {/* <button
                     onClick={handleGoogleLogin}
                     className="w-full flex items-center justify-center gap-3 py-4 bg-white border border-slate-200 text-slate-900 hover:bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all mb-4 shadow-sm active:scale-95"
                 >
@@ -265,10 +265,10 @@ export default function LoginForm() {
                         <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z" />
                     </svg>
                     Google Single Sign-On
-                </button>
+                </button> */}
 
                 {/* Magic Link */}
-                <form onSubmit={handleMagicLink}>
+                {/* <form onSubmit={handleMagicLink}>
                     <button
                         type="submit"
                         disabled={magicLoading || !email}
@@ -276,7 +276,7 @@ export default function LoginForm() {
                     >
                         {magicLoading ? "Sending Signal..." : "Request Magic Link"}
                     </button>
-                </form>
+                </form> */}
             </div>
 
             <p className="mt-10 text-[10px] text-center text-slate-400 font-black uppercase tracking-widest">

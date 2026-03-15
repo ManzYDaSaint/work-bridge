@@ -41,7 +41,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
             </motion.main>
 
             {/* Layout Footer */}
-            <motion.footer
+            {/* <motion.footer
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5, duration: 0.8 }}
@@ -65,7 +65,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
                         </motion.div>
                     ))}
                 </div>
-            </motion.footer>
+            </motion.footer> */}
         </div>
     );
 };

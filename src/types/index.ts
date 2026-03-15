@@ -41,6 +41,9 @@ export interface JobSeeker {
     isSubscribed?: boolean;
     anonymizedSummary?: string;
     topVerificationTier?: number;
+    avatarUrl?: string;
+    hasBadge?: boolean;
+    badgeSeekerNumber?: number;
 }
 
 export interface Employer {
