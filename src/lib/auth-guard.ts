@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "./supabase-server";
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 import { UserRole } from "@/types";
 
 /**
@@ -26,15 +27,41 @@ export async function validateAuth(
     requireApprovedEmployer: boolean = false
 ): Promise<AuthValidationResult> {
     const supabase = await createSupabaseServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (authError || !user) {
-        return {
-            userId: "",
-            role: "JOB_SEEKER",
-            user: null,
-            error: NextResponse.json({ error: "Unauthorized access detected. Please sign in." }, { status: 401 })
-        };
+    // Prefer local cookie session to avoid an Auth API call on every route hit.
+    // Fallback to `getUser()` only when session is absent/stale.
+    const { data: { session } } = await supabase.auth.getSession();
+    let user = session?.user ?? null;
+
+    if (!user) {
+        // If cookies are missing on this request (rare dev cross-origin cases),
+        // accept Authorization: Bearer <access_token> from apiFetch.
+        try {
+            const h = await headers();
+            const raw = h.get("authorization") ?? h.get("Authorization");
+            if (raw?.toLowerCase().startsWith("bearer ")) {
+                const token = raw.slice(7).trim();
+                if (token) {
+                    const { data: { user: fromBearer } } = await supabase.auth.getUser(token);
+                    if (fromBearer) user = fromBearer;
+                }
+            }
+        } catch {
+            // Continue to cookie-based fallback below.
+        }
+
+        if (!user) {
+            const { data: { user: fetched }, error: authError } = await supabase.auth.getUser();
+            if (authError || !fetched) {
+                return {
+                    userId: "",
+                    role: "JOB_SEEKER",
+                    user: null,
+                    error: NextResponse.json({ error: "Unauthorized access detected. Please sign in." }, { status: 401 })
+                };
+            }
+            user = fetched;
+        }
     }
 
     // Check MFA Assurance Level if required

@@ -43,7 +43,46 @@ export async function getIP() {
     return "127.0.0.1";
 }
 
-export function rateLimitResponse() {
+export function rateLimitResponse(request?: Request) {
+    const acceptsHtml = request?.headers.get("accept")?.includes("text/html");
+
+    if (acceptsHtml) {
+        return new NextResponse(
+            `<!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Slow Down | WorkBridge</title>
+                <style>
+                    body { font-family: system-ui, -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-h: 100vh; margin: 0; background: #f8fafc; color: #0f172a; }
+                    .card { background: white; padding: 2.5rem; border-radius: 1.5rem; shadow: 0 25px 50px -12px rgba(0,0,0,0.1); max-width: 400px; text-align: center; border: 1px solid #e2e8f0; }
+                    .icon { font-size: 3rem; margin-bottom: 1rem; }
+                    h1 { font-size: 1.5rem; font-weight: 800; margin: 0 0 0.5rem; color: #1e293b; }
+                    p { font-size: 0.875rem; color: #64748b; line-height: 1.5; margin-bottom: 2rem; }
+                    .btn { display: inline-block; background: #2563eb; color: white; padding: 0.75rem 1.5rem; border-radius: 0.75rem; text-decoration: none; font-weight: 600; font-size: 0.875rem; transition: background 0.2s; }
+                    .btn:hover { background: #1d4ed8; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <div class="icon">⏳</div>
+                    <h1>Slow Down</h1>
+                    <p>You're moving a bit fast for our systems. Please wait a moment before trying again to ensure WorkBridge remains secure for everyone.</p>
+                    <a href="/dashboard" class="btn">Return to Safety</a>
+                </div>
+            </body>
+            </html>`,
+            {
+                status: 429,
+                headers: {
+                    "Content-Type": "text/html",
+                    "Retry-After": "60",
+                }
+            }
+        );
+    }
+
     return NextResponse.json(
         { error: "Too many requests. Please try again later." },
         {

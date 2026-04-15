@@ -1,6 +1,7 @@
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 export async function GET() {
     const auth = await validateAuth(['EMPLOYER']);
@@ -25,9 +26,7 @@ export async function GET() {
             location: "",
             website: "",
             description: "",
-            applicationAlerts: true,
-            hiringVelocity: true,
-            candidatePrivacy: false
+            logoUrl: "",
         });
     }
 
@@ -39,14 +38,14 @@ export async function GET() {
         website: profile.website,
         description: profile.description,
         status: profile.status,
-        applicationAlerts: profile.application_alerts ?? true,
-        hiringVelocity: profile.hiring_velocity ?? true,
-        candidatePrivacy: profile.candidate_privacy ?? false
+        logoUrl: profile.logo_url,
+        plan: profile.plan || 'FREE',
+        recruiterVerified: profile.recruiter_verified ?? false,
     });
 }
 
 export async function PUT(request: Request) {
-    const auth = await validateAuth(['EMPLOYER'], true);
+    const auth = await validateAuth(['EMPLOYER'], false);
     if (auth.error) return auth.error;
 
     const supabase = await createSupabaseServerClient();
@@ -55,9 +54,6 @@ export async function PUT(request: Request) {
         const body = await request.json();
 
         // Ensure defined boolean values are explicitly true/false, default back to their schema defaults otherwise
-        const application_alerts = body.applicationAlerts !== undefined ? body.applicationAlerts : true;
-        const hiring_velocity = body.hiringVelocity !== undefined ? body.hiringVelocity : true;
-        const candidate_privacy = body.candidatePrivacy !== undefined ? body.candidatePrivacy : false;
 
         const { data, error } = await supabase
             .from("employers")
@@ -68,14 +64,17 @@ export async function PUT(request: Request) {
                 location: body.location,
                 website: body.website,
                 description: body.description,
-                application_alerts,
-                hiring_velocity,
-                candidate_privacy
+                logo_url: body.logoUrl,
             })
             .select()
             .single();
 
         if (error) throw error;
+        
+        // Refresh the dashboard and public views
+        revalidatePath("/", "layout");
+        revalidatePath("/dashboard/employer");
+        revalidatePath("/jobs");
 
         return NextResponse.json({ success: true, profile: data });
     } catch (error: any) {

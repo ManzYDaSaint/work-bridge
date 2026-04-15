@@ -1,35 +1,59 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 export async function GET() {
     const supabase = await createSupabaseServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    const { data: notifications, error } = await supabase
         .from("notifications")
         .select("*")
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(50);
 
     if (error) {
-        console.error("Notifications GET error:", error);
-        return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 });
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Format to camelCase
-    const formattedData = data.map(notification => ({
-        id: notification.id,
-        userId: notification.user_id,
-        jobId: notification.job_id,
-        message: notification.message,
-        isRead: notification.is_read,
-        type: notification.type,
-        createdAt: notification.created_at
-    }));
+    return NextResponse.json(notifications);
+}
 
-    return NextResponse.json(formattedData);
+export async function PUT(request: Request) {
+    const supabase = await createSupabaseServerClient();
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id, all } = await request.json();
+
+    if (all) {
+        const { error } = await supabase
+            .from("notifications")
+            .update({ is_read: true })
+            .eq("user_id", user.id)
+            .eq("is_read", false);
+            
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    } else if (id) {
+        const { error } = await supabase
+            .from("notifications")
+            .update({ is_read: true })
+            .eq("user_id", user.id)
+            .eq("id", id);
+            
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Revalidate the entire layout to refresh notification counts everywhere
+    revalidatePath("/", "layout");
+
+    return NextResponse.json({ success: true });
 }

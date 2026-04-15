@@ -19,16 +19,12 @@ CREATE TABLE public.job_seekers (
   completion INTEGER DEFAULT 0,
   is_subscribed BOOLEAN DEFAULT FALSE,
   experience JSONB[], -- Array of objects: { role, company, startDate, endDate, description }
+  education JSONB[], -- Array of objects: { certificate, institution, startDate, endDate, current }
   salary_expectation TEXT,
   seniority_level TEXT,
   employment_type TEXT,
-  anonymized_summary TEXT,
-  top_verification_tier INTEGER DEFAULT -1,
-  email_alias TEXT,
-  privacy_level TEXT DEFAULT 'VERIFIED_ONLY',
-  new_job_alerts BOOLEAN DEFAULT TRUE,
-  app_status_pulse BOOLEAN DEFAULT TRUE,
-  marketing_insights BOOLEAN DEFAULT FALSE
+  has_badge BOOLEAN DEFAULT FALSE,
+  avatar_url TEXT,
 );
 
 -- 3. Employers table
@@ -55,9 +51,16 @@ CREATE TABLE public.jobs (
   description TEXT,
   location TEXT NOT NULL,
   type TEXT NOT NULL, -- e.g., 'FULL_TIME', 'PART_TIME', etc.
+  work_mode TEXT DEFAULT 'REMOTE' CHECK (work_mode IN ('REMOTE', 'HYBRID', 'ON_SITE')),
   skills TEXT[],
+  must_have_skills TEXT[] DEFAULT '{}',
+  nice_to_have_skills TEXT[] DEFAULT '{}',
+  minimum_years_experience INTEGER DEFAULT 0,
+  qualification TEXT,
+  screening_questions JSONB DEFAULT '[]'::jsonb,
   salary_range TEXT,
-  status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+  deadline DATE,
+  status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'ACTIVE', 'EXPIRED', 'FILLED')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -67,6 +70,11 @@ CREATE TABLE public.applications (
   job_id UUID REFERENCES public.jobs(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
   status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACCEPTED', 'REJECTED', 'SHORTLISTED', 'INTERVIEWING', 'INVITED')),
+  screening_answers JSONB DEFAULT '{}'::jsonb,
+  screening_score INTEGER DEFAULT 0,
+  screening_summary TEXT,
+  screening_breakdown JSONB DEFAULT '[]'::jsonb,
+  meets_required_criteria BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   UNIQUE(job_id, user_id) -- Prevent double applications
 );
@@ -94,15 +102,7 @@ CREATE TABLE public.audit_logs (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 8. Notes table
-CREATE TABLE public.notes (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
-  content TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 9. Subscriptions table
+-- 8. Subscriptions table
 CREATE TABLE public.subscriptions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
@@ -112,7 +112,7 @@ CREATE TABLE public.subscriptions (
   end_date TIMESTAMP WITH TIME ZONE
 );
 
--- 10. Transactions table
+-- 9. Transactions table
 CREATE TABLE public.transactions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
@@ -124,7 +124,7 @@ CREATE TABLE public.transactions (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 11. Certificates table (Job Seeker credentials)
+-- 10. Certificates table (Job Seeker credentials)
 CREATE TABLE public.certificates (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   seeker_id UUID REFERENCES public.job_seekers(id) ON DELETE CASCADE NOT NULL,
@@ -133,13 +133,11 @@ CREATE TABLE public.certificates (
   issue_date DATE,
   credential_url TEXT,
   is_verified BOOLEAN DEFAULT FALSE,
-  verification_tier INTEGER DEFAULT -1, -- -1: Unverified, 0-4: Tiers
-  verification_confidence NUMERIC,
-  verification_summary TEXT,
+  verification_tier INTEGER DEFAULT -1, -- -1: Manual review pending/unverified, 0-4: internal tiers
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 12. Profile Reveals table (Privacy management)
+-- 11. Profile Reveals table (Privacy management)
 CREATE TABLE public.profile_reveals (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   employer_id UUID REFERENCES public.employers(id) ON DELETE CASCADE NOT NULL,
@@ -166,7 +164,6 @@ ALTER TABLE public.jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profile_reveals ENABLE ROW LEVEL SECURITY;
@@ -201,6 +198,27 @@ CREATE POLICY "Approved employers can view full seeker profile" ON public.job_se
 
 
 -- 12. Automated Auditing Triggers
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = auth.uid() AND role = 'ADMIN'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RLS Policies for users
+CREATE POLICY "Users can view own profile" ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Admins can manage all users" ON public.users FOR ALL USING (public.is_admin());
+
+-- RLS Policies for employers
+CREATE POLICY "Employers can manage own profile" ON public.employers FOR ALL USING (auth.uid() = id);
+CREATE POLICY "Admins can manage all employers" ON public.employers FOR ALL USING (public.is_admin());
+
+-- RLS Policies for jobs
+CREATE POLICY "Admins can manage all jobs" ON public.jobs FOR ALL USING (public.is_admin());
+
 CREATE OR REPLACE FUNCTION public.audit_trigger_function()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -374,4 +392,27 @@ CREATE POLICY "Seekers can manage own saved jobs" ON public.saved_jobs
 CREATE TRIGGER audit_saved_jobs_trigger
 AFTER INSERT OR UPDATE OR DELETE ON public.saved_jobs
 FOR EACH ROW EXECUTE FUNCTION public.audit_trigger_function();
+
+-- Public /jobs feed (anonymous read). Safe to re-run in SQL editor only if policies missing.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policy
+        WHERE polrelid = 'public.jobs'::regclass AND polname = 'Public can view active jobs'
+    ) THEN
+        CREATE POLICY "Public can view active jobs" ON public.jobs
+            FOR SELECT TO anon USING (status = 'ACTIVE');
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policy
+        WHERE polrelid = 'public.employers'::regclass AND polname = 'Public can view employer basic info'
+    ) THEN
+        CREATE POLICY "Public can view employer basic info" ON public.employers
+            FOR SELECT TO anon USING (true);
+    END IF;
+END $$;
 

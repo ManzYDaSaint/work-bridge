@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { UserPlus, Search, Send, Briefcase, CheckCircle, FileText, Zap, MessageSquare, Shield } from "lucide-react";
+import { UserPlus, Search, Send, Briefcase, CheckCircle, FileText, Zap, Shield, ShieldCheck } from "lucide-react";
 
 const Tag = Search; // Using Search as a proxy for Tag/Match icon
 
@@ -15,13 +15,13 @@ const seekerSteps = [
     },
     {
         title: "Get Verified",
-        description: "Upload certificates and earn the AI-Verified Bio Badge to boost trust.",
+        description: "Upload certificates and complete your profile to build trust with employers.",
         icon: Shield,
         color: "bg-indigo-500",
     },
     {
-        title: "Anonymized Match",
-        description: "Get discovered by employers through secure, privacy-first AI summaries.",
+        title: "Structured Discovery",
+        description: "Get discovered through clear skills, experience, and privacy-first profile details.",
         icon: Zap,
         color: "bg-sky-500",
     },
@@ -36,20 +36,17 @@ const seekerSteps = [
 const employerSteps = [
     {
         title: "Define Goals",
-        description: "Post job requirements focusing on intent and long-term project goals.",
+        description: "Post clear job requirements, must-have skills, and knockout questions.",
         icon: FileText,
         color: "bg-blue-600",
     },
     {
-        title: "Semantic Discovery",
-        description: "Find verified talent matched by semantic alignment, not just keywords.",
+        title: "Review Fit",
+        description: "Compare candidates using transparent checklists instead of black-box scores.",
         icon: Search,
         color: "bg-indigo-600",
     },
-    {
-        title: "Request Reveal",
-        description: "Connect with anonymous candidates by requesting full profile access.",
-        icon: MessageSquare,
+        icon: ShieldCheck,
         color: "bg-sky-600",
     },
     {

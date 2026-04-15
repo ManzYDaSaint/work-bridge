@@ -2,115 +2,108 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { Application } from "@/types";
-import { motion } from "framer-motion";
-import { ChevronRight, Briefcase } from "lucide-react";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { Briefcase, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { PageHeader, EmptyState, Badge } from "@/components/dashboard/ui";
+import JobDetailModal, { ExtendedJob } from "@/components/jobs/JobDetailModal";
 
-const STATUS_CONFIG: Record<string, { label: string; ringColor: string; bg: string; text: string }> = {
-    PENDING: { label: "Applied", ringColor: "border-slate-300", bg: "bg-slate-100", text: "text-slate-600" },
-    INVITED: { label: "Shortlisted", ringColor: "border-purple-400", bg: "bg-purple-50", text: "text-purple-700" },
-    ACCEPTED: { label: "Interview", ringColor: "border-green-400", bg: "bg-green-50", text: "text-green-700" },
-    REJECTED: { label: "Seeing off", ringColor: "border-red-400", bg: "bg-red-50", text: "text-red-600" },
-};
+interface AppEntry {
+    id: string;
+    jobId: string;
+    status: string;
+    createdAt: string;
+    job: ExtendedJob | null;
+}
 
 export default function ApplicationsPage() {
-    const [applications, setApplications] = useState<Application[]>([]);
+    const [applications, setApplications] = useState<AppEntry[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedJob, setSelectedJob] = useState<ExtendedJob | null>(null);
 
     useEffect(() => {
-        const fetchApplications = async () => {
+        const fetchData = async () => {
             try {
-                const res = await apiFetch("/applications");
+                const res = await apiFetch("/api/applications");
                 if (res.ok) setApplications(await res.json());
             } finally {
                 setLoading(false);
             }
         };
-        fetchApplications();
+        fetchData();
     }, []);
 
-    if (loading) return (
-        <div className="space-y-3">
-            {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-20 bg-white rounded-2xl border border-slate-200 animate-pulse" />
-            ))}
-        </div>
-    );
+    const handleWithdraw = async (appId: string) => {
+        setApplications((prev) => prev.filter((a) => a.id !== appId));
+        try {
+            const res = await apiFetch(`/api/applications/${appId}`, { method: "DELETE" });
+            if (!res.ok) toast.error("Failed to withdraw application.");
+        } catch {
+            toast.error("Failed to withdraw application.");
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex min-h-[60vh] items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-[#16324f]" />
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-6">
-            {/* Page Header */}
-            <div>
-                <h2 className="text-xl font-black text-slate-900">Applied Jobs</h2>
-                <p className="text-sm text-slate-400 mt-0.5">{applications.length} application{applications.length !== 1 ? "s" : ""} found</p>
-            </div>
+        <div className="space-y-6 pb-20">
+            <PageHeader title="Applications" subtitle={`You have ${applications.length} active application${applications.length === 1 ? "" : "s"}.`} />
 
             {applications.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-slate-200 py-20 flex flex-col items-center gap-4 text-center px-10">
-                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
-                        <Briefcase size={28} className="text-slate-400" />
-                    </div>
-                    <div>
-                        <p className="font-bold text-slate-700 text-base">No Applications Yet</p>
-                        <p className="text-sm text-slate-400 mt-1 max-w-xs">Start exploring opportunities and apply to positions that match your skills and career goals.</p>
-                    </div>
-                    <Link href="/dashboard/seeker" className="mt-2 px-6 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors">
-                        Browse Jobs
-                    </Link>
+                <div className="rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
+                    <EmptyState icon={Briefcase} title="No applications yet" description="Browse the board and apply to roles that match your profile." action={{ label: "Browse jobs", href: "/jobs" }} iconColor="text-[#16324f]" />
                 </div>
             ) : (
-                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                    {/* Table header */}
-                    <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr] px-6 py-3 border-b border-slate-100 bg-slate-50">
-                        {["Job Title", "Company", "Date Applied", "Status"].map(h => (
-                            <span key={h} className="text-xs font-bold text-slate-400 uppercase tracking-wider">{h}</span>
-                        ))}
+                <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
+                    <div className="hidden sm:grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] gap-2 border-b border-stone-200/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:border-slate-800">
+                        <span>Role</span>
+                        <span>Status</span>
+                        <span className="sm:text-right">Action</span>
                     </div>
-
-                    <div className="divide-y divide-slate-100">
-                        {applications.map((app, idx) => {
-                            const cfg = STATUS_CONFIG[app.status] ?? STATUS_CONFIG.PENDING;
-                            return (
-                                <motion.div
-                                    key={app.id}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: idx * 0.04 }}
-                                    className="grid grid-cols-[2fr_1.5fr_1fr_1fr] px-6 py-4 items-center hover:bg-slate-50 transition-colors"
-                                >
-                                    {/* Job */}
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-600 text-sm flex-shrink-0">
-                                            {app.job?.employer?.companyName?.[0] ?? "?"}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-900">{app.job?.title ?? "Unknown"}</p>
-                                            <p className="text-xs text-slate-400">{app.job?.location ?? ""} · {app.job?.type ?? ""}</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Company */}
-                                    <p className="text-sm text-slate-600 font-medium">{app.job?.employer?.companyName ?? "—"}</p>
-
-                                    {/* Date */}
-                                    <p className="text-sm text-slate-500">
-                                        {app.createdAt ? new Date(app.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
-                                    </p>
-
-                                    {/* Status badge */}
-                                    <span className={cn(
-                                        "inline-flex self-start px-4 py-1.5 rounded-full border text-xs font-bold",
-                                        cfg.ringColor, cfg.bg, cfg.text
-                                    )}>
-                                        {cfg.label}
-                                    </span>
-                                </motion.div>
-                            );
-                        })}
-                    </div>
+                    {applications.map((app) => (
+                        <div key={app.id} className="grid grid-cols-1 gap-4 border-b border-stone-200/70 px-4 py-4 last:border-b-0 dark:border-slate-800 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-4">
+                            <button type="button" onClick={() => app.job && setSelectedJob(app.job)} className="min-w-0 text-left">
+                                <p className="truncate text-sm font-semibold text-slate-900 dark:text-white sm:text-base">{app.job?.title || "Unknown role"}</p>
+                                <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">{app.job?.employer?.companyName || "Company"}</p>
+                            </button>
+                            <div className="flex items-center gap-2">
+                                <Badge 
+                                    label={app.status} 
+                                    variant={
+                                        app.status === "ACCEPTED" || app.status === "SHORTLISTED" ? "green" : 
+                                        app.status === "INTERVIEWING" ? "blue" :
+                                        app.status === "REJECTED" ? "red" : 
+                                        "yellow"
+                                    } 
+                                />
+                            </div>
+                            <div className="flex items-center justify-between gap-3 sm:justify-end">
+                                <button onClick={() => app.job && setSelectedJob(app.job)} className="text-sm font-semibold text-[#16324f] hover:underline dark:text-slate-200">
+                                    View details
+                                </button>
+                                <button onClick={() => handleWithdraw(app.id)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-stone-200 text-slate-500 hover:text-red-600 dark:border-slate-700 dark:text-slate-300">
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
                 </div>
+            )}
+
+            {selectedJob && (
+                <JobDetailModal
+                    job={selectedJob}
+                    isSaved={false}
+                    isApplied={true}
+                    onClose={() => setSelectedJob(null)}
+                    onSave={() => { }}
+                    onApply={() => { }}
+                />
             )}
         </div>
     );

@@ -2,131 +2,251 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { Job } from "@/types";
-import { Briefcase, PlusCircle, Calendar, Users, MapPin, Loader2, ChevronRight, Edit3, Sparkles } from "lucide-react";
-import { PageHeader, EmptyState, Badge } from "@/components/dashboard/ui";
+import { User, Job, Employer } from "@/types";
+import { Briefcase, PlusCircle, Loader2, Pencil, Trash2, RefreshCw, ArrowRightLeft, Lock, CheckCircle, Link as LinkIcon } from "lucide-react";
+import { PageHeader, EmptyState, Badge, Tabs, Pagination } from "@/components/dashboard/ui";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 export default function EmployerJobsPage() {
     const [jobs, setJobs] = useState<Job[]>([]);
+    const [employerProfile, setEmployerProfile] = useState<Employer | null>(null);
     const [loading, setLoading] = useState(true);
+    const [deleting, setDeleting] = useState<string | null>(null);
+    const [reposting, setReposting] = useState<string | null>(null);
+    const [closing, setClosing] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const router = useRouter();
+
+    const fetchJobs = async (tab: string, page: number) => {
+        setLoading(true);
+        try {
+            const res = await apiFetch(`/api/jobs/my-jobs?status=${tab}&page=${page}&limit=8`);
+            if (res.ok) {
+                const data = await res.json();
+                setJobs(data.jobs);
+                setTotalPages(data.totalPages);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchJobs = async () => {
+        fetchJobs(activeTab, currentPage);
+    }, [activeTab, currentPage]);
+
+    useEffect(() => {
+        const fetchUser = async () => {
             try {
-                const res = await apiFetch("/api/jobs/my-jobs");
+                const res = await apiFetch("/api/me");
                 if (res.ok) {
-                    setJobs(await res.json());
+                    const data: User = await res.json();
+                    if (data.role !== "EMPLOYER") {
+                        router.push("/dashboard");
+                    } else {
+                        setEmployerProfile(data.employer ?? null);
+                    }
+                } else {
+                    router.push("/login");
                 }
-            } finally {
-                setLoading(false);
+            } catch {
+                router.push("/login");
             }
         };
-        fetchJobs();
-    }, []);
+        fetchUser();
+    }, [router]);
 
-    if (loading) return (
-        <div className="flex items-center justify-center min-h-[60vh]">
-            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-        </div>
-    );
+    const handleDelete = async (jobId: string) => {
+        if (!confirm("Delete this role? This cannot be undone.")) return;
+        setDeleting(jobId);
+        try {
+            const res = await apiFetch(`/api/jobs/${jobId}`, { method: "DELETE" });
+            if (res.ok) {
+                setJobs((prev) => prev.filter((job) => job.id !== jobId));
+            }
+        } finally {
+            setDeleting(null);
+        }
+    };
+
+    const handleRepost = async (jobId: string) => {
+        const newDeadline = prompt(
+            "Enter a new deadline (YYYY-MM-DD):",
+            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+        );
+        if (!newDeadline) return;
+
+        setReposting(jobId);
+        try {
+            const res = await apiFetch(`/api/jobs/${jobId}`, {
+                method: "POST",
+                body: JSON.stringify({ deadline: newDeadline }),
+            });
+            if (res.ok) {
+                fetchJobs(activeTab, currentPage);
+            }
+        } finally {
+            setReposting(null);
+        }
+    };
+
+    const handleCloseJob = async (jobId: string) => {
+        if (!confirm("Mark this role as filled? It will be removed from the public board.")) return;
+        setClosing(jobId);
+        try {
+            const res = await apiFetch(`/api/jobs/${jobId}`, {
+                method: "PATCH",
+                body: JSON.stringify({ status: "FILLED" }),
+            });
+            if (res.ok) {
+                fetchJobs(activeTab, currentPage);
+            }
+        } finally {
+            setClosing(null);
+        }
+    };
+
+    const handleCopyLink = (jobId: string) => {
+        const url = `${window.location.origin}/jobs/${jobId}`;
+        navigator.clipboard.writeText(url);
+        // Optional: you could add a tiny toast here if you have sonner/toast imported
+        // toast.success("Link copied!");
+    };
+
+    const isApproved = employerProfile?.status === "APPROVED";
+    const tabs = [
+        { id: "all", label: "All" },
+        { id: "ACTIVE", label: "Active" },
+        { id: "EXPIRED", label: "Expired" },
+        { id: "FILLED", label: "Filled" },
+    ];
+
+    if (loading && jobs.length === 0) {
+        return (
+            <div className="flex min-h-[60vh] items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-[#16324f]" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 pb-20">
             <PageHeader
-                title="Operational Intelligence"
-                subtitle="High-performance management of your active job postings"
-                action={{ label: "Deploy New Role", icon: PlusCircle, href: "/dashboard/employer/jobs/new" }}
+                title="Manage roles"
+                subtitle="A faster role list with clear status, quick edits, and fewer clicks."
+                action={
+                    isApproved
+                        ? { label: "Post role", icon: PlusCircle, href: "/dashboard/employer/jobs/new" }
+                        : { label: "Pending approval", icon: Lock, href: "/dashboard/employer", disabled: true }
+                }
             />
 
-            <div className="space-y-4">
-                {jobs.length === 0 ? (
-                    <div className="bg-white rounded-2xl border border-slate-200">
-                        <EmptyState
-                            icon={Briefcase}
-                            title="No Active Postings"
-                            description="Strategic hiring begins with a single listing. Create your first operational requirement."
-                            action={{ label: "Initialize Job Post", href: "/dashboard/employer/jobs/new" }}
-                            iconColor="text-blue-500"
-                        />
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 gap-4">
-                        {jobs.map((job, idx) => (
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.1 }}
-                                key={job.id}
-                                className="glass-effect p-6 rounded-3xl border border-slate-200 dark:border-slate-800/50 hover:shadow-xl hover:border-blue-500/30 transition-all group overflow-hidden relative"
-                            >
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl -z-10 group-hover:bg-blue-500/10 transition-colors" />
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                                                <Briefcase size={20} />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-lg font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">{job.title}</h3>
-                                                <div className="flex items-center gap-4 mt-1">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                        <MapPin size={12} className="text-blue-500" /> {job.location}
-                                                    </span>
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                        <Calendar size={12} className="text-indigo-500" /> {job.createdAt ? new Date(job.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Recently"}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2 pt-1">
-                                            <Badge label={job.type.replace("_", " ")} variant="blue" />
-                                            {job.skills?.slice(0, 3).map((s, i) => (
-                                                <Badge key={i} label={s} variant="slate" />
-                                            ))}
-                                            {job.skills && job.skills.length > 3 && (
-                                                <span className="text-[9px] font-black text-slate-400 self-center">+{job.skills.length - 3} More</span>
-                                            )}
-                                        </div>
-                                    </div>
+            <Tabs
+                tabs={tabs}
+                activeTab={activeTab}
+                onChange={(id) => {
+                    setActiveTab(id);
+                    setCurrentPage(1);
+                }}
+            />
 
-                                    <div className="flex items-center gap-8 md:gap-12">
-                                        <div className="text-center">
-                                            <p className="text-2xl font-black text-slate-900 dark:text-white leading-none">{job._count?.applications || 0}</p>
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-1.5 justify-center">
-                                                <Users size={12} className="text-green-500" /> Applicants
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <Link
-                                                href={`/dashboard/employer/jobs/${job.id}`}
-                                                className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-white dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-700 shadow-sm"
-                                            >
-                                                <Edit3 size={18} />
-                                            </Link>
-                                            <Link
-                                                href={`/dashboard/employer/jobs/${job.id}/discover`}
-                                                className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all border border-blue-100 dark:border-blue-800 shadow-sm"
-                                                title="AI Discovery Match"
-                                            >
-                                                <Sparkles size={18} />
-                                            </Link>
-                                            <Link
-                                                href={`/dashboard/employer/candidates?jobId=${job.id}`}
-                                                className="h-12 px-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 dark:hover:bg-blue-500 transition-all shadow-xl group/btn"
-                                            >
-                                                Review Pipeline
-                                                <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-                                            </Link>
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
+            {jobs.length === 0 ? (
+                <div className="rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
+                    <EmptyState
+                        icon={Briefcase}
+                        title={activeTab === "all" ? "No roles yet" : `No ${activeTab.toLowerCase()} roles`}
+                        description="Keep this area focused on active hiring. Add a role when you're ready."
+                        action={isApproved && activeTab === "all" ? { label: "Post a role", href: "/dashboard/employer/jobs/new" } : undefined}
+                        iconColor="text-[#16324f]"
+                    />
+                </div>
+            ) : (
+                <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
+                    <div className="grid grid-cols-1 gap-2 border-b border-stone-200/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:border-slate-800 sm:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_auto]">
+                        <span>Role</span>
+                        <span>Status</span>
+                        <span className="sm:text-right">Actions</span>
                     </div>
-                )}
-            </div>
+
+                    {jobs.map((job) => (
+                        <div key={job.id} className="grid grid-cols-1 gap-4 border-b border-stone-200/70 px-4 py-4 last:border-b-0 dark:border-slate-800 sm:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_auto] sm:items-center">
+                            <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{job.title}</p>
+                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                    {job.location} · {job.type.replace(/_/g, " ")}
+                                    {job.work_mode ? ` · ${job.work_mode.replace(/_/g, " ")}` : ""}
+                                </p>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Badge label={job.status} variant={job.status === "ACTIVE" ? "green" : job.status === "FILLED" ? "blue" : "slate"} />
+                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                    {job._count?.applications || 0} applicants
+                                    {job._count?.shortlisted ? ` (${job._count.shortlisted} shortlisted)` : ""}
+                                </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 sm:justify-end">
+                                {job.status === "EXPIRED" && (
+                                    <button
+                                        onClick={() => handleRepost(job.id)}
+                                        disabled={reposting === job.id}
+                                        className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300"
+                                        title="Repost"
+                                    >
+                                        {reposting === job.id ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                                    </button>
+                                )}
+                                
+                                {job.status === "ACTIVE" && (
+                                    <button
+                                        onClick={() => handleCopyLink(job.id)}
+                                        className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300"
+                                        title="Copy Link"
+                                    >
+                                        <LinkIcon size={16} />
+                                    </button>
+                                )}
+
+                                {job.status === "ACTIVE" && (
+                                    <button
+                                        onClick={() => handleCloseJob(job.id)}
+                                        disabled={closing === job.id}
+                                        className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-emerald-600 dark:border-slate-700 dark:text-slate-300"
+                                        title="Mark as Filled"
+                                    >
+                                        {closing === job.id ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                                    </button>
+                                )}
+
+                                <Link href={`/dashboard/employer/jobs/${job.id}/edit`} className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300" title="Edit">
+                                    <Pencil size={16} />
+                                </Link>
+                                <button
+                                    onClick={() => handleDelete(job.id)}
+                                    disabled={deleting === job.id}
+                                    className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-red-600 dark:border-slate-700 dark:text-slate-300"
+                                    title="Delete"
+                                >
+                                    {deleting === job.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                </button>
+                                <Link
+                                    href={`/dashboard/employer/candidates?jobId=${job.id}`}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-[#16324f] px-3 py-2 text-xs font-semibold text-white hover:opacity-90"
+                                >
+                                    Pipeline
+                                    <ArrowRightLeft size={14} />
+                                </Link>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
     );
 }

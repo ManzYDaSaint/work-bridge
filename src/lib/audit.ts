@@ -6,7 +6,7 @@ import { sendAdminSecurityAlert } from "./resend";
  * -------------------------
  * 1. DATABASE AUTOMATED: INSERT, UPDATE, DELETE on high-risk tables (users, jobs, etc.)
  *    are handled by 'audit_trigger_function' in Postgres.
- * 2. MANUAL EVENTS: Auth attempts, data exports, AI anonymization, and other non-CRUD
+ * 2. MANUAL EVENTS: Auth attempts, data exports, profile redaction, and other non-CRUD
  *    events should use this recordAuditLog function.
  */
 

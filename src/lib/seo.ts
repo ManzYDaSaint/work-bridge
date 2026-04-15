@@ -6,15 +6,21 @@ interface SEOProps {
     canonical?: string;
     ogImage?: string;
     noIndex?: boolean;
+    jobId?: string;
 }
 
 export function constructMetadata({
-    title = "WorkBridge - AI-Powered Talent Discovery & Recruitment",
-    description = "WorkBridge connects elite organizations with verified, high-performance professionals through objective AI matching.",
+    title = "WorkBridge - Malawi's modern job board",
+    description = "Browse remote, hybrid, and on-site jobs with a calm, fast experience built for Malawi and beyond.",
     canonical = "/",
     ogImage = "/og-image.png",
     noIndex = false,
+    jobId,
 }: SEOProps = {}): Metadata {
+    const finalOgImage = jobId
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/og/job/${jobId}`
+        : ogImage;
+
     return {
         title,
         description,
@@ -25,7 +31,7 @@ export function constructMetadata({
             siteName: "WorkBridge",
             images: [
                 {
-                    url: ogImage,
+                    url: finalOgImage,
                 },
             ],
             type: "website",
@@ -34,7 +40,7 @@ export function constructMetadata({
             card: "summary_large_image",
             title,
             description,
-            images: [ogImage],
+            images: [finalOgImage],
             creator: "Emmanuel Nyangazie",
         },
         alternates: {

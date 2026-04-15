@@ -1,7 +1,24 @@
 export type UserRole = 'JOB_SEEKER' | 'EMPLOYER' | 'ADMIN';
 export type EmployerStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type JobStatus = 'ACTIVE' | 'EXPIRED' | 'FILLED' | 'ARCHIVED' | 'PENDING' | 'REJECTED';
 export type JobType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP';
+export type JobWorkMode = 'REMOTE' | 'HYBRID' | 'ON_SITE';
 export type ApplicationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SHORTLISTED' | 'INTERVIEWING' | 'INVITED';
+export type ScreeningAnswer = 'YES' | 'NO';
+
+export interface ScreeningQuestion {
+    id: string;
+    question: string;
+    expectedAnswer: ScreeningAnswer;
+    required: boolean;
+}
+
+export interface ScreeningBreakdownItem {
+    label: string;
+    met: boolean;
+    detail: string;
+    required?: boolean;
+}
 
 export interface Certificate {
     id: string;
@@ -16,19 +33,15 @@ export interface Certificate {
 
 export interface JobSeeker {
     id: string;
-    fullName: string;
+    full_name: string;
     bio?: string;
     location?: string;
+    phone?: string;
+    whatsapp?: boolean;
     skills?: string[];
-    certificates?: Certificate[];
     salaryExpectation?: string;
     seniorityLevel?: string;
     employmentType?: string;
-    emailAlias?: string;
-    privacyLevel?: string;
-    newJobAlerts?: boolean;
-    appStatusPulse?: boolean;
-    marketingInsights?: boolean;
     experience?: Array<{
         role: string;
         company: string;
@@ -36,18 +49,23 @@ export interface JobSeeker {
         endDate?: string;
         description: string;
     }>;
-    resume_url?: string;
     completion?: number;
     isSubscribed?: boolean;
-    anonymizedSummary?: string;
-    topVerificationTier?: number;
     avatarUrl?: string;
     hasBadge?: boolean;
-    badgeSeekerNumber?: number;
+    qualification?: string | null;
+    preferredWorkModes?: string[];
+    preferredJobTypes?: string[];
+    preferredLocations?: string[];
+    preferredSkills?: string[];
+    education?: Array<Record<string, unknown>>;
+    /** Filled by GET /api/me and server layouts */
+    applicationsThisMonth?: number;
 }
 
 export interface Employer {
     id: string; // References Users primary key
+    company_name: string;
     companyName: string;
     industry?: string;
     location?: string;
@@ -55,9 +73,11 @@ export interface Employer {
     description?: string;
     status: EmployerStatus;
     profile_views: number;
-    applicationAlerts?: boolean;
-    hiringVelocity?: boolean;
-    candidatePrivacy?: boolean;
+    logo_url?: string;
+    logoUrl?: string;
+    plan?: 'FREE' | 'PREMIUM';
+    planExpiresAt?: string;
+    recruiterVerified?: boolean;
     _count?: {
         jobs: number;
     };
@@ -70,6 +90,8 @@ export interface User {
     jobSeeker?: JobSeeker;
     employer?: Employer;
     createdAt?: string;
+    onboardingComplete?: boolean;
+    onboardingCompletedAt?: string | null;
 }
 
 export interface Job {
@@ -78,16 +100,27 @@ export interface Job {
     description?: string;
     location: string;
     type: JobType | string;
+    work_mode?: JobWorkMode | string;
+    status: JobStatus;
     skills: string[];
     salary_range?: string;
+    must_have_skills?: string[];
+    nice_to_have_skills?: string[];
+    minimum_years_experience?: number | null;
+    qualification?: string | null;
+    screening_questions?: ScreeningQuestion[] | null;
     employer: {
+        company_name: string;
         companyName: string;
         id?: string;
+        logoUrl?: string | null;
     };
     _count?: {
         applications: number;
+        shortlisted?: number;
     };
     isNew?: boolean;
+    deadline?: string;
     createdAt?: string;
 }
 
@@ -96,6 +129,11 @@ export interface Application {
     jobId: string;
     userId: string;
     status: ApplicationStatus;
+    screeningScore?: number;
+    meetsRequiredCriteria?: boolean;
+    screeningSummary?: string;
+    screeningBreakdown?: ScreeningBreakdownItem[];
+    screeningAnswers?: Record<string, ScreeningAnswer>;
     user?: User;
     job?: Job;
     createdAt?: string;
@@ -111,19 +149,10 @@ export interface AppNotification {
     jobId?: string;
 }
 
-export interface Note {
-    id: string;
-    content: string;
-    userId: string;
-    createdAt: string;
-}
-
 export interface Subscription {
     id: string;
     userId: string;
     plan: 'FREE' | 'PREMIUM';
-    status: 'ACTIVE' | 'CANCELED' | 'EXPIRED';
-    startDate: string;
     endDate?: string;
 }
 
@@ -169,27 +198,6 @@ export interface AuditLogResponse {
     offset: number;
 }
 
-export interface Conversation {
-    id: string;
-    seekerId: string;
-    employerId: string;
-    lastMessage?: string;
-    lastMessageAt?: string;
-    createdAt: string;
-    // Joined data
-    seeker?: JobSeeker;
-    employer?: Employer;
-    unreadCount?: number;
-}
-
-export interface Message {
-    id: string;
-    conversationId: string;
-    senderId: string;
-    content: string;
-    isRead: boolean;
-    createdAt: string;
-}
 
 export interface SavedJob {
     id: string;

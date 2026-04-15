@@ -1,0 +1,5 @@
+console.log("NEXT_PUBLIC_SUPABASE_URL:", !!process.env.NEXT_PUBLIC_SUPABASE_URL);
+console.log("NEXT_SUPABASE_SERVICE_ROLE_KEY:", !!process.env.NEXT_SUPABASE_SERVICE_ROLE_KEY);
+console.log("SUPABASE_SERVICE_ROLE_KEY:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+console.log("NEXT_SUPABASE_SERVICE_KEY:", !!process.env.NEXT_SUPABASE_SERVICE_KEY);
+console.log("SERVICE_ROLE_KEY:", !!process.env.SERVICE_ROLE_KEY);

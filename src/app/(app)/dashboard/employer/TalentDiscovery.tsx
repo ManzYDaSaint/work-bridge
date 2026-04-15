@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
-import { Sparkles, Shield, MapPin, ChevronRight, Lock, Loader2, CheckCircle2 } from "lucide-react";
-import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { Sparkles, Shield, MapPin, ChevronRight, Loader2, CheckCircle2, Lock } from "lucide-react";
+import { Badge, EmptyState, SectionCard } from "@/components/dashboard/ui";
 import { requestProfileReveal } from "./actions";
+import { toast } from "sonner";
 
 interface Talent {
     id: string;
@@ -15,8 +15,6 @@ interface Talent {
     location: string;
     revealStatus: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
 }
-
-import { toast } from "sonner";
 
 const TIERS = ["Cert", "Dip", "BSc", "MSc", "PhD"];
 
@@ -44,8 +42,8 @@ export function TalentDiscovery({ initialTalent, isApproved = true }: { initialT
                     setTalent(data);
                 } else if (res.status === 403) {
                     const err = await res.json();
-                    if (err.code === 'EMPLOYER_PENDING') {
-                        // Silence error, the UI will reflect this via isApproved
+                    if (err.code === "EMPLOYER_PENDING") {
+                        return;
                     }
                 }
             } catch (err) {
@@ -59,132 +57,115 @@ export function TalentDiscovery({ initialTalent, isApproved = true }: { initialT
 
     const handleRevealRequest = async (seekerId: string) => {
         if (!isApproved) {
-            toast.error("Verification Required. Your account must be approved to request profile reveals.");
+            toast.error("Verification required before requesting full profiles.");
             return;
         }
         const res = await requestProfileReveal(seekerId);
         if (res.success) {
-            toast.success("Request Sent Successfully");
-            setTalent(prev => prev.map(t =>
-                t.id === seekerId ? { ...t, revealStatus: "PENDING" } : t
-            ));
+            toast.success("Profile request sent");
+            setTalent((prev) => prev.map((t) => (t.id === seekerId ? { ...t, revealStatus: "PENDING" } : t)));
         } else if (res.error) {
             toast.error(res.error);
         }
     };
 
-    if (loading) return (
-        <div className="py-20 flex justify-center">
-            <Loader2 className="animate-spin text-blue-600" size={32} />
-        </div>
-    );
-
-    if (!isApproved && talent.length === 0) {
+    if (loading) {
         return (
-            <div className="py-20 bg-white rounded-[2.5rem] border border-slate-100 flex flex-col items-center text-center px-10">
-                <div className="w-20 h-20 rounded-[2rem] bg-amber-50 flex items-center justify-center text-amber-600 mb-6 shadow-inner">
-                    <Shield size={40} />
-                </div>
-                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Talent Access Restriced</h3>
-                <p className="text-sm font-medium text-slate-500 mt-2 max-w-sm">
-                    To maintain our elite marketplace integrity, talent discovery is restricted until your corporate profile audit is complete.
-                </p>
-                <div className="mt-8 flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
-                    <Lock size={12} className="text-amber-500" /> Professional verification in progress
-                </div>
+            <div className="py-20 flex justify-center">
+                <Loader2 className="animate-spin text-blue-600" size={32} />
             </div>
         );
     }
 
+    if (!isApproved && talent.length === 0) {
+        return (
+            <SectionCard title="Talent matches">
+                <EmptyState
+                    icon={Shield}
+                    title="Talent search is locked until approval"
+                    description="Employers can browse anonymized candidate profiles once the company profile review is complete."
+                    iconColor="text-amber-600"
+                />
+            </SectionCard>
+        );
+    }
+
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between px-2">
-                <div className="flex items-center gap-2">
-                    <Sparkles className="text-blue-600" size={20} />
-                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Anonymized Talent Pool</h3>
+        <SectionCard title="Talent matches">
+            <div className="space-y-4 p-6">
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="text-[#16324f]" size={16} />
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Anonymized profiles ranked by skills and fit.</p>
+                    </div>
+                    <Badge label={`${talent.length} matches`} variant="slate" />
                 </div>
-                <span className="text-xs font-bold text-slate-400">{talent.length} Matches Found</span>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {talent.map((t, idx) => (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        key={t.id}
-                        className="bg-white rounded-[2.5rem] border border-slate-200 p-8 hover:border-blue-400 transition-all group relative overflow-hidden"
-                    >
-                        {/* Status Badge */}
-                        <div className="absolute top-6 right-8">
-                            {t.tier >= 0 ? (
-                                <div className="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-100/50">
-                                    <Shield size={12} />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Verified {TIERS[t.tier] || "Degree"}</span>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-1.5 bg-slate-50 text-slate-400 px-3 py-1 rounded-full border border-slate-100">
-                                    <Lock size={12} />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Basic Profile</span>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="space-y-6">
-                            <div className="flex items-start gap-4">
-                                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-400 font-black text-xl flex-shrink-0 shadow-inner">
-                                    {idx + 1}
-                                </div>
-                                <div className="pt-1">
-                                    <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        <MapPin size={12} /> {t.location || "Regional Talent"}
+                {talent.length === 0 ? (
+                    <EmptyState
+                        icon={Sparkles}
+                        title="No matches yet"
+                        description="Run a talent search or wait for more candidates to enter the pool."
+                        iconColor="text-[#16324f]"
+                    />
+                ) : (
+                    <div className="space-y-3">
+                        {talent.map((t, idx) => (
+                            <div key={t.id} className="rounded-2xl border border-stone-200 bg-stone-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-white text-sm font-semibold text-slate-700 shadow-sm dark:bg-slate-800 dark:text-slate-200">
+                                                {idx + 1}
+                                            </span>
+                                            <Badge variant={t.tier >= 0 ? "blue" : "outline"}>
+                                                {t.tier >= 0 ? `Verified ${TIERS[t.tier] || "Profile"}` : "Basic profile"}
+                                            </Badge>
+                                            <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                                                <MapPin size={12} />
+                                                {t.location || "Location not shared"}
+                                            </span>
+                                        </div>
+                                        <p className="mt-3 text-sm leading-6 text-slate-700 dark:text-slate-300">{t.summary}</p>
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {t.skills.slice(0, 5).map((s) => (
+                                                <span key={s} className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                                    {s}
+                                                </span>
+                                            ))}
+                                            {t.skills.length > 5 && (
+                                                <span className="px-1 py-1 text-xs text-slate-500 dark:text-slate-400">+{t.skills.length - 5} more</span>
+                                            )}
+                                        </div>
                                     </div>
-                                    <p className="text-sm font-bold text-slate-500 mt-1 italic">
-                                        "Candidate Summary"
-                                    </p>
+                                    <div className="flex gap-3 lg:w-52 lg:flex-col">
+                                        <button
+                                            onClick={() => handleRevealRequest(t.id)}
+                                            disabled={t.revealStatus !== "NONE"}
+                                            className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#16324f] px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:bg-green-50 disabled:text-green-700"
+                                        >
+                                            {t.revealStatus === "NONE" ? (
+                                                <>
+                                                    Request profile
+                                                    <ChevronRight size={16} />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CheckCircle2 size={16} />
+                                                    {t.revealStatus === "PENDING" ? "Requested" : "Approved"}
+                                                </>
+                                            )}
+                                        </button>
+                                        <div className="inline-flex h-11 items-center justify-center rounded-xl border border-stone-200 px-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                                            <Lock size={16} />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-
-                            <p className="text-slate-800 font-medium leading-relaxed text-sm">
-                                {t.summary}
-                            </p>
-
-                            <div className="flex flex-wrap gap-2">
-                                {t.skills.slice(0, 4).map((s) => (
-                                    <span key={s} className="px-3 py-1 bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-widest rounded-lg border border-slate-100">
-                                        {s}
-                                    </span>
-                                ))}
-                                {t.skills.length > 4 && (
-                                    <span className="text-[10px] font-black text-slate-400 self-center">+{t.skills.length - 4} more</span>
-                                )}
-                            </div>
-
-                            <div className="pt-2 flex items-center gap-4">
-                                <button
-                                    onClick={() => handleRevealRequest(t.id)}
-                                    disabled={t.revealStatus !== "NONE"}
-                                    className={cn(
-                                        "flex-1 h-12 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2",
-                                        t.revealStatus === "NONE"
-                                            ? "bg-slate-900 text-white hover:bg-blue-600 shadow-xl"
-                                            : "bg-green-50 text-green-600 border border-green-100"
-                                    )}
-                                >
-                                    {t.revealStatus === "NONE" ? (
-                                        <>Request Full Profile <ChevronRight size={14} /></>
-                                    ) : (
-                                        <><CheckCircle2 size={14} /> {t.revealStatus === "PENDING" ? "Request Sent" : "Reveal Approved"}</>
-                                    )}
-                                </button>
-                                <button className="w-12 h-12 rounded-2xl border border-slate-200 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all">
-                                    <Lock size={18} />
-                                </button>
-                            </div>
-                        </div>
-                    </motion.div>
-                ))}
+                        ))}
+                    </div>
+                )}
             </div>
-        </div>
+        </SectionCard>
     );
 }

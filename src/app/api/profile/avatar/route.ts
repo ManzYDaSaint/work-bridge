@@ -55,7 +55,13 @@ export async function POST(request: Request) {
         if (updateError) {
             // Upsert if record doesn't exist yet
             if (updateError.code === "PGRST116" || updateError.code === "23503") {
-                await supabase.from("job_seekers").upsert({ id: user.id, avatar_url: avatarUrl });
+                const { data: userData } = await supabase.from("users").select("email").eq("id", user.id).single();
+                const fallbackName = userData?.email?.split("@")[0] || "";
+                await supabase.from("job_seekers").upsert({
+                    id: user.id,
+                    avatar_url: avatarUrl,
+                    full_name: fallbackName
+                });
             } else {
                 throw updateError;
             }

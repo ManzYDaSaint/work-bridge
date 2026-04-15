@@ -1,12 +1,12 @@
-import Navbar from "@/components/layout/Navbar";
+import MarketingNavbar from "@/components/layout/MarketingNavbar";
 import Footer from "@/components/layout/Footer";
 import { constructMetadata } from "@/lib/seo";
 import { Metadata } from "next";
 
 export const metadata: Metadata = constructMetadata({
-    title: "WorkBridge - AI-Powered Talent Discovery & Recruitment",
-    description: "WorkBridge connects elite organizations with verified, high-performance professionals through objective AI and zero-bias matching.",
-    canonical: "/"
+    title: "WorkBridge",
+    description: "Privacy-first job matching for job seekers and employers.",
+    canonical: "/",
 });
 
 export default function MarketingLayout({
@@ -16,7 +16,7 @@ export default function MarketingLayout({
 }) {
     return (
         <>
-            <Navbar />
+            <MarketingNavbar />
             {children}
             <Footer />
         </>

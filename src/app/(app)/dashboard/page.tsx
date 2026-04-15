@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 
-export default async function DashboardPage() {
+export default async function DashboardRedirect() {
     const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -16,14 +16,10 @@ export default async function DashboardPage() {
         .eq("id", user.id)
         .single();
 
+    // Redirection is primarily handled by the middleware (src/middleware.ts).
+    // This server component acts as a safety fallback.
     if (profile) {
-        if (profile.role === "ADMIN") {
-            redirect("/dashboard/admin");
-        } else if (profile.role === "EMPLOYER") {
-            redirect("/dashboard/employer");
-        } else {
-            redirect("/dashboard/seeker");
-        }
+        redirect(`/dashboard/${profile.role === "ADMIN" ? "admin" : profile.role === "EMPLOYER" ? "employer" : "seeker"}`);
     }
 
     // Fallback if profile doesn't exist yet

@@ -5,20 +5,20 @@ import { motion } from "framer-motion";
 export default function FAQ() {
     const faqs = [
         {
-            q: "How does the AI talent matching work?",
-            a: "Our AI engine performs semantic analysis on candidate skills, parses certificates, and evaluates work experience against your specific job requirements to generate a 0-100 Match Score.",
+            q: "How does candidate matching work?",
+            a: "WorkBridge uses structured requirements like must-have skills, screening questions, and experience expectations to help employers compare applicants clearly.",
         },
         {
             q: "Are the academic qualifications verified?",
-            a: "Yes. When a job seeker uploads a certificate, our system parses the document and fuzzily matches the awarded name to the user's verified identity to prevent credential fraud.",
+            a: "Certificates can be uploaded and stored with the profile, and employers can review them alongside the rest of a candidate's application.",
         },
         {
             q: "Why are candidate names hidden initially?",
             a: "We employ Zero-Bias Discovery. When employers view the talent pipeline, real names and photos are redacted until the candidate is explicitly shortlisted, ensuring decisions are based purely on merit.",
         },
         {
-            q: "Can I generate custom resumes for matched candidates?",
-            a: "Absolutely. Our platform uses Gemini AI to synthesize a candidate's bio, skills, and parsed certificates into a perfectly tailored, ATS-ready resume specifically for your job posting.",
+            q: "Can employers shortlist candidates privately first?",
+            a: "Yes. Employers can review structured candidate information, shortlist strong applicants, and request profile reveal only when there is genuine interest.",
         },
     ];
 

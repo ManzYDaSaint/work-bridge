@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-    const auth = await validateAuth(['ADMIN'], true);
+    const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
     const supabase = await createSupabaseServerClient();
@@ -51,7 +51,7 @@ export async function GET() {
 }
 
 export async function DELETE(request: Request) {
-    const auth = await validateAuth(['ADMIN'], true);
+    const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
     const supabase = await createSupabaseServerClient();

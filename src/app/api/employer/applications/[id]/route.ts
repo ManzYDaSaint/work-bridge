@@ -1,6 +1,8 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { sendApplicationStatusEmail } from "@/lib/resend";
+import { createNotification } from "@/lib/notifications";
 
 export async function PATCH(
     request: Request,
@@ -43,14 +45,37 @@ export async function PATCH(
         const jobTitle = application.job?.title;
         const companyName = (application.job as any)?.employer?.company_name || "WorkBridge Employer";
 
-        if (seekerEmail && (status === 'ACCEPTED' || status === 'REJECTED' || status === 'SHORTLISTED')) {
-            await sendApplicationStatusEmail(seekerEmail, {
-                seekerName,
-                jobTitle,
-                companyName,
-                status: status as any
-            });
+        if (!seekerEmail) {
+            console.warn(`[NOTIFICATION_DEBUG] SKIPPED: Seeker ${application.user_id} has no email or user record.`);
         }
+
+        if (seekerEmail && (status === 'ACCEPTED' || status === 'REJECTED' || status === 'SHORTLISTED' || status === 'INTERVIEWING')) {
+            console.log(`[NOTIFICATION_DEBUG] INITIATING: Creating notification for seeker ${application.user_id} (${seekerEmail}) for status ${status}`);
+            try {
+                await Promise.all([
+                    sendApplicationStatusEmail(seekerEmail, {
+                        seekerName,
+                        jobTitle,
+                        companyName,
+                        status: status as any
+                    }),
+                    createNotification({
+                        userId: application.user_id,
+                        title: `Application ${status.toLowerCase()}`,
+                        message: `${companyName} has updated your application for ${jobTitle} to ${status.toLowerCase()}.`,
+                        type: "APPLICATION_UPDATE",
+                        link: `/dashboard/seeker/applications`
+                    })
+                ]);
+            } catch (notifyError) {
+                console.error("Non-blocking notification error in Employer Status API:", notifyError);
+            }
+        }
+
+        // Force immediate consistency for Seeker and Employer dashboards
+        revalidatePath("/", "layout");
+        revalidatePath("/dashboard/employer/candidates");
+        revalidatePath("/dashboard/seeker/applications");
 
         return NextResponse.json({ success: true, item: application });
 

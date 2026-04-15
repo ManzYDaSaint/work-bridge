@@ -8,7 +8,6 @@ import { AdminMetrics, AuditLog, AuditLogResponse, Employer, User } from "@/type
 import { CheckCircle, XCircle, Users, Briefcase, UserIcon, ShieldCheck, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import NotificationDropdown from "@/components/notifications/NotificationDropdown";
 
 type AdminTab = "metrics" | "employers" | "users" | "audit";
 
@@ -90,9 +89,10 @@ export default function AdminDashboardClient() {
     }, [auditMeta.offset, JSON.stringify(auditFilters), activeTab]);
 
     const updateEmployerStatus = async (id: string, status: string) => {
-        const res = await apiFetch(`/admin/employers/${id}/status`, {
+        const res = await apiFetch(`/admin/employers`, {
+            method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status }),
+            body: JSON.stringify({ employerId: id, status }),
         });
         if (res.ok) setEmployers((prev) => prev.map((e) => (e.id === id ? { ...e, status: status as Employer["status"] } : e)));
     };
@@ -160,7 +160,6 @@ export default function AdminDashboardClient() {
                                 ))}
                             </div>
                             <div className="flex items-center gap-3">
-                                <NotificationDropdown />
                                 <div className="h-6 w-px bg-slate-200/50 dark:bg-slate-800/50 hidden md:block"></div>
                             </div>
                             <button onClick={handleLogout} className="text-sm font-black text-slate-500 hover:text-red-600 uppercase tracking-widest transition-colors flex items-center gap-2">
@@ -280,7 +279,7 @@ export default function AdminDashboardClient() {
                                                 <span className="px-3 py-1 bg-blue-600/10 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-blue-600/20">{u.role}</span>
                                             </td>
                                             <td className="px-8 py-6 text-sm font-bold text-slate-500 dark:text-slate-400">
-                                                {u.role === "JOB_SEEKER" ? u.jobSeeker?.fullName : u.employer?.companyName ?? "System Entity"}
+                                                {u.role === "JOB_SEEKER" ? u.jobSeeker?.full_name : u.employer?.companyName ?? "System Entity"}
                                             </td>
                                             <td className="px-8 py-6 text-sm font-bold text-slate-400 dark:text-slate-500">
                                                 {u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "-"}

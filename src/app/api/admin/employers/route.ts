@@ -2,10 +2,12 @@ import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { recordAuditLog } from "@/lib/audit";
 import { sendEmployerVerificationEmail } from "@/lib/resend";
+import { createNotification } from "@/lib/notifications";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 export async function GET() {
-    const auth = await validateAuth(['ADMIN'], true);
+    const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
     const supabase = await createSupabaseServerClient();
@@ -37,7 +39,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-    const auth = await validateAuth(['ADMIN'], true);
+    const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
     const supabase = await createSupabaseServerClient();
@@ -72,13 +74,14 @@ export async function PATCH(request: Request) {
             });
 
             // Trigger Real-time notification for the employer
-            await supabase.from("notifications").insert({
-                user_id: employerId,
+            await createNotification({
+                userId: employerId,
+                title: status === 'APPROVED' ? "Employer Verified" : "Verification Declined",
                 message: status === 'APPROVED'
                     ? `Congratulations! ${updatedEmployer?.company_name} has been approved. You can now post jobs.`
-                    : `Security Notice: Your employer verification for ${updatedEmployer?.company_name} was not successful.`,
-                type: status === 'APPROVED' ? 'SUCCESS' : 'ERROR',
-                is_read: false
+                    : `Your employer verification for ${updatedEmployer?.company_name} was not successful.`,
+                type: "VERIFICATION_UPDATE",
+                link: `/dashboard/employer`
             });
         }
 
@@ -91,6 +94,12 @@ export async function PATCH(request: Request) {
             userId: user.id,
             metadata: { employerId, status, notes }
         });
+
+        // Clean up caches for Admin, Employer, and Job board
+        revalidatePath("/", "layout");
+        revalidatePath("/dashboard/admin");
+        revalidatePath("/dashboard/employer");
+        revalidatePath("/jobs");
 
         return NextResponse.json({ success: true });
     } catch (error) {

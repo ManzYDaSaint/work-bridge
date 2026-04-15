@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import ThemeController from "./ThemeController";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 
 export default function Navbar() {
@@ -53,20 +53,47 @@ export default function Navbar() {
                                 className="absolute -inset-2 bg-blue-500 rounded-2xl blur-lg -z-10"
                             />
                             <div className="w-12 h-12 flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-                                <Image src="/logo.svg" alt="WorkBridge" width={48} height={48} priority />
+                                <div className="logo-white">
+                                    <Image
+                                        src="/logo.svg"
+                                        alt="WorkBridge"
+                                        width={48}
+                                        height={48}
+                                        priority
+                                    />
+                                </div>
+                                <div className="logo-black">
+                                    <Image
+                                        src="/logo-black.svg"
+                                        alt="WorkBridge"
+                                        width={48}
+                                        height={48}
+                                        priority
+                                    />
+                                </div>
                             </div>
                         </div>
-                        <span className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                        <span className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors hidden sm:block">
                             WorkBridge
                         </span>
                     </Link>
                 </div>
 
-                <div className="flex-none gap-8 flex items-center">
-                    <ul className="hidden md:flex items-center gap-10 list-none m-0 p-0 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                <div className="flex-none gap-4 md:gap-8 flex items-center">
+                    <Link
+                        href="/jobs"
+                        className="md:hidden text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                    >
+                        Jobs
+                    </Link>
+                    <ul className="hidden md:flex items-center gap-8 list-none m-0 p-0 text-sm font-medium text-slate-600 dark:text-slate-400">
                         <li>
-                            <Link href="/pricing" className="hover:text-blue-600 dark:hover:text-white transition-all no-underline flex items-center gap-2 group">
-                                <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full group-hover:scale-[3] group-hover:bg-blue-600 transition-all" />
+                            <Link href="/jobs" className="hover:text-slate-900 dark:hover:text-white transition-colors no-underline">
+                                Jobs
+                            </Link>
+                        </li>
+                        <li>
+                            <Link href="/#pricing" className="hover:text-slate-900 dark:hover:text-white transition-colors no-underline">
                                 Pricing
                             </Link>
                         </li>

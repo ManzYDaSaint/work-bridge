@@ -24,7 +24,7 @@ Follow these steps every time you have a new micro SaaS idea.
 
 ## 5. Set Your Price
 - Update `src/app/(marketing)/pricing/page.tsx` with your local currency and plans.
-- Create your payment links in your **Flutterwave** dashboard and update `src/lib/payments.ts`.
+- Set up your account on [PayChangu](https://paychangu.com), grab your Secret Key and Webhook Secret from **Settings > APIs and Webhooks**, and add them to `.env.local`.
 
 ## 6. Verify and Ship
 - Run `npm run check` to ensure no bugs, type errors, or lint issues.

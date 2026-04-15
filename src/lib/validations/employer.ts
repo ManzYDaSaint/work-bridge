@@ -7,8 +7,7 @@ export const employerProfileSchema = z.object({
     website: z.string().url("Invalid website URL").optional().or(z.literal("")),
     description: z.string().min(10, "Description must be at least 10 characters").optional(),
     applicationAlerts: z.boolean().optional(),
-    hiringVelocity: z.boolean().optional(),
-    candidatePrivacy: z.boolean().optional(),
+    logoUrl: z.string().url("Invalid logo URL").optional().or(z.literal("")),
 });
 
 export type EmployerProfileValues = z.infer<typeof employerProfileSchema>;

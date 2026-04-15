@@ -1,58 +1,57 @@
-import { createBrowserClient } from "@supabase/ssr";
-
-const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "";
+import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 
 /**
- * Get the current Supabase session token (client-side).
- * Falls back to an empty string if no session exists.
- * Uses @supabase/ssr directly to avoid importing the server-only supabase.ts module.
+ * Same browser Supabase client as dashboard layouts — one cookie/session store.
  */
 const getAccessToken = async (): Promise<string> => {
-    const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-    );
-    const { data } = await supabase.auth.getSession();
+    const supabase = createBrowserSupabaseClient();
+    const { data, error } = await supabase.auth.getSession();
+    if (error) return "";
     return data.session?.access_token ?? "";
 };
 
 /**
- * Authenticated fetch wrapper — attaches the Supabase session token as Bearer.
- * Mirrors the original WorkBridgeApp `apiFetch` but uses Supabase auth instead of localStorage.
+ * Authenticated fetch for this Next app only: same-origin relative paths, cookies + optional Bearer.
+ * Do not set NEXT_PUBLIC_API_BASE_URL to a different host than the page unless CORS + credentials are configured.
  */
 export const apiFetch = async (
     path: string,
     options: RequestInit = {}
 ): Promise<Response> => {
     const token = await getAccessToken();
-    const headers = new Headers(options.headers as Record<string, string> ?? {});
+    const headers = new Headers(options.headers as HeadersInit ?? {});
 
     if (token && !headers.has("Authorization")) {
         headers.set("Authorization", `Bearer ${token}`);
     }
 
-    return fetch(`${API_BASE_URL}${path}`, {
+    const url =
+        path.startsWith("http://") || path.startsWith("https://")
+            ? path
+            : path.startsWith("/")
+              ? path
+              : `/${path}`;
+
+    return fetch(url, {
+        cache: "no-store",
+        credentials: "include",
         ...options,
         headers,
     });
 };
 
-/**
- * Convenience wrapper that sets Content-Type to application/json automatically.
- */
-export const apiFetchJson = async <T = any>(
+export const apiFetchJson = async <T = unknown>(
     path: string,
     options: RequestInit = {}
 ): Promise<T> => {
-    const headers = new Headers(options.headers as Record<string, string> ?? {});
+    const headers = new Headers(options.headers as HeadersInit ?? {});
     if (!headers.has("Content-Type")) {
         headers.set("Content-Type", "application/json");
     }
     const res = await apiFetch(path, { ...options, headers });
     if (!res.ok) {
         const error = await res.json().catch(() => ({}));
-        throw new Error(error.error || `Request failed with status ${res.status}`);
+        throw new Error((error as { error?: string }).error || `Request failed with status ${res.status}`);
     }
-    return res.json();
+    return res.json() as Promise<T>;
 };

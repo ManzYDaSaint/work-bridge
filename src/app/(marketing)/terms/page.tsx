@@ -16,17 +16,17 @@ const sections = [
     {
         title: "2. Verifiable Credentials & Document Parsing",
         icon: <FileText className="text-purple-500" size={24} />,
-        content: `Seekers have the ability to upload up to 5 academic or professional certificates. You explicitly consent to WorkBridge utilizing AI-driven extraction systems to parse these PDF documents. The system will attempt to match the "Awarded To" name against your registered profile name. Uploading forged documents or documents belonging to another individual is a severe violation of these Terms and will result in a permanent ban and potential referral to relevant authorities.`
+        content: `Seekers have the ability to upload up to 5 academic or professional certificates. These documents may be stored and reviewed within the platform to support candidate evaluation. Uploading forged documents or documents belonging to another individual is a severe violation of these Terms and will result in a permanent ban and potential referral to relevant authorities.`
     },
     {
-        title: "3. Precision AI Matching & Recruiting",
+        title: "3. Structured Matching & Recruiting",
         icon: <BookOpen className="text-emerald-500" size={24} />,
-        content: `Our AI Semantic Engine generates Match Scores (0-100) based on your skills, experience, and verified certificates relative to employer job descriptions. WorkBridge does not guarantee employment or interview placements. The Match Score is an algorithmic tool designed to assist employers in Zero-Bias discovery. Employers utilize this tool at their own discretion.`
+        content: `WorkBridge uses structured requirements, screening questions, and profile data to help employers review candidates consistently. WorkBridge does not guarantee employment or interview placements. Employers remain responsible for their own hiring decisions.`
     },
     {
         title: "4. Subscription Billing & Mobile Money",
         icon: <Briefcase className="text-indigo-500" size={24} />,
-        content: `Employers may be subject to subscription fees to access premium features like instant candidate shortlisting and AI Resume synthesis. Payments are processed securely via Flutterwave, supporting local methods including Airtel Money and TNM Mpamba. All transactions are billed in Malawian Kwacha (MWK) unless stated otherwise. Subscriptions are strictly non-refundable once the billing cycle initiates.`
+        content: `Employers may be subject to subscription fees to access premium features like expanded listing capacity and faster candidate workflow tools. Payments are processed securely via PayChangu, supporting local methods including Airtel Money and TNM Mpamba. All transactions are billed in Malawian Kwacha (MWK) unless stated otherwise. Subscriptions are strictly non-refundable once the billing cycle initiates.`
     },
     {
         title: "5. Platform Moderation & Audit Registry",
@@ -37,32 +37,38 @@ const sections = [
 
 export default function TermsPage() {
     return (
-        <main className="min-h-screen bg-[#F8FAFC] dark:bg-[#020617] pt-32 pb-24 relative overflow-hidden">
-            {/* Background elements */}
-            <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-blue-500/10 dark:bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
-            <div className="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] bg-purple-500/10 dark:bg-purple-600/5 blur-[150px] rounded-full pointer-events-none" />
+        <main className="min-h-screen bg-[#F8FAFC] dark:bg-[#020617] pt-24 pb-20 sm:pt-32 sm:pb-24 relative overflow-hidden">
+            {/* Subtle Background Elements */}
+            <div className="absolute top-[-5%] right-[-5%] w-[400px] h-[400px] bg-blue-500/5 dark:bg-blue-600/5 blur-[100px] rounded-full pointer-events-none" />
+            <div className="absolute bottom-[-5%] left-[-5%] w-[500px] h-[500px] bg-purple-500/5 dark:bg-purple-600/5 blur-[120px] rounded-full pointer-events-none" />
 
             <div className="max-w-4xl mx-auto px-6 relative z-10">
-                <div className="text-center mb-16 space-y-4">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold text-[10px] uppercase tracking-[0.2em] mb-4">
+                <div className="text-center mb-16 space-y-6">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-stone-200 bg-stone-50 dark:border-slate-700 dark:bg-slate-800 text-stone-600 dark:text-slate-300 font-bold text-[10px] uppercase tracking-[0.18em] mb-2">
                         <CheckCircle size={14} /> Official Implementation
                     </div>
-                    <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tight">Terms of Service</h1>
-                    <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">Effective Date: February 2026. Governing the digital operational standards of the WorkBridge platform.</p>
+                    <h1 className="text-4xl md:text-6xl font-semibold text-slate-900 dark:text-white tracking-tight leading-[1.05]">
+                        Terms of Service
+                    </h1>
+                    <p className="text-lg text-slate-600 dark:text-slate-400 font-medium max-w-2xl mx-auto leading-relaxed">
+                        Effective Date: February 2026. Governing the digital operational standards of the WorkBridge platform.
+                    </p>
                 </div>
 
-                <div className="space-y-8">
+                <div className="space-y-6 sm:space-y-8">
                     {sections.map((section, idx) => (
                         <div
                             key={idx}
-                            className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-slate-800/50 p-8 md:p-10 rounded-[2.5rem] shadow-xl shadow-slate-200/20 dark:shadow-none hover:shadow-2xl hover:border-blue-500/30 transition-all duration-500 group"
+                            className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm border border-stone-200/80 dark:border-slate-800 p-8 sm:p-10 rounded-[2rem] shadow-[0_20px_40px_-30px_rgba(17,24,39,0.15)] hover:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.1)] transition-all duration-500 group"
                         >
-                            <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
-                                <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-500">
+                            <div className="flex flex-col md:flex-row gap-6 md:gap-10 items-start">
+                                <div className="w-14 h-14 rounded-2xl bg-stone-50 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-500 shadow-sm">
                                     {section.icon}
                                 </div>
                                 <div className="space-y-4">
-                                    <h3 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white">{section.title}</h3>
+                                    <h3 className="text-xl md:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
+                                        {section.title}
+                                    </h3>
                                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                                         {section.content}
                                     </p>
@@ -72,10 +78,18 @@ export default function TermsPage() {
                     ))}
                 </div>
 
-                <div className="mt-16 text-center border-t border-slate-200 dark:border-slate-800 pt-12">
-                    <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">
-                        Questions? Reach our compliance architecture team at <a href="mailto:legal@workbridge.mw" className="text-blue-600 hover:text-blue-700">legal@workbridge.mw</a>
-                    </p>
+                <div className="mt-20 p-10 rounded-[2rem] border border-stone-200/80 dark:border-slate-800 bg-white/60 dark:bg-slate-900/50 text-center relative overflow-hidden">
+                    <div className="relative z-10 space-y-4">
+                        <p className="text-sm font-bold text-slate-500 uppercase tracking-[0.15em]">
+                            Questions? Reach our compliance team
+                        </p>
+                        <a
+                            href="mailto:legal@workbridge.mw"
+                            className="text-lg font-semibold text-[#16324f] dark:text-blue-400 hover:text-[#a65a2e] dark:hover:text-blue-300 transition-colors underline underline-offset-4"
+                        >
+                            legal@workbridge.mw
+                        </a>
+                    </div>
                 </div>
             </div>
         </main>

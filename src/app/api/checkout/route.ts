@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { createPaymentLink } from "@/lib/payments";
+import { createPaymentLink, generateEmployerPremiumRef } from "@/lib/payments";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -11,17 +11,19 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Generate a unique reference
-        const tx_ref = `tx-${Date.now()}-${user.id.slice(0, 8)}`;
+        // Generate a semantic reference
+        const tx_ref = generateEmployerPremiumRef(user.id);
 
         const payment = await createPaymentLink({
             email: user.email!,
-            amount: 5000, // Example: 5000 MWK
+            amount: 15000, // Premium Employer Plan Amount
             tx_ref,
             customer_name: user.email?.split('@')[0] || "User",
+            title: "WorkBridge Premium Employer",
+            description: "30-day Premium Employer plan with unlimited role listings.",
         });
 
-        if (payment.status === "success") {
+        if (payment.status === "success" && payment.data?.link) {
             return NextResponse.json({ url: payment.data.link });
         } else {
             return NextResponse.json({ error: payment.message || "Failed" }, { status: 400 });

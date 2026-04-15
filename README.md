@@ -1,113 +1,255 @@
-# 🌉 WorkBridge: The Verified Talent Marketplace
+# WorkBridge
 
-WorkBridge is a next-generation job matching platform designed for high-trust professional environments. It combines **AI-driven semantic matching** with **cryptographic and manual verification** to ensure that every candidate is both qualified and privacy-protected.
+WorkBridge is a Malawi-first job platform built around a lean public job board and a structured hiring workflow.
 
-## 🚀 System Architecture
+The product no longer relies on AI matching. Instead, employers define clear job requirements and seekers apply through a low-friction, profile-based flow. Employers then review candidates using transparent screening data:
 
-WorkBridge is built on a modern, serverless-first stack optimized for security and rapid iteration.
+- must-have skills
+- nice-to-have skills
+- minimum years of experience
+- knockout questions
+- shortlist / reject pipeline states
 
-### Tech Stack
-- **Framework**: Next.js 16+ (App Router, Server Components)
-- **Database & Auth**: Supabase (PostgreSQL with Row Level Security)
-- **AI Engine**: Google Gemini (Semantic matching, Bio anonymization)
-- **Auditing**: PostgreSQL Trigger-based immutable logs
-- **Payments**: Flutterwave (Airtel Money & Mpamba compatible)
-- **Styling**: Tailwind CSS v4 + daisyUI
+## Current Product Model
 
----
+### Public experience
 
-## 🛡️ Core Robustness Pillars
+- Public visitors can browse jobs at `/jobs`.
+- Jobs support `REMOTE`, `HYBRID`, and `ON_SITE`.
+- The board is listing-first, dense, and filterable by search, work mode, and type.
+- Public users can inspect job details before signing in.
 
-We handle sensitive PII (Personally Identifiable Information) and professional credentials using a "Zero-Trust" framework:
+### Job seeker experience
 
-1. **AI Anonymization**: All job seeker bios and resumes are automatically redacted (emails, phones, specific names) using semantic AI before being presented to employers.
-2. **Conditional Reveal**: Employer access to PII is gated. Seekers must explicitly approve "Profile Reveal" requests before their full identity is visible.
-3. **Corporate Auditing**: Employers undergo a manual trust audit upon registration. Core actions like job deployment and profile reveals are restricted until they reach `APPROVED` status.
-4. **Database-Level Auditing**: Every sensitive operation (User updates, Job applications, Transactions) is captured by immutable PostgreSQL triggers, ensuring a tamper-proof audit trail.
-5. **Verified Certificates**: A multi-tier qualification system (Tiers 0-4) that rewards job seekers for verified academic and professional credentials.
+- Seekers maintain one reusable profile with:
+  - bio
+  - skills
+  - experience
+  - location
+  - salary expectation
+  - resume
+  - certificates
+- Seekers can save jobs, apply to jobs, and track application status.
+- Applications now include screening answers when a job has knockout questions.
+- Certificate uploads are currently stored for manual review, not AI verification.
+- Seekers can still control profile reveals for privacy-sensitive hiring flows.
 
----
+### Employer experience
 
-## � Data Protection & Backups (3-2-1 Strategy)
+- Employers post jobs with structured requirements.
+- Employers review applications in a rule-based pipeline instead of using AI match scores.
+- Candidate review shows:
+  - screening score
+  - whether required criteria were met
+  - matched vs missing skills
+  - years of experience
+  - checklist breakdown per requirement
+- Primary hiring action is now shortlisting, followed by deeper review and outreach.
 
-WorkBridge employs a robust **3-2-1 Backup Strategy** to ensure no data is ever lost:
+### Admin experience
 
-1. **Primary Data (1)**: Live production database hosted on Supabase (PostgreSQL).
-2. **First Backup (2)**: Supabase's automated daily internal backups with Point-in-Time Recovery (PITR).
-3. **Offsite Backup (3)**: A recurring GitHub Action (`db-backup.yml`) runs nightly at 02:00 UTC. It securely connects to the database using `pg_dump`, compresses the data, and uploads it to an external AWS S3 bucket.
+- Admins manage users, employers, jobs, and audit views.
+- Employer audit is currently a simple rule-based/manual review helper, not an AI trust audit.
 
-### 🔄 Backup Retrieval Process
-If a catastrophic failure occurs and you need to restore the database from the offsite S3 backup:
-1. Navigate to your AWS S3 bucket and download the latest `db-backup-...sql.gz` file.
-2. Decompress the file: `gunzip db-backup-...sql.gz`.
-3. Restore the schema and data to your fresh database instance using `psql`:
-   ```bash
-   psql -U your_db_user -h your_db_host -d your_db_name < db-backup-...sql
-   ```
-4. Verify the database integrity.
+## Tech Stack
 
----
+- Next.js 16 App Router
+- React 19
+- Tailwind CSS v4
+- Supabase Auth + Postgres + RLS
+- PayChangu payments (Airtel Money / TNM Mpamba / Card via MWK)
+- Resend email notifications
 
-## �🗺️ User Experience Flows
+## Current Hiring Logic
 
-WorkBridge follows a **Landing-First** strategy, building trust through early marketing value before account creation.
+WorkBridge currently uses structured screening instead of AI.
 
-### 👤 Job Seeker Flow
-Registration → **AI Anonymization** (Profile redacted via Gemini) → **Verification** (Certificates uploaded/audited) → **Reveal Control** (Approve/Reject employer access requests).
+### Job creation
 
-### 🏢 Employer Flow
-Registration → **Trust Audit** (Account starts as `PENDING`) → **Workspace Access** (Browse anonymized talent pool) → **Approval** (Unlock "Deploy Role" and "Profile Reveal" requests).
+Employers can define:
 
----
+- `skills`
+- `must_have_skills`
+- `nice_to_have_skills`
+- `minimum_years_experience`
+- `screening_questions`
 
-## 📂 Project Structure
+### Apply flow
 
-- `src/app/(marketing)`: High-conversion landing pages, pricing, and legal (Privacy/Terms).
-- `src/app/(app)`: Specialized dashboards for **Job Seekers**, **Employers**, and **Admins**.
-- `src/app/api`: Secure API endpoints with built-in **Auth Guards** enforcing role and status-based access.
-- `src/lib`: Core logic for AI matching (`ai.ts`), audits (`audit.ts`), and security gatekeeping (`auth-guard.ts`).
-- `supabase/`: Database schema definitions, RLS policies, and automated audit triggers.
+When a seeker applies:
 
----
+1. WorkBridge validates that the job is active.
+2. The seeker must have a complete profile.
+3. Required screening questions must be answered.
+4. The server calculates a transparent screening result from:
+   - required skill matches
+   - optional skill matches
+   - experience against minimum requirement
+   - screening question answers
+5. The application stores:
+   - `screening_answers`
+   - `screening_score`
+   - `screening_summary`
+   - `screening_breakdown`
+   - `meets_required_criteria`
 
-## 🏁 Getting Started
+### Employer review
 
-### 1. Prerequisites
+Employers no longer receive AI-generated fit results. They review a structured checklist and move applicants through the pipeline manually.
+
+## Repository Structure
+
+- `src/app/(marketing)`  
+  Public landing pages, jobs page, pricing, privacy, terms
+
+- `src/app/(app)`  
+  Authenticated dashboards for seekers, employers, and admins
+
+- `src/app/api`  
+  API routes for jobs, applications, profiles, payments, admin, and messaging
+
+- `src/components`  
+  Public board UI, dashboard UI, profile forms, and marketing components
+
+- `src/lib`  
+  Shared helpers for auth, screening, payments, audit, email, and utility logic
+
+- `supabase`  
+  Schema and migrations
+
+## Setup
+
+### Prerequisites
+
 - Node.js 20+
-- A Supabase Project
-- Gemini API Key (for matching features)
+- npm
+- Supabase project
+- PayChangu credentials for payments
+- Resend credentials for emails
 
-### 2. Setup
-1. Clone the repository and install dependencies:
-   ```bash
-   npm install
-   ```
-2. Configure `.env.local` based on `.env.example`:
-   ```bash
-   cp .env.example .env.local
-   ```
-3. Initialize the database:
-   Run the contents of `supabase/schema.sql` in your Supabase SQL Editor to set up tables, RLS, and **Audit Triggers**.
+### Install
 
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-### 3. Quality Assurance
-Before pushing code, run the system health check:
 ```bash
-npm run check
+npm install
 ```
 
----
+### Environment
 
-## 🏗️ Future Roadmap
-- [x] AI-driven profile anonymization.
-- [x] Status-based Corporate auth-guards.
-- [ ] Autonomous OCR-based certificate verification.
-- [ ] Real-time Admin Dashboard alerts for high-risk data events.
-- [ ] Advanced "Semantic Match" visualizations for Employers.
+Create `.env.local` from `.env.example` and supply the required values for:
 
----
-Built with ❤️ by **ManzYDaSaint** for the next generation of verified work.
+- Supabase
+- PayChangu
+- Resend
+- app base URL
+
+### Run locally
+
+```bash
+npm run dev
+```
+
+### Typecheck
+
+```bash
+npm run type-check
+```
+
+## Database Changes Required
+
+If you are bringing up a fresh database or updating an older WorkBridge database, these are the important schema changes for the current product.
+
+### Required migrations already present in this repo
+
+Apply the migrations in `supabase/migrations`, especially:
+
+- `20260322165403_add_plan_to_employers.sql`
+- `20260322171800_add_plan_expires_at_to_employers.sql`
+- `20260322175200_create_transactions_table.sql`
+- `20260323_fix_seeker_rls.sql`
+- `20260326120000_public_anon_jobs_read.sql`
+- `20260326143000_add_work_mode_to_jobs.sql`
+- `20260326160000_add_structured_screening.sql`
+- `20260326170000_drop_notes_and_certificate_ai_columns.sql`
+
+### Current schema requirements
+
+The current app expects these job fields:
+
+- `work_mode`
+- `must_have_skills`
+- `nice_to_have_skills`
+- `minimum_years_experience`
+- `screening_questions`
+
+The current app expects these application fields:
+
+- `screening_answers`
+- `screening_score`
+- `screening_summary`
+- `screening_breakdown`
+- `meets_required_criteria`
+
+### Cleanup migrations now included
+
+The first round of legacy cleanup is now implemented in SQL migrations:
+
+1. `20260326170000_drop_notes_and_certificate_ai_columns.sql`
+This removes the unused `notes` table and drops `certificates.verification_confidence` and `certificates.verification_summary`.
+
+### Remaining cleanup worth reviewing later
+
+These items are still in active use or still represent product decisions, so they were not dropped automatically:
+
+
+2. `job_seekers.top_verification_tier` and `certificates.verification_tier`
+These are still used in seeker and employer flows, even though certificate review is manual rather than AI-based.
+
+3. `profile_reveals`
+This privacy workflow is still wired into the product and RLS policies.
+
+4. Any older payment/subscription labels in historic rows
+Current code already uses `Plus` naming, but existing database records may still contain older wording depending on your environment.
+
+## Recommended Deployment Sequence
+
+For an existing environment:
+
+1. Back up the database.
+2. Apply all pending SQL migrations in order.
+3. Verify `jobs` and `applications` contain the structured screening columns.
+4. Start the app and test:
+   - public `/jobs`
+   - employer job creation
+   - seeker application flow
+   - employer candidate review
+   - PayChangu webhook handling
+
+For a fresh environment:
+
+1. Provision Supabase.
+2. Apply `supabase/schema.sql` or run the migrations in order.
+3. Configure environment variables.
+4. Run `npm install`.
+5. Run `npm run dev`.
+
+## Current Status
+
+What is working now:
+
+- lean public board
+- structured job posting
+- structured application screening
+- employer candidate shortlist flow
+- seeker saved jobs and applications
+- payments and badges / plus plan
+- TypeScript clean source tree
+
+What is still worth a future pass:
+
+- deeper review of legacy privacy and verification fields that are still intentionally in use
+- lockfile refresh after dependency removals
+- optional pruning of older marketing/help copy that is no longer essential
+
+## Owner Note
+
+This README describes the platform as it operates now, not the older AI-driven version.

@@ -1,11 +1,18 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { sendWelcomeEmail } from "@/lib/resend";
+import { canUseEmailForRegistration, isFreeEmailDomain } from "@/lib/email-safety";
+import { notifyAdmin } from "@/lib/notifications";
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { email, role, fullName, companyName, industry, location } = body;
+        const { email, role, full_name, companyName, industry, location } = body;
+        const registrationEmail = String(email || "").trim().toLowerCase();
+        const emailValidation = canUseEmailForRegistration(registrationEmail);
+        if (!emailValidation.ok) {
+            return NextResponse.json({ error: emailValidation.reason || "Invalid email" }, { status: 400 });
+        }
 
         const supabase = await createSupabaseServerClient();
 
@@ -29,42 +36,41 @@ export async function POST(request: Request) {
 
         // 2. Create Role-Specific Profile
         if (role === "JOB_SEEKER") {
+            const fallbackName = full_name || registrationEmail.split("@")[0] || "";
             const { error: seekerError } = await supabase
                 .from("job_seekers")
                 .upsert({
                     id: user.id,
-                    full_name: fullName,
-                    location: location
+                    full_name: fallbackName,
+                    location: location || "To be updated"
                 });
             if (seekerError) throw seekerError;
         } else if (role === "EMPLOYER") {
+            const fallbackCompany = companyName || "New Company";
             const { error: employerError } = await supabase
                 .from("employers")
                 .upsert({
                     id: user.id,
-                    company_name: companyName,
-                    industry: industry,
-                    location: location,
-                    status: "PENDING"
+                    company_name: fallbackCompany,
+                    industry: industry || "To be updated",
+                    location: location || "To be updated",
+                    status: "PENDING",
+                    recruiter_verified: !isFreeEmailDomain(registrationEmail),
                 });
             if (employerError) throw employerError;
         }
 
         // 3. Send Welcome Email
-        await sendWelcomeEmail(email || user.email!, fullName || companyName || "New User");
+        await sendWelcomeEmail(registrationEmail || user.email!, full_name || companyName || "");
 
         // 4. Notify Administrators (Real-Time System Event)
         if (role === "EMPLOYER") {
-            const { data: admins } = await supabase.from("users").select("id").eq("role", "ADMIN");
-            if (admins && admins.length > 0) {
-                const adminNotifications = admins.map(admin => ({
-                    user_id: admin.id,
-                    message: `Verification Required: ${companyName} has requested access to the platform.`,
-                    type: 'WARNING',
-                    is_read: false
-                }));
-                await supabase.from("notifications").insert(adminNotifications);
-            }
+            await notifyAdmin({
+                title: "New employer verification required",
+                message: `${companyName || "A new company"} has requested access to the platform.`,
+                type: "VERIFICATION_UPDATE",
+                link: `/dashboard/admin/employers`
+            });
         }
 
         return NextResponse.json({ success: true });

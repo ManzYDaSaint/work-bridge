@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Analytics from "@/components/Analytics";
 import { Toaster } from "sonner";
+import PWARegister from "@/components/pwa/PWARegister";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -13,31 +14,32 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://workbridge.co"),
+  applicationName: "WorkBridge",
   title: {
-    default: "WorkBridge | The AI-Verified Talent Network",
+    default: "WorkBridge | Malawi's modern job board",
     template: "%s | WorkBridge",
   },
-  description: "Bridging the gap between world-class talent and elite enterprises using AI-driven verification, zero-bias matching, and privacy-first hiring.",
-  keywords: ["Job Search", "Recruitment", "AI Hiring", "Malawi Jobs", "Verified Talent", "Zero-Bias Hiring", "Tech Jobs", "Remote Work"],
+  description: "A modern Malawian job board for remote, hybrid, and on-site roles across tech, operations, design, sales, and more.",
+  keywords: ["Job Search", "Recruitment", "Malawi Jobs", "Remote Jobs", "Hybrid Jobs", "On-site Jobs", "Hiring", "Careers"],
   authors: [{ name: "WorkBridge Team" }],
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "/",
-    title: "WorkBridge | The AI-Verified Talent Network",
-    description: "Hire with absolute certainty. Anonymous matching, verified credentials, and AI-driven precision.",
+    title: "WorkBridge | Malawi's modern job board",
+    description: "Browse remote, hybrid, and on-site roles across Malawi and beyond.",
     siteName: "WorkBridge",
     images: [{
       url: "/og-image.png",
       width: 1200,
       height: 630,
-      alt: "WorkBridge - AI Verified Talent Network",
+      alt: "WorkBridge - Malawi's modern job board",
     }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "WorkBridge | The AI-Verified Talent Network",
-    description: "Hire with absolute certainty. Anonymous matching, verified credentials, and AI-driven precision.",
+    title: "WorkBridge | Malawi's modern job board",
+    description: "Browse remote, hybrid, and on-site roles across Malawi and beyond.",
     images: ["/og-image.png"],
     creator: "@workbridge",
   },
@@ -49,11 +51,12 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico" },
-      { url: "/logo.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
-    shortcut: ["/logo.png"],
+    shortcut: ["/favicon.ico"],
     apple: [
-      { url: "/logo.png", sizes: "180x180", type: "image/png" },
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
   appleWebApp: {
@@ -67,7 +70,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  themeColor: "#2563eb",
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#16324f",
 };
 
 export default function RootLayout({
@@ -79,26 +84,9 @@ export default function RootLayout({
     <html lang="en" className={jakarta.variable}>
       <body className={`${jakarta.className} antialiased min-h-screen flex flex-col`}>
         <Toaster position="top-right" richColors />
+        <PWARegister />
         <Analytics />
         <main className="flex-grow">{children}</main>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(
-                    function(registration) {
-                      console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    },
-                    function(err) {
-                      console.log('ServiceWorker registration failed: ', err);
-                    }
-                  );
-                });
-              }
-            `,
-          }}
-        />
       </body>
     </html>
   );

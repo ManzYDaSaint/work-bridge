@@ -4,7 +4,7 @@ import { withAudit } from "@/lib/api-utils";
 import { NextResponse } from "next/server";
 
 export const GET = withAudit(async () => {
-    const auth = await validateAuth(['ADMIN'], true);
+    const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
     const supabase = await createSupabaseServerClient();
@@ -13,7 +13,7 @@ export const GET = withAudit(async () => {
             .from("jobs")
             .select(`
                 *,
-                employer:employers(company_name, location, status)
+                employer:employers(id, company_name, location, status, logo_url, industry, website, description, recruiter_verified)
             `)
             .order('created_at', { ascending: false });
 
@@ -24,20 +24,23 @@ export const GET = withAudit(async () => {
             const employer = Array.isArray(j.employer) ? j.employer[0] : j.employer;
             const employerStatus = employer?.status;
 
-            const jobStatus = j.status ?? (employerStatus === 'APPROVED' ? 'APPROVED' : 'PENDING');
+            const jobStatus = j.status;
 
             return {
-                id: j.id,
-                title: j.title,
-                description: j.description,
-                location: j.location,
-                type: j.type,
-                skills: j.skills,
+                ...j,
                 createdAt: j.created_at,
-                status: jobStatus,
                 companyName: employer?.company_name,
-                companyLocation: employer?.location,
-                employerStatus: employerStatus
+                employer: {
+                    id: employer?.id,
+                    companyName: employer?.company_name,
+                    location: employer?.location,
+                    logoUrl: employer?.logo_url,
+                    industry: employer?.industry,
+                    website: employer?.website,
+                    description: employer?.description,
+                    recruiterVerified: employer?.recruiter_verified,
+                },
+                employerStatus: employerStatus,
             };
         });
 
@@ -49,7 +52,7 @@ export const GET = withAudit(async () => {
 }, "ADMIN_FETCH_JOBS");
 
 export const PATCH = withAudit(async (request: Request) => {
-    const auth = await validateAuth(['ADMIN'], true);
+    const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
     const supabase = await createSupabaseServerClient();
@@ -73,7 +76,7 @@ export const PATCH = withAudit(async (request: Request) => {
 }, "ADMIN_JOB_MODERATION");
 
 export const DELETE = withAudit(async (request: Request) => {
-    const auth = await validateAuth(['ADMIN'], true);
+    const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
     const supabase = await createSupabaseServerClient();

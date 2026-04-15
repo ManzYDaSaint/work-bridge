@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
-import { Eye, Check, X, Shield, Clock, Loader2, Building2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Eye, Check, Clock, Loader2, Building2 } from "lucide-react";
 import { respondToRevealRequest } from "./actions";
 import { toast } from "sonner";
+import { Badge, SectionCard } from "@/components/dashboard/ui";
 
 interface RevealRequest {
     id: string;
@@ -40,8 +40,8 @@ export function RevealRequestCenter() {
         try {
             const res = await respondToRevealRequest(id, status);
             if (res.success) {
-                toast.success(status === "APPROVED" ? "Profile revealed!" : "Request declined");
-                setRequests(prev => prev.filter(r => r.id !== id));
+                toast.success(status === "APPROVED" ? "Profile revealed" : "Request declined");
+                setRequests((prev) => prev.filter((r) => r.id !== id));
             } else {
                 toast.error(res.error || "Failed to respond");
             }
@@ -50,67 +50,53 @@ export function RevealRequestCenter() {
         }
     };
 
-    if (loading) return null;
-    if (requests.length === 0) return null;
+    if (loading || requests.length === 0) return null;
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center gap-2 px-2">
-                <Shield className="text-blue-600" size={18} />
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">Privacy Requests</h3>
-                <span className="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full font-black">
-                    {requests.length}
-                </span>
-            </div>
+        <SectionCard title="Privacy requests">
+            <div className="space-y-3 p-6">
+                <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Employers can ask to reveal your full profile before moving forward.</p>
+                    <Badge label={`${requests.length} open`} variant="yellow" />
+                </div>
 
-            <div className="grid gap-4">
-                <AnimatePresence>
-                    {requests.map((req) => (
-                        <motion.div
-                            key={req.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col sm:flex-row items-center gap-6"
-                        >
-                            <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 shrink-0 shadow-inner">
-                                <Building2 size={24} />
-                            </div>
-
-                            <div className="flex-1 text-center sm:text-left">
-                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Reveal Request</p>
-                                <p className="text-lg font-black text-slate-900 tracking-tight">{req.employer.companyName}</p>
-                                <div className="flex items-center justify-center sm:justify-start gap-4 mt-1">
-                                    <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                        <Clock size={12} /> {new Date(req.createdAt).toLocaleDateString()}
-                                    </div>
-                                    <div className="flex items-center gap-1 text-[10px] font-black text-blue-600 uppercase tracking-widest">
-                                        <Eye size={12} /> Full Profile
+                {requests.map((req) => (
+                    <div key={req.id} className="rounded-2xl border border-stone-200 bg-stone-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="flex items-start gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm dark:bg-slate-800 dark:text-slate-300">
+                                    <Building2 size={18} />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{req.employer.companyName}</p>
+                                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                                        <span className="inline-flex items-center gap-1"><Clock size={12} /> {new Date(req.createdAt).toLocaleDateString()}</span>
+                                        <span className="inline-flex items-center gap-1"><Eye size={12} /> Full profile request</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-3 w-full sm:w-auto">
+                            <div className="flex gap-3">
                                 <button
                                     onClick={() => handleResponse(req.id, "REJECTED")}
                                     disabled={!!processing}
-                                    className="flex-1 sm:px-6 h-12 rounded-2xl border border-slate-200 text-slate-400 hover:bg-slate-50 transition-all font-black text-[10px] uppercase tracking-widest"
+                                    className="inline-flex h-10 items-center justify-center rounded-xl border border-stone-300 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-white disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                                 >
                                     Decline
                                 </button>
                                 <button
                                     onClick={() => handleResponse(req.id, "APPROVED")}
                                     disabled={!!processing}
-                                    className="flex-1 sm:px-8 h-12 rounded-2xl bg-slate-900 text-white hover:bg-blue-600 transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10"
+                                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#16324f] px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                                 >
                                     {processing === req.id ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
-                                    Approve Reveal
+                                    Approve
                                 </button>
                             </div>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
+                        </div>
+                    </div>
+                ))}
             </div>
-        </div>
+        </SectionCard>
     );
 }

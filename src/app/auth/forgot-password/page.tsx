@@ -45,18 +45,23 @@ export default function ForgotPasswordPage() {
                         whileHover={{ rotate: 15 }}
                         className="w-16 h-16 flex items-center justify-center mb-6"
                     >
-                        <Image src="/logo.svg" alt="WorkBridge" width={64} height={64} priority />
+                        <div className="logo-black">
+                            <Image src="/logo-black.svg" alt="WorkBridge" width={64} height={64} priority />
+                        </div>
+                        <div className="logo-white">
+                            <Image src="/logo.svg" alt="WorkBridge" width={64} height={64} priority />
+                        </div>
                     </motion.div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tighter text-center">
+                    <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter text-center">
                         Recover Access
                     </h1>
-                    <p className="text-slate-400 mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-center text-center">
+                    <p className="text-slate-400 mt-2 text-[10px] font-black uppercase tracking-[0.2em] text-center">
                         We'll broadcast a secure link to your inbox
                     </p>
                 </div>
 
                 {/* Form Card */}
-                <div className="bg-white/90 backdrop-blur-3xl border border-white rounded-[2.5rem] p-10 shadow-2xl shadow-slate-200/50">
+                <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-3xl border border-white dark:border-slate-800 rounded-[2.5rem] p-10 shadow-2xl shadow-slate-200/50 dark:shadow-none">
                     {!isSent ? (
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="space-y-1.5">
