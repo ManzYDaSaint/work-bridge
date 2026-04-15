@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import PublicJobBoard from "@/components/jobs/PublicJobBoard";
 
+export const dynamic = "force-dynamic";
+
 function JobsFallback() {
     return (
         <div className="max-w-3xl mx-auto px-4 py-16 space-y-6 animate-pulse">
