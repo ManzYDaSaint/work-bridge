@@ -7,7 +7,6 @@ interface JobSeekerProfile {
     id: string;
     full_name: string;
     location?: string;
-    location?: string;
     phone?: string;
     whatsapp?: boolean;
     skills?: string[];

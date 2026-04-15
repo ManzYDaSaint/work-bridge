@@ -138,7 +138,7 @@ export async function POST(
         return NextResponse.json({ error: "Failed to submit application" }, { status: 500 });
     }
 
-    const [{ data: employer }, { data: seekerUser }] = await Promise.all([
+    const [{ data: employer }, { data: seekerUser }, { data: employerUser }] = await Promise.all([
         supabase
             .from("employers")
             .select("company_name")
@@ -148,6 +148,11 @@ export async function POST(
             .from("users")
             .select("email, job_seekers(full_name)")
             .eq("id", auth.userId)
+            .single(),
+        supabase
+            .from("users")
+            .select("email")
+            .eq("id", (job as any).employer_id)
             .single(),
     ]);
 

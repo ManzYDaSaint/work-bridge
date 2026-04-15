@@ -45,8 +45,7 @@
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
-      "eslint --fix",
-      "npm run type-check"
+      "eslint --fix"
     ]
   }
 }

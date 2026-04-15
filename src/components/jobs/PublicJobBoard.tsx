@@ -206,7 +206,7 @@ export default function PublicJobBoard() {
             }
 
             // Fetch saved jobs and applications if user is a seeker
-            if (user?.role === "JOB_SEEKER" || user?.role === "SEEKER") {
+            if (user?.role === "JOB_SEEKER") {
                 const [savedRes, appsRes] = await Promise.all([
                     apiFetch("/api/seeker/saved-jobs"),
                     apiFetch("/api/applications"),
@@ -304,7 +304,7 @@ export default function PublicJobBoard() {
     };
 
     const handleToggleSave = async (jobId: string) => {
-        if (user?.role !== "JOB_SEEKER" && user?.role !== "SEEKER") {
+        if (user?.role !== "JOB_SEEKER") {
             router.push("/login");
             return;
         }
@@ -402,7 +402,7 @@ export default function PublicJobBoard() {
     };
 
     const subtitle = selectedWorkMode === "ALL" ? "Remote, hybrid, and on-site jobs" : formatWorkMode(selectedWorkMode);
-    const isSeeker = user?.role === "JOB_SEEKER" || user?.role === "SEEKER";
+    const isSeeker = user?.role === "JOB_SEEKER";
 
     const publicViewerMode: PublicViewerMode = useMemo(() => {
         if (isSeeker) return "guest";
@@ -636,10 +636,6 @@ export default function PublicJobBoard() {
                         job={selectedJob}
                         isSaved={savedJobIds.has(selectedJob.id)}
                         isApplied={appliedJobIds.has(selectedJob.id)}
-                        profileCompletion={profileCompletion}
-                        isSubscribed={isSubscribed}
-                        applicationsThisMonth={applicationsThisMonth}
-                        seekerSkills={seekerSkills}
                         publicMode={!isSeeker}
                         publicViewerMode={publicViewerMode}
                         onReport={() => handleReportEmployer(selectedJob)}

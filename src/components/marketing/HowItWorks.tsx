@@ -46,6 +46,9 @@ const employerSteps = [
         icon: Search,
         color: "bg-indigo-600",
     },
+    {
+        title: "Verified Candidates",
+        description: "Access profiles backed by verified credentials and skills, reducing hiring risk.",
         icon: ShieldCheck,
         color: "bg-sky-600",
     },
