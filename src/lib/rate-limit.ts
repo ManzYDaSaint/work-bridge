@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
-import { LRUCache } from "lru-cache";
-
 interface RateLimitConfig {
     limit: number;
     window: number; // in milliseconds
 }
 
-const tokenCache = new LRUCache<string, number[]>({
-    max: 1000,
-    ttl: 60 * 1000, // 1 minute default
-});
+// In-memory cache using Map instead of lru-cache to avoid Node.js native module dependencies in Edge Runtime.
+// Note: In Vercel Edge functions, this state is isolated per lambda instance and transient.
+const tokenCache = new Map<string, number[]>();
 
 export async function rateLimit(identifier: string, config: RateLimitConfig) {
     const now = Date.now();
@@ -28,7 +25,13 @@ export async function rateLimit(identifier: string, config: RateLimitConfig) {
     }
 
     validTokens.push(now);
-    tokenCache.set(identifier, validTokens, { ttl: config.window });
+    tokenCache.set(identifier, validTokens);
+
+    // Basic cleanup: if the cache gets too large, clear it. 
+    // In Edge functions this is less critical as instances are short-lived.
+    if (tokenCache.size > 1000) {
+        tokenCache.clear();
+    }
 
     return {
         success: true,
