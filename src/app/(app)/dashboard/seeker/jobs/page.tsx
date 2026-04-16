@@ -1,4 +1,8 @@
 import { Suspense } from "react";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import PublicJobBoard from "@/components/jobs/PublicJobBoard";
 
 function JobsFallback() {

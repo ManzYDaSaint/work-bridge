@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
 import { Users, Search, Loader2, UserX } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 export default function UserManagementPage() {
@@ -12,6 +13,7 @@ export default function UserManagementPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [roleFilter, setRoleFilter] = useState("ALL");
     const [actioning, setActioning] = useState<string | null>(null);
+    const router = useRouter();
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -36,6 +38,7 @@ export default function UserManagementPage() {
             const res = await apiFetch(`/api/admin/users?userId=${userId}`, { method: "DELETE" });
             if (res.ok) {
                 setUsers((prev) => prev.filter((u) => u.id !== userId));
+                router.refresh();
             } else {
                 toast.error("Deletion failed.");
             }

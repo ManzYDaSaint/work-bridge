@@ -1,5 +1,8 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { Briefcase, Users, ArrowRight, CheckCircle, Loader2 } from "lucide-react";

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Users, Loader2, X, Mail, MapPin, ExternalLink } from "lucide-react";
 import { PageHeader, EmptyState, Badge, CompanyAvatar } from "@/components/dashboard/ui";
 import CandidateCard from "@/components/dashboard/employer/CandidateCard";
@@ -16,6 +16,7 @@ export default function CandidatesPage() {
     const [selectedApp, setSelectedApp] = useState<any | null>(null);
     const [template, setTemplate] = useState<"INTERVIEW" | "FOLLOW_UP" | "CLOSE">("INTERVIEW");
     const searchParams = useSearchParams();
+    const router = useRouter();
     const jobId = searchParams.get("jobId");
 
     useEffect(() => {
@@ -43,6 +44,7 @@ export default function CandidatesPage() {
             if (res.ok) {
                 setApplications((prev) => prev.map((app) => (app.id === id ? { ...app, status } : app)));
                 if (selectedApp?.id === id) setSelectedApp((prev: any) => (prev ? { ...prev, status } : prev));
+                router.refresh();
             }
         } finally {
             setUpdating(null);
@@ -117,6 +119,7 @@ export default function CandidatesPage() {
             if (selectedApp?.user?.id === app?.user?.id) {
                 setSelectedApp(null);
             }
+            router.refresh();
         } catch {
             // non-blocking UX
         }
@@ -139,6 +142,7 @@ export default function CandidatesPage() {
                 setApplications((prev) =>
                     prev.map((app) => (idsToReject.includes(app.id) ? { ...app, status: "REJECTED" } : app))
                 );
+                router.refresh();
             }
         } finally {
             setUpdating(null);

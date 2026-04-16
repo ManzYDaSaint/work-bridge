@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/api";
 import { Briefcase, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, EmptyState, Badge } from "@/components/dashboard/ui";
+import { useRouter } from "next/navigation";
 import JobDetailModal, { ExtendedJob } from "@/components/jobs/JobDetailModal";
 
 interface AppEntry {
@@ -19,6 +20,7 @@ export default function ApplicationsPage() {
     const [applications, setApplications] = useState<AppEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedJob, setSelectedJob] = useState<ExtendedJob | null>(null);
+    const router = useRouter();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -36,7 +38,11 @@ export default function ApplicationsPage() {
         setApplications((prev) => prev.filter((a) => a.id !== appId));
         try {
             const res = await apiFetch(`/api/applications/${appId}`, { method: "DELETE" });
-            if (!res.ok) toast.error("Failed to withdraw application.");
+            if (res.ok) {
+                router.refresh();
+            } else {
+                toast.error("Failed to withdraw application.");
+            }
         } catch {
             toast.error("Failed to withdraw application.");
         }

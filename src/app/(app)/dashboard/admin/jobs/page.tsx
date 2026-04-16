@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
 import { Briefcase, CheckCircle, XCircle, Trash2, Search, Loader2, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import JobDetailModal from "@/components/jobs/JobDetailModal";
 
@@ -13,6 +14,7 @@ export default function AdminJobsPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [actioning, setActioning] = useState<string | null>(null);
     const [selectedJob, setSelectedJob] = useState<any | null>(null);
+    const router = useRouter();
 
     const fetchJobs = async () => {
         try {
@@ -39,6 +41,7 @@ export default function AdminJobsPage() {
             });
             if (res.ok) {
                 setJobs((prev) => prev.map((job) => (job.id === jobId ? { ...job, status } : job)));
+                router.refresh();
             } else {
                 toast.error("Status update failed.");
             }
@@ -55,6 +58,7 @@ export default function AdminJobsPage() {
             const res = await apiFetch(`/api/admin/jobs?jobId=${jobId}`, { method: "DELETE" });
             if (res.ok) {
                 setJobs((prev) => prev.filter((job) => job.id !== jobId));
+                router.refresh();
             } else {
                 toast.error("Deletion failed.");
             }

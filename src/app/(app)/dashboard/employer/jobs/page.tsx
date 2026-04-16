@@ -66,6 +66,7 @@ export default function EmployerJobsPage() {
             const res = await apiFetch(`/api/jobs/${jobId}`, { method: "DELETE" });
             if (res.ok) {
                 setJobs((prev) => prev.filter((job) => job.id !== jobId));
+                router.refresh();
             }
         } finally {
             setDeleting(null);
@@ -87,6 +88,7 @@ export default function EmployerJobsPage() {
             });
             if (res.ok) {
                 fetchJobs(activeTab, currentPage);
+                router.refresh();
             }
         } finally {
             setReposting(null);
@@ -103,6 +105,7 @@ export default function EmployerJobsPage() {
             });
             if (res.ok) {
                 fetchJobs(activeTab, currentPage);
+                router.refresh();
             }
         } finally {
             setClosing(null);

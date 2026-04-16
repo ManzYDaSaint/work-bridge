@@ -86,6 +86,7 @@ export default function SeekerProfile() {
             const json = await res.json();
             if (res.ok && json.url) {
                 setAvatarUrl(json.url);
+                router.refresh();
                 toast.success("Profile picture updated");
             } else {
                 toast.error(json.error || "Upload failed");

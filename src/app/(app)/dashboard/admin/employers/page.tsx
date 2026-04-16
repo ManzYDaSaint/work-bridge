@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { Building2, CheckCircle, XCircle, Search, Loader2, ExternalLink, AlertTriangle } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { PageHeader, Badge, Tabs } from "@/components/dashboard/ui";
 import { toast } from "sonner";
 
@@ -14,6 +15,7 @@ export default function EmployerVerificationPage() {
     const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("PENDING");
     const [actioning, setActioning] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState("employers");
+    const router = useRouter();
 
     const fetchData = async () => {
         setLoading(true);
@@ -50,6 +52,7 @@ export default function EmployerVerificationPage() {
             });
             if (res.ok) {
                 setEmployers((prev) => prev.map((e) => (e.id === employerId ? { ...e, status } : e)));
+                router.refresh();
                 toast.success(`Employer ${status.toLowerCase()} successfully.`);
             } else {
                 toast.error("Status change failed.");
@@ -69,6 +72,7 @@ export default function EmployerVerificationPage() {
             });
             if (res.ok) {
                 setCloseRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+                router.refresh();
                 toast.success(`Request marked as ${status.toLowerCase()}.`);
             } else {
                 toast.error("Failed to update request.");

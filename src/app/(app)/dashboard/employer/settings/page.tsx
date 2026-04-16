@@ -131,6 +131,7 @@ export default function EmployerSettingsPage() {
             });
             if (res.ok) {
                 setCloseSubmitted(true);
+                router.refresh();
             } else {
                 toast.error("Failed to submit. Please try again.");
             }

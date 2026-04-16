@@ -2,6 +2,9 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
     const supabase = await createSupabaseServerClient();
     
@@ -21,7 +24,9 @@ export async function GET() {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(notifications);
+    const response = NextResponse.json(notifications);
+    response.headers.set("Cache-Control", "no-store, max-age=0");
+    return response;
 }
 
 export async function PUT(request: Request) {

@@ -3,6 +3,9 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
     const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
@@ -93,7 +96,7 @@ export async function GET() {
             signupTrend.push({ date: day, signups: trendMap.get(day) || 0 });
         }
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             stats: {
                 totalUsers: stats[0],
                 totalSeekers: stats[1],
@@ -123,6 +126,8 @@ export async function GET() {
                 signupTrend,
             }
         });
+        response.headers.set("Cache-Control", "no-store, max-age=0");
+        return response;
     } catch (error) {
         console.error("Admin stats fetch error:", error);
         return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });

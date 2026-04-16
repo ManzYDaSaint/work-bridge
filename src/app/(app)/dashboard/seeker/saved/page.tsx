@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { Bookmark, Loader2, Trash2 } from "lucide-react";
 import { PageHeader, EmptyState, Badge } from "@/components/dashboard/ui";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import JobDetailModal, { ExtendedJob } from "@/components/jobs/JobDetailModal";
 import { ScreeningAnswer } from "@/types";
@@ -21,6 +22,7 @@ export default function SavedJobsPage() {
     const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [selectedJob, setSelectedJob] = useState<ExtendedJob | null>(null);
+    const router = useRouter();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -41,7 +43,10 @@ export default function SavedJobsPage() {
     const handleRemove = async (jobId: string) => {
         try {
             const res = await apiFetch("/api/seeker/saved-jobs", { method: "POST", body: JSON.stringify({ jobId }) });
-            if (res.ok) setSavedEntries((prev) => prev.filter((s) => s.job_id !== jobId));
+            if (res.ok) {
+                setSavedEntries((prev) => prev.filter((s) => s.job_id !== jobId));
+                router.refresh();
+            }
         } catch {
             toast.error("Failed to remove saved job.");
         }
@@ -56,6 +61,7 @@ export default function SavedJobsPage() {
             });
             if (res.ok) {
                 setAppliedJobIds((prev) => new Set([...prev, jobId]));
+                router.refresh();
                 toast.success("Application sent.");
             } else {
                 const err = await res.json();
