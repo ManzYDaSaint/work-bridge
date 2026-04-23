@@ -2,7 +2,6 @@ import { requireDashboardProfile } from "@/lib/dashboard-auth";
 import EmployerLayoutClient from "./EmployerLayoutClient";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 export default async function EmployerLayout({ children }: { children: React.ReactNode }) {
     const { profile } = await requireDashboardProfile("EMPLOYER");

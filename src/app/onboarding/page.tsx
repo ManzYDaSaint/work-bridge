@@ -5,7 +5,6 @@ import { JobSeekerOnboarding, EmployerOnboarding } from "./client";
 
 // Force no caching — always read the latest profile from the DB
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 export default async function OnboardingPage() {
     const supabase = await createSupabaseServerClient();
