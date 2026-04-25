@@ -1,131 +1,148 @@
 "use client";
 
 import { useState } from "react";
+import { UserPlus, Search, CheckCircle, FileText, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { UserPlus, Search, Send, Briefcase, CheckCircle, FileText, Zap, Shield, ShieldCheck } from "lucide-react";
-
-const Tag = Search; // Using Search as a proxy for Tag/Match icon
 
 const seekerSteps = [
     {
-        title: "Create Profile",
-        description: "Build a premium professional profile that showcases your unique value.",
+        title: "Build Your Profile",
+        description: "Add your skills, experience, education, certifications, and portfolio links — your full professional presence in one place.",
         icon: UserPlus,
-        color: "bg-blue-500",
+        color: "bg-[#16324f]",
     },
     {
-        title: "Get Verified",
-        description: "Upload certificates and complete your profile to build trust with employers.",
-        icon: Shield,
-        color: "bg-indigo-500",
-    },
-    {
-        title: "Structured Discovery",
-        description: "Get discovered through clear skills, experience, and privacy-first profile details.",
-        icon: Zap,
-        color: "bg-sky-500",
-    },
-    {
-        title: "Approve Reveal",
-        description: "You controlled your PII. Only reveal your identity when the interest is mutual.",
-        icon: CheckCircle,
-        color: "bg-emerald-500",
-    },
-];
-
-const employerSteps = [
-    {
-        title: "Define Goals",
-        description: "Post clear job requirements, must-have skills, and knockout questions.",
+        title: "Set Your Intent",
+        description: "Tell employers exactly what you're looking for — a job, internship, attachment, or just open to offers.",
         icon: FileText,
-        color: "bg-blue-600",
+        color: "bg-[#1a4f7a]",
     },
     {
-        title: "Review Fit",
-        description: "Compare candidates using transparent checklists instead of black-box scores.",
-        icon: Search,
-        color: "bg-indigo-600",
+        title: "Get Discovered",
+        description: "Employers searching for your skills will find you instantly. Control your visibility — public, anonymous, or hidden.",
+        icon: Sparkles,
+        color: "bg-[#1e6ea5]",
     },
     {
-        title: "Verified Candidates",
-        description: "Access profiles backed by verified credentials and skills, reducing hiring risk.",
-        icon: ShieldCheck,
-        color: "bg-sky-600",
-    },
-    {
-        title: "Secure Onboarding",
-        description: "Hire with absolute confidence in verified skills and credentials.",
+        title: "Get Hired",
+        description: "Receive direct invites from employers, track applications, and move through a structured hiring pipeline.",
         icon: CheckCircle,
         color: "bg-emerald-600",
     },
 ];
 
-
+const employerSteps = [
+    {
+        title: "Post a Role",
+        description: "Define clear requirements — must-have skills, experience level, screening questions, and work mode.",
+        icon: FileText,
+        color: "bg-[#16324f]",
+    },
+    {
+        title: "Discover Talent",
+        description: "Browse and filter a pool of verified job seekers, students, and interns actively looking for opportunities.",
+        icon: Search,
+        color: "bg-[#1a4f7a]",
+    },
+    {
+        title: "Get Instant Matches",
+        description: "Each job automatically surfaces candidates whose skills match your requirements — no manual searching needed.",
+        icon: Sparkles,
+        color: "bg-[#1e6ea5]",
+    },
+    {
+        title: "Invite & Hire",
+        description: "Save promising candidates, send direct invites, and move applicants through your pipeline to hire with confidence.",
+        icon: CheckCircle,
+        color: "bg-emerald-600",
+    },
+];
 
 export default function HowItWorks() {
     const [activeTab, setActiveTab] = useState<"seeker" | "employer">("seeker");
     const steps = activeTab === "seeker" ? seekerSteps : employerSteps;
 
     return (
-        <section className="py-32 bg-white dark:bg-[#020617]">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center max-w-3xl mx-auto mb-20">
-                    <h2 className="text-4xl md:text-6xl font-black mb-6 tracking-tight">
-                        How WorkBridge <br />
-                        <span className="text-blue-600 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">really works.</span>
+        <section className="py-24 bg-white dark:bg-slate-950">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6">
+                <div className="text-center max-w-2xl mx-auto mb-16">
+                    <p className="inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-stone-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 mb-4">
+                        How it works
+                    </p>
+                    <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+                        Built for both sides of the table
                     </h2>
+                    <p className="mt-4 text-base text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Whether you are looking for work or looking for talent — WorkBridge is designed to make the connection faster, smarter, and more human.
+                    </p>
+                </div>
 
-                    <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl mb-12 border border-slate-200 dark:border-slate-800">
+                {/* Tab Toggle */}
+                <div className="flex justify-center mb-12">
+                    <div className="inline-flex p-1 bg-stone-100 dark:bg-slate-900 rounded-2xl border border-stone-200 dark:border-slate-800">
                         <button
                             onClick={() => setActiveTab("seeker")}
-                            className={`px-8 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === "seeker"
-                                ? "bg-white dark:bg-slate-800 shadow-lg text-blue-600 dark:text-white"
-                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                            className={`px-4 sm:px-6 py-2.5 rounded-xl text-sm font-semibold transition-all relative whitespace-nowrap ${activeTab === "seeker"
+                                ? "text-white"
+                                : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
                                 }`}
                         >
-                            For Job Seekers
+                            {activeTab === "seeker" && (
+                                <motion.div
+                                    layoutId="activeTabBg"
+                                    className="absolute inset-0 bg-[#16324f] rounded-xl"
+                                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                />
+                            )}
+                            <span className="relative z-10 hidden sm:inline">For Job Seekers & Students</span>
+                            <span className="relative z-10 sm:hidden">Job Seekers</span>
                         </button>
                         <button
                             onClick={() => setActiveTab("employer")}
-                            className={`px-8 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === "employer"
-                                ? "bg-white dark:bg-slate-800 shadow-lg text-blue-600 dark:text-white"
-                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                            className={`px-4 sm:px-6 py-2.5 rounded-xl text-sm font-semibold transition-all relative whitespace-nowrap ${activeTab === "employer"
+                                ? "text-white"
+                                : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
                                 }`}
                         >
-                            For Employers
+                            {activeTab === "employer" && (
+                                <motion.div
+                                    layoutId="activeTabBg"
+                                    className="absolute inset-0 bg-[#16324f] rounded-xl"
+                                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                />
+                            )}
+                            <span className="relative z-10 hidden sm:inline">For Employers</span>
+                            <span className="relative z-10 sm:hidden">Employers</span>
                         </button>
                     </div>
                 </div>
 
-                <div className="relative">
-                    {/* Connector Line */}
-                    <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-100 dark:bg-slate-800 hidden lg:block -translate-y-1/2 z-0" />
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 relative z-10">
-                        <AnimatePresence mode="wait">
-                            {steps.map((step, i) => (
+                {/* Steps Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <AnimatePresence mode="wait">
+                        {steps.map((step, i) => {
+                            const Icon = step.icon;
+                            return (
                                 <motion.div
                                     key={`${activeTab}-${i}`}
-                                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                    transition={{ delay: i * 0.1, duration: 0.4 }}
-                                    className="flex flex-col items-center text-center group"
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -20 }}
+                                    transition={{ duration: 0.3, delay: i * 0.1 }}
+                                    className="relative flex flex-col rounded-2xl border border-stone-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
                                 >
-                                    <div className={`w-20 h-20 ${step.color} rounded-3xl flex items-center justify-center text-white mb-8 shadow-2xl group-hover:scale-110 transition-transform duration-500 relative`}>
-                                        <step.icon size={32} />
-                                        <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center text-xs font-black">
-                                            {i + 1}
-                                        </div>
+                                    <div className={`${step.color} mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl text-white`}>
+                                        <Icon size={22} />
                                     </div>
-                                    <h3 className="text-xl font-bold mb-3 tracking-tight">{step.title}</h3>
-                                    <p className="text-slate-500 dark:text-slate-400 text-[15px] leading-relaxed font-light px-4">
-                                        {step.description}
-                                    </p>
+                                    <span className="absolute right-5 top-5 text-3xl font-black text-stone-100 dark:text-slate-800">
+                                        {i + 1}
+                                    </span>
+                                    <h3 className="mb-2 font-bold text-slate-900 dark:text-white">{step.title}</h3>
+                                    <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">{step.description}</p>
                                 </motion.div>
-                            ))}
-                        </AnimatePresence>
-                    </div>
+                            );
+                        })}
+                    </AnimatePresence>
                 </div>
             </div>
         </section>

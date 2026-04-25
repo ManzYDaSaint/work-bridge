@@ -46,6 +46,10 @@ CREATE TABLE public.job_seekers (
   has_badge BOOLEAN DEFAULT FALSE,
   badge_seeker_number INTEGER,
   completion INTEGER DEFAULT 0,
+  search_intent TEXT DEFAULT 'ACTIVELY_LOOKING',
+  profile_visibility TEXT DEFAULT 'HIDDEN',
+  portfolio_links TEXT[] DEFAULT '{}',
+  profile_views INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -211,6 +215,15 @@ CREATE TABLE public.profile_reveals (
   UNIQUE(employer_id, seeker_id)
 );
 
+CREATE TABLE public.employer_saved_candidates (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  employer_id UUID REFERENCES public.employers(id) ON DELETE CASCADE NOT NULL,
+  seeker_id UUID REFERENCES public.job_seekers(id) ON DELETE CASCADE NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(employer_id, seeker_id)
+);
+
 -- ==========================================
 -- 2. HELPER FUNCTIONS
 -- ==========================================
@@ -244,6 +257,7 @@ ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.certificates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profile_reveals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.employer_saved_candidates ENABLE ROW LEVEL SECURITY;
 
 -- ADMIN: Global Access
 CREATE POLICY "Admins have full access" ON public.users FOR ALL USING (public.is_admin());
@@ -266,6 +280,7 @@ CREATE POLICY "Approved employers can view full seeker profile" ON public.job_se
 -- EMPLOYERS
 CREATE POLICY "Employers can manage own profile" ON public.employers FOR ALL USING (auth.uid() = id);
 CREATE POLICY "Public can view employer basic info" ON public.employers FOR SELECT USING (true);
+CREATE POLICY "Employers can manage own saved candidates" ON public.employer_saved_candidates FOR ALL USING (auth.uid() = employer_id);
 
 -- JOBS
 CREATE POLICY "Public can view active jobs" ON public.jobs FOR SELECT USING (status = 'ACTIVE');
@@ -307,6 +322,8 @@ CREATE INDEX idx_jobs_status_created ON public.jobs(status, created_at DESC);
 CREATE INDEX idx_applications_status_created ON public.applications(status, created_at DESC);
 CREATE INDEX idx_notifications_unread ON public.notifications(user_id) WHERE is_read = false;
 CREATE INDEX idx_audit_logs_created ON public.audit_logs(created_at DESC);
+CREATE INDEX idx_job_seekers_visibility ON public.job_seekers(profile_visibility);
+CREATE INDEX idx_job_seekers_intent ON public.job_seekers(search_intent);
 
 -- ==========================================
 -- 5. AUTOMATED AUDITING TRIGGERS

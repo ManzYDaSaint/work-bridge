@@ -23,6 +23,9 @@ export const seekerProfileSchema = z.object({
     salaryExpectation: z.string().optional(),
     seniorityLevel: z.string().optional(),
     employmentType: z.string().optional(),
+    searchIntent: z.enum(["ACTIVELY_LOOKING", "OPEN_TO_OFFERS", "SEEKING_INTERNSHIP", "NOT_LOOKING"]).optional(),
+    profileVisibility: z.enum(["PUBLIC", "ANONYMOUS", "HIDDEN"]).optional(),
+    portfolioLinks: z.array(z.string().url("Invalid URL format")).optional(),
 });
 
 export type SeekerProfileValues = z.infer<typeof seekerProfileSchema>;

@@ -30,6 +30,9 @@ export async function GET() {
             completion: 0,
             hasBadge: false,
             avatarUrl: null,
+            searchIntent: "ACTIVELY_LOOKING",
+            profileVisibility: "HIDDEN",
+            portfolioLinks: [],
         });
         emptyResponse.headers.set("Cache-Control", "no-store, max-age=0");
         return emptyResponse;
@@ -53,6 +56,9 @@ export async function GET() {
         isSubscribed: profile.is_subscribed,
         has_badge: profile.has_badge ?? false,
         avatar_url: profile.avatar_url ?? null,
+        searchIntent: profile.search_intent,
+        profileVisibility: profile.profile_visibility,
+        portfolioLinks: profile.portfolio_links || [],
     });
     response.headers.set("Cache-Control", "no-store, max-age=0");
     return response;
@@ -133,6 +139,9 @@ export async function PUT(request: Request) {
                 salary_expectation: body.salaryExpectation,
                 seniority_level: body.seniorityLevel,
                 employment_type: body.employmentType,
+                search_intent: body.searchIntent || "ACTIVELY_LOOKING",
+                profile_visibility: body.profileVisibility || "HIDDEN",
+                portfolio_links: body.portfolioLinks || [],
                 completion,
                 has_badge,
             })

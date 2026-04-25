@@ -21,12 +21,17 @@ export async function POST(request: Request) {
 
         const payload = {
             user_id: user?.id || null,
-            session_id: sessionId,
-            role: body.role || null,
-            event_name: body.eventName || "unknown_event",
-            stage: body.stage || null,
-            variant,
-            metadata: body.metadata || {},
+            action: body.eventName || "UNKNOWN_METRIC_EVENT",
+            path: "/api/metrics/track",
+            method: "POST",
+            status_code: 200,
+            metadata: {
+                session_id: sessionId,
+                role: body.role || null,
+                stage: body.stage || null,
+                variant,
+                ...body.metadata
+            }
         };
 
         const adminClient = getSupabaseAdminClient();
@@ -34,10 +39,11 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: true, message: "Tracking skipped (Admin key missing)" });
         }
 
-        const { error } = await adminClient.from("product_events").insert(payload);
+        const { error } = await adminClient.from("audit_logs").insert(payload);
         if (error) {
             console.error("Metrics track DB error:", error);
-            return NextResponse.json({ error: "Failed to track event" }, { status: 500 });
+            // Don't fail the request for a tracking error, but log it
+            return NextResponse.json({ success: true, warning: "Failed to track event" });
         }
 
         return NextResponse.json({ success: true });

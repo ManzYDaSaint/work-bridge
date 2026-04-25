@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch, apiFetchJson } from "@/lib/api";
 import { JobSeeker } from "@/types";
-import { Camera, Check, Loader2, Plus, Trash2 } from "lucide-react";
+import { Camera, Check, Loader2, Plus, Trash2, Award, ExternalLink } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { seekerProfileSchema, type SeekerProfileValues } from "@/lib/validations/profile";
@@ -14,6 +14,18 @@ import { useRouter } from "next/navigation";
 
 interface SeekerProfileData extends JobSeeker {
     completion: number;
+    searchIntent?: "ACTIVELY_LOOKING" | "OPEN_TO_OFFERS" | "SEEKING_INTERNSHIP" | "NOT_LOOKING";
+    profileVisibility?: "PUBLIC" | "ANONYMOUS" | "HIDDEN";
+    portfolioLinks?: string[];
+    profileViews?: number;
+}
+
+interface Certificate {
+    id: string;
+    title: string;
+    issuer: string | null;
+    issue_date: string | null;
+    credential_url: string | null;
 }
 
 export default function SeekerProfile() {
@@ -21,8 +33,16 @@ export default function SeekerProfile() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [newSkill, setNewSkill] = useState("");
+    const [newLink, setNewLink] = useState("");
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
+    
+    // Certificates state
+    const [certificates, setCertificates] = useState<Certificate[]>([]);
+    const [certLoading, setCertLoading] = useState(true);
+    const [newCert, setNewCert] = useState({ title: "", issuer: "", issue_date: "", credential_url: "" });
+    const [addingCert, setAddingCert] = useState(false);
+
     const router = useRouter();
 
     const {
@@ -46,12 +66,16 @@ export default function SeekerProfile() {
             employmentType: profile.employmentType ?? "",
             phone: profile.phone ?? "",
             whatsapp: profile.whatsapp ?? false,
+            searchIntent: profile.searchIntent ?? "ACTIVELY_LOOKING",
+            profileVisibility: profile.profileVisibility ?? "HIDDEN",
+            portfolioLinks: profile.portfolioLinks ?? [],
         } : undefined,
     });
 
     const { fields, append, remove } = useFieldArray({ control, name: "experience" });
     const { fields: educationFields, append: educationAppend, remove: educationRemove } = useFieldArray({ control, name: "education" });
     const watchedSkills = watch("skills") || [];
+    const watchedPortfolioLinks = watch("portfolioLinks") || [];
 
     const fetchProfile = async () => {
         try {
@@ -64,8 +88,21 @@ export default function SeekerProfile() {
         }
     };
 
+    const fetchCertificates = async () => {
+        try {
+            const res = await apiFetch("/api/profile/certificates");
+            if (res.ok) {
+                const data = await res.json();
+                setCertificates(data);
+            }
+        } finally {
+            setCertLoading(false);
+        }
+    };
+
     useEffect(() => {
         fetchProfile();
+        fetchCertificates();
     }, []);
 
     const addSkill = (skill: string) => {
@@ -73,6 +110,45 @@ export default function SeekerProfile() {
         if (!trimmed || watchedSkills.includes(trimmed)) return;
         setValue("skills", [...watchedSkills, trimmed], { shouldDirty: true });
         setNewSkill("");
+    };
+
+    const addLink = () => {
+        let trimmed = newLink.trim();
+        if (!trimmed) return;
+        if (!/^https?:\/\//.test(trimmed)) {
+            trimmed = `https://${trimmed}`;
+        }
+        if (watchedPortfolioLinks.includes(trimmed)) return;
+        setValue("portfolioLinks", [...watchedPortfolioLinks, trimmed], { shouldDirty: true });
+        setNewLink("");
+    };
+
+    const handleAddCertificate = async () => {
+        if (!newCert.title) return toast.error("Title is required");
+        setAddingCert(true);
+        try {
+            const res = await apiFetchJson("/api/profile/certificates", {
+                method: "POST",
+                body: JSON.stringify(newCert)
+            });
+            setCertificates([res as Certificate, ...certificates]);
+            setNewCert({ title: "", issuer: "", issue_date: "", credential_url: "" });
+            toast.success("Certificate added");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to add certificate");
+        } finally {
+            setAddingCert(false);
+        }
+    };
+
+    const handleDeleteCertificate = async (id: string) => {
+        try {
+            await apiFetchJson(`/api/profile/certificates/${id}`, { method: "DELETE" });
+            setCertificates(certificates.filter(c => c.id !== id));
+            toast.success("Certificate deleted");
+        } catch {
+            toast.error("Failed to delete certificate");
+        }
     };
 
     const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -257,6 +333,97 @@ export default function SeekerProfile() {
                             </button>
                         </div>
                     </SectionCard>
+
+                    <SectionCard title="Certifications">
+                        <div className="space-y-4 p-6">
+                            {certLoading ? (
+                                <div className="flex justify-center py-4"><Loader2 className="animate-spin text-slate-400" /></div>
+                            ) : certificates.length > 0 ? (
+                                <div className="space-y-3">
+                                    {certificates.map((cert) => (
+                                        <div key={cert.id} className="flex items-start justify-between rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                                            <div className="flex items-start gap-3">
+                                                <div className="mt-1 rounded-full bg-stone-200 p-1.5 dark:bg-slate-800">
+                                                    <Award size={16} className="text-slate-600 dark:text-slate-400" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-semibold text-slate-900 dark:text-white">{cert.title}</h4>
+                                                    <p className="text-sm text-slate-500 dark:text-slate-400">{cert.issuer || "Unknown Issuer"} {cert.issue_date && `• ${new Date(cert.issue_date).getFullYear()}`}</p>
+                                                    {cert.credential_url && (
+                                                        <a href={cert.credential_url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                                            View Credential <ExternalLink size={10} />
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <button type="button" onClick={() => handleDeleteCertificate(cert.id)} className="text-slate-400 hover:text-red-500">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-slate-500 dark:text-slate-400">No certifications added yet.</p>
+                            )}
+
+                            <div className="mt-4 rounded-2xl border border-dashed border-stone-300 p-4 dark:border-slate-700">
+                                <h4 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">Add Certification</h4>
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                    <input value={newCert.title} onChange={e => setNewCert({...newCert, title: e.target.value})} placeholder="Title *" className={inputClass} />
+                                    <input value={newCert.issuer} onChange={e => setNewCert({...newCert, issuer: e.target.value})} placeholder="Issuer (e.g. Coursera)" className={inputClass} />
+                                    <input type="date" value={newCert.issue_date} onChange={e => setNewCert({...newCert, issue_date: e.target.value})} className={inputClass} />
+                                    <input value={newCert.credential_url} onChange={e => setNewCert({...newCert, credential_url: e.target.value})} placeholder="Credential URL" className={inputClass} />
+                                </div>
+                                <button type="button" onClick={handleAddCertificate} disabled={addingCert || !newCert.title} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#16324f] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
+                                    {addingCert ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                                    Add
+                                </button>
+                            </div>
+                        </div>
+                    </SectionCard>
+
+                    <SectionCard title="Marketplace Preferences">
+                        <div className="space-y-4 p-6">
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Profile Visibility</label>
+                                <select {...register("profileVisibility")} className={inputClass}>
+                                    <option value="PUBLIC">Public (Employers can see your full profile)</option>
+                                    <option value="ANONYMOUS">Anonymous (Employers see your skills/experience but not your name or photo)</option>
+                                    <option value="HIDDEN">Hidden (You will not appear in the discover pool)</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Current Intent</label>
+                                <select {...register("searchIntent")} className={inputClass}>
+                                    <option value="ACTIVELY_LOOKING">Actively looking for jobs</option>
+                                    <option value="OPEN_TO_OFFERS">Open to offers</option>
+                                    <option value="SEEKING_INTERNSHIP">Seeking an internship or attachment</option>
+                                    <option value="NOT_LOOKING">Not looking</option>
+                                </select>
+                            </div>
+                            
+                            <div className="border-t border-stone-200 pt-4 dark:border-slate-800">
+                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Portfolio Links</label>
+                                <div className="space-y-2">
+                                    {watchedPortfolioLinks.length > 0 ? watchedPortfolioLinks.map((link) => (
+                                        <div key={link} className="flex items-center justify-between rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900">
+                                            <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline dark:text-blue-400 truncate">{link}</a>
+                                            <button type="button" onClick={() => setValue("portfolioLinks", watchedPortfolioLinks.filter((l) => l !== link), { shouldDirty: true })} className="text-slate-400 hover:text-red-500">
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    )) : <p className="text-sm text-slate-500 dark:text-slate-400">No links added yet.</p>}
+                                </div>
+                                <div className="mt-3 flex gap-2">
+                                    <input value={newLink} onChange={(e) => setNewLink(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addLink())} placeholder="https://github.com/..." className={inputClass} />
+                                    <button type="button" onClick={addLink} className="rounded-xl bg-[#16324f] px-4 py-3 text-sm font-semibold text-white hover:opacity-90">
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </SectionCard>
                 </div>
 
                 <div className="space-y-6">
@@ -285,6 +452,14 @@ export default function SeekerProfile() {
                         <div className="space-y-3 p-6 text-sm text-slate-600 dark:text-slate-400">
                             <p>Completion: <span className="font-semibold text-slate-900 dark:text-white">{profile.completion ?? 0}%</span></p>
                             <p>Skills: <span className="font-semibold text-slate-900 dark:text-white">{profile.skills?.length ?? 0} added</span></p>
+                            <div className="mt-4 border-t border-stone-200 pt-3 dark:border-slate-800">
+                                <p className="flex items-center justify-between">
+                                    Profile Views
+                                    <span className="rounded-full bg-blue-100 px-2 py-0.5 font-bold text-blue-700 dark:bg-blue-900/50 dark:text-blue-400">
+                                        {(profile as any).profile_views || profile.profileViews || 0}
+                                    </span>
+                                </p>
+                            </div>
                         </div>
                     </SectionCard>
                 </div>

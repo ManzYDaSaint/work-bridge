@@ -1,121 +1,218 @@
-# WorkBridge
+# WorkBridge — Talent Marketplace Platform
 
-WorkBridge is a Malawi-first job platform built around a lean public job board and a structured hiring workflow.
+> **Malawi's premier talent marketplace** connecting job seekers, students, and interns with employers through proactive discovery, skill-based matching, and a structured hiring pipeline.
 
-The product no longer relies on AI matching. Instead, employers define clear job requirements and seekers apply through a low-friction, profile-based flow. Employers then review candidates using transparent screening data:
+---
 
-- must-have skills
-- nice-to-have skills
-- minimum years of experience
-- knockout questions
-- shortlist / reject pipeline states
+## What is WorkBridge?
 
-## Current Product Model
+WorkBridge has evolved from a traditional job board into a **proactive talent marketplace**. Instead of waiting for candidates to apply, employers can now discover, save, and directly invite talent — while job seekers build a rich, verifiable online presence that works for them 24/7.
 
-### Public experience
+The platform serves three audiences:
 
-- Public visitors can browse jobs at `/jobs`.
-- Jobs support `REMOTE`, `HYBRID`, and `ON_SITE`.
-- The board is listing-first, dense, and filterable by search, work mode, and type.
-- Public users can inspect job details before signing in.
+- **Job Seekers & Graduates** — build a full professional profile with skills, experience, education, certifications, and portfolio links to get discovered by employers.
+- **Students** — configure your profile for internship or attachment search and appear in relevant employer discovery pools.
+- **Employers** — post structured job listings, discover pre-screened talent, manage a hiring pipeline, and invite promising candidates directly.
 
-### Job seeker experience
+---
 
-- Seekers maintain one reusable profile with:
-  - bio
-  - skills
-  - experience
-  - location
-  - salary expectation
-  - resume
-  - certificates
-- Seekers can save jobs, apply to jobs, and track application status.
-- Applications now include screening answers when a job has knockout questions.
-- Certificate uploads are currently stored for manual review, not AI verification.
-- Seekers can still control profile reveals for privacy-sensitive hiring flows.
+## Core Features
 
-### Employer experience
+### 🎯 Talent Marketplace (Discovery Engine)
 
-- Employers post jobs with structured requirements.
-- Employers review applications in a rule-based pipeline instead of using AI match scores.
-- Candidate review shows:
-  - screening score
-  - whether required criteria were met
-  - matched vs missing skills
-  - years of experience
-  - checklist breakdown per requirement
-- Primary hiring action is now shortlisting, followed by deeper review and outreach.
+- **Seeker Profiles with Online Presence**
+  - Full bio, skills, experience, education, certifications, and portfolio links
+  - Avatar upload and profile completion tracking
+  - Profile view analytics — see how many employers have viewed your profile
 
-### Admin experience
+- **Privacy Controls** — seekers choose one of three visibility levels:
+  - `PUBLIC` — full profile visible to employers including contact details
+  - `ANONYMOUS` — skills and experience visible, name/photo/contacts hidden
+  - `HIDDEN` — does not appear in any employer discovery pool
 
-- Admins manage users, employers, jobs, and audit views.
-- Employer audit is currently a simple rule-based/manual review helper, not an AI trust audit.
+- **Search Intent** — seekers declare what they are looking for:
+  - Actively looking for jobs
+  - Open to offers
+  - Seeking internship or attachment
+  - Not looking
+
+- **Employer Discover Page** (`/dashboard/employer/discover`)
+  - Filter by skills, search intent, and seniority level
+  - Skill-based search with debounced input
+  - Candidate cards linked to full public profile pages
+
+### 👤 Candidate Profile View (`/dashboard/employer/talent/[id]`)
+
+When an employer clicks a candidate, they see:
+- Full profile: bio, experience, education, certifications, portfolio links
+- Contact information (only for `PUBLIC` profiles)
+- WhatsApp direct message button (if candidate enabled it)
+- **Save Candidate** button — bookmark candidates to a personal talent pool
+- **Invite to Apply** button — opens a modal to select a role and send a direct in-platform message
+
+### ⭐ Saved Talent Pool (`/dashboard/employer/talent/saved`)
+
+- Employers bookmark candidates they want to revisit
+- Dedicated "Saved Talent" page with card grid and one-click unsave
+- Accessible from the employer sidebar
+
+### ✉️ Invite to Apply (Direct Messaging)
+
+- Employers select a role and optionally write a custom message
+- Platform sends an in-app message and a notification to the candidate
+- Message is stored in the existing conversations/messages system
+
+### ✨ Automated Matchmaking
+
+**For Employers — Suggested Candidates on Job Detail Page** (`/dashboard/employer/jobs/[id]`):
+- Each job detail page has a "✨ Suggested Candidates" tab
+- Queries all visible candidates whose skills overlap with job requirements
+- Shows matched skills per candidate highlighted in green
+- One-click "Invite" button per candidate card
+
+**For Seekers — Recommended Jobs on Dashboard**:
+- Seeker dashboard shows a "Recommended for You" widget
+- Matches active job listings whose skill requirements overlap with the seeker's skills
+- Updates automatically as the seeker adds skills to their profile
+
+---
+
+### 📋 Structured Hiring Pipeline
+
+- Employers post jobs with structured requirements:
+  - `skills`, `must_have_skills`, `nice_to_have_skills`
+  - `minimum_years_experience`, `screening_questions`, `salary_range`, `deadline`
+  - Work mode: `REMOTE`, `HYBRID`, `ON_SITE`
+
+- When a seeker applies, the server computes a **transparent screening score**:
+  - Required skill match check
+  - Optional skill match
+  - Experience vs. minimum requirement
+  - Screening question answers
+  - Stores: `screening_score`, `screening_summary`, `screening_breakdown`, `meets_required_criteria`
+
+- Employer pipeline stages: `PENDING` → `SHORTLISTED` → `INTERVIEWING` → `HIRED` / `REJECTED`
+
+- Employers can view the candidate pipeline per job from the Jobs list or Job Detail page
+
+---
+
+### 🎓 Onboarding Flow
+
+New users (both students and graduates) complete a multi-step onboarding that captures:
+- Personal details and professional background
+- Skills, experience, and education
+- Search intent (job, internship, open to offers, etc.)
+- Profile visibility preference (set before entering the discovery pool)
+
+---
+
+### 🔔 Notifications
+
+- In-platform notifications for invite events, application updates, and messages
+- Seekers receive a notification when an employer invites them to apply
+
+---
+
+### 👩‍💼 Admin Dashboard
+
+- Manage users, employer accounts, job listings, and applications
+- Approve or reject employer accounts
+- Audit log for all platform actions
+
+---
+
+### 💳 Payments & Subscriptions
+
+- Powered by **PayChangu** (Airtel Money, TNM Mpamba, Card — MWK)
+- **WorkBridge Badge** — seeker credibility badge
+- **WorkBridge Plus** — premium seeker plan
+
+---
 
 ## Tech Stack
 
-- Next.js 16 App Router
-- React 19
-- Tailwind CSS v4
-- Supabase Auth + Postgres + RLS
-- PayChangu payments (Airtel Money / TNM Mpamba / Card via MWK)
-- Resend email notifications
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, Vanilla CSS / Tailwind CSS v4 |
+| Icons | lucide-react |
+| Forms | React Hook Form + Zod |
+| Database | Supabase (PostgreSQL + Row Level Security) |
+| Auth | Supabase Auth |
+| Storage | Supabase Storage (avatars, resumes) |
+| Realtime | Supabase Realtime (messages, notifications) |
+| Payments | PayChangu |
+| Email | Resend |
 
-## Current Hiring Logic
-
-WorkBridge currently uses structured screening instead of AI.
-
-### Job creation
-
-Employers can define:
-
-- `skills`
-- `must_have_skills`
-- `nice_to_have_skills`
-- `minimum_years_experience`
-- `screening_questions`
-
-### Apply flow
-
-When a seeker applies:
-
-1. WorkBridge validates that the job is active.
-2. The seeker must have a complete profile.
-3. Required screening questions must be answered.
-4. The server calculates a transparent screening result from:
-   - required skill matches
-   - optional skill matches
-   - experience against minimum requirement
-   - screening question answers
-5. The application stores:
-   - `screening_answers`
-   - `screening_score`
-   - `screening_summary`
-   - `screening_breakdown`
-   - `meets_required_criteria`
-
-### Employer review
-
-Employers no longer receive AI-generated fit results. They review a structured checklist and move applicants through the pipeline manually.
+---
 
 ## Repository Structure
 
-- `src/app/(marketing)`  
-  Public landing pages, jobs page, pricing, privacy, terms
+```
+src/
+├── app/
+│   ├── (marketing)/          # Public pages: landing, jobs, pricing, terms
+│   ├── (app)/dashboard/
+│   │   ├── seeker/           # Seeker dashboard, profile, applications, saved jobs
+│   │   ├── employer/         # Employer dashboard, jobs, candidates, discover, saved talent
+│   │   └── admin/            # Admin user, employer, job, and audit management
+│   ├── api/
+│   │   ├── profile/          # Seeker profile GET/PUT, certificates CRUD, avatar upload
+│   │   ├── employer/
+│   │   │   ├── discover/     # Talent search + candidate public profile
+│   │   │   ├── jobs/[id]/matches/  # Skill-based matchmaking for a job
+│   │   │   ├── messages/invite/    # Invite to Apply messaging
+│   │   │   └── talent/       # Save/unsave candidates, saved list
+│   │   ├── seeker/jobs/recommended/ # Seeker-side job recommendations
+│   │   ├── jobs/             # Public job listing + application endpoints
+│   │   ├── applications/     # Application submission and management
+│   │   └── notifications/    # In-platform notification management
+│   └── onboarding/           # Multi-step onboarding for new users
+├── components/
+│   ├── profile/              # SeekerProfile form with certs, portfolio, marketplace prefs
+│   ├── dashboard/            # Shared UI: SectionCard, Badge, Tabs, StatCard, PageHeader
+│   └── layout/               # DashboardLayout, sidebar navigation
+├── lib/
+│   ├── validations/          # Zod schemas for profile, jobs, applications
+│   ├── auth-guard.ts         # Server-side auth helper
+│   ├── supabase-server.ts    # Server Supabase client
+│   └── api.ts                # Client-side fetch helpers
+supabase/
+├── schema.sql                # Full canonical schema (source of truth)
+└── migrations/               # Incremental SQL migrations
+```
 
-- `src/app/(app)`  
-  Authenticated dashboards for seekers, employers, and admins
+---
 
-- `src/app/api`  
-  API routes for jobs, applications, profiles, payments, admin, and messaging
+## Database Schema Highlights
 
-- `src/components`  
-  Public board UI, dashboard UI, profile forms, and marketing components
+### `job_seekers` table (key fields)
+```sql
+search_intent    TEXT  -- ACTIVELY_LOOKING | OPEN_TO_OFFERS | SEEKING_INTERNSHIP | NOT_LOOKING
+profile_visibility TEXT -- PUBLIC | ANONYMOUS | HIDDEN
+portfolio_links  TEXT[] -- Array of URL strings
+profile_views    INTEGER -- Incremented every time an employer views the profile
+```
 
-- `src/lib`  
-  Shared helpers for auth, screening, payments, audit, email, and utility logic
+### `employer_saved_candidates` table
+```sql
+employer_id  UUID  -- references employers
+seeker_id    UUID  -- references job_seekers
+notes        TEXT  -- optional employer notes
+created_at   TIMESTAMP
+```
 
-- `supabase`  
-  Schema and migrations
+### `certificates` table
+```sql
+seeker_id      UUID
+title          TEXT
+issuer         TEXT
+issue_date     DATE
+credential_url TEXT
+```
+
+---
 
 ## Setup
 
@@ -123,133 +220,120 @@ Employers no longer receive AI-generated fit results. They review a structured c
 
 - Node.js 20+
 - npm
-- Supabase project
-- PayChangu credentials for payments
-- Resend credentials for emails
+- A [Supabase](https://supabase.com) project
+- PayChangu credentials (for payment features)
+- Resend credentials (for email notifications)
 
-### Install
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### Environment
+### 2. Configure environment
 
-Create `.env.local` from `.env.example` and supply the required values for:
+Copy `.env.example` to `.env.local` and fill in:
 
-- Supabase
-- PayChangu
-- Resend
-- app base URL
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_APP_URL=
+PAYCHANGU_SECRET_KEY=
+RESEND_API_KEY=
+```
 
-### Run locally
+### 3. Apply the database schema
+
+**Fresh database:**
+```bash
+# Option A — apply the full canonical schema
+psql -h <host> -U postgres -d postgres -f supabase/schema.sql
+
+# Option B — use Supabase CLI
+npx supabase db push
+```
+
+**Existing database (apply incremental migrations):**
+```bash
+npx supabase db push
+```
+
+Key migrations to ensure are applied:
+- `20260424170000_add_talent_marketplace_fields.sql` — adds `search_intent`, `profile_visibility`, `portfolio_links` to `job_seekers`
+- `20260424210000_add_talent_marketplace_advanced.sql` — adds `profile_views` to `job_seekers` and creates `employer_saved_candidates` table
+
+### 4. Run locally
 
 ```bash
 npm run dev
 ```
 
-### Typecheck
+### 5. Type check
 
 ```bash
 npm run type-check
 ```
 
-## Database Changes Required
+---
 
-If you are bringing up a fresh database or updating an older WorkBridge database, these are the important schema changes for the current product.
+## Deployment
 
-### Required migrations already present in this repo
+**For a fresh environment:**
 
-Apply the migrations in `supabase/migrations`, especially:
+1. Provision Supabase project
+2. Apply `supabase/schema.sql` or run all migrations in order
+3. Configure all environment variables in your deployment platform (Vercel, etc.)
+4. Deploy — `npm run build && npm start`
 
-- `20260322165403_add_plan_to_employers.sql`
-- `20260322171800_add_plan_expires_at_to_employers.sql`
-- `20260322175200_create_transactions_table.sql`
-- `20260323_fix_seeker_rls.sql`
-- `20260326120000_public_anon_jobs_read.sql`
-- `20260326143000_add_work_mode_to_jobs.sql`
-- `20260326160000_add_structured_screening.sql`
-- `20260326170000_drop_notes_and_certificate_ai_columns.sql`
+**For an existing environment:**
 
-### Current schema requirements
+1. Back up the database
+2. Run `npx supabase db push` to apply pending migrations
+3. Verify the new columns are present (`profile_views`, `profile_visibility`, `search_intent`, `employer_saved_candidates` table)
+4. Deploy the updated app
 
-The current app expects these job fields:
+---
 
-- `work_mode`
-- `must_have_skills`
-- `nice_to_have_skills`
-- `minimum_years_experience`
-- `screening_questions`
+## Current Platform Status
 
-The current app expects these application fields:
+### ✅ Working
 
-- `screening_answers`
-- `screening_score`
-- `screening_summary`
-- `screening_breakdown`
-- `meets_required_criteria`
+| Feature | Status |
+|---|---|
+| Public job board (`/jobs`) | ✅ |
+| Structured job posting with screening | ✅ |
+| Transparent screening score on apply | ✅ |
+| Employer hiring pipeline (Shortlist → Interview → Hire) | ✅ |
+| Full seeker profile (bio, skills, experience, education) | ✅ |
+| Certifications management | ✅ |
+| Portfolio links | ✅ |
+| Profile visibility & search intent controls | ✅ |
+| Profile view analytics for seekers | ✅ |
+| Marketplace preferences in onboarding | ✅ |
+| Employer Discover page with filters | ✅ |
+| Candidate public profile page | ✅ |
+| Save Candidate / Talent Pool | ✅ |
+| Invite to Apply (direct messaging) | ✅ |
+| Skill-based matchmaking (employer side) | ✅ |
+| Suggested Candidates on Job Detail page | ✅ |
+| Recommended Jobs widget on seeker dashboard | ✅ |
+| In-platform notifications | ✅ |
+| Payments & subscriptions (PayChangu) | ✅ |
+| Admin dashboard | ✅ |
+| Mobile responsive UI | ✅ |
 
-### Cleanup migrations now included
+---
 
-The first round of legacy cleanup is now implemented in SQL migrations:
+## Privacy Design
 
-1. `20260326170000_drop_notes_and_certificate_ai_columns.sql`
-This removes the unused `notes` table and drops `certificates.verification_confidence` and `certificates.verification_summary`.
+WorkBridge takes candidate privacy seriously. The platform enforces the following rules at every level:
 
-### Remaining cleanup worth reviewing later
+- **`HIDDEN` profiles** never appear in employer discovery or matchmaking results
+- **`ANONYMOUS` profiles** show skills, experience, and bio — but name, avatar, location, and contact details are masked in all views (Discover page, Candidate Profile page, Suggested Candidates tab, Saved Talent page)
+- **Contact details** (email, phone, WhatsApp) are only exposed for `PUBLIC` profiles
+- **Row Level Security (RLS)** is enforced at the database level for all tables
 
-These items are still in active use or still represent product decisions, so they were not dropped automatically:
+---
 
-
-2. `job_seekers.top_verification_tier` and `certificates.verification_tier`
-These are still used in seeker and employer flows, even though certificate review is manual rather than AI-based.
-
-3. `profile_reveals`
-This privacy workflow is still wired into the product and RLS policies.
-
-4. Any older payment/subscription labels in historic rows
-Current code already uses `Plus` naming, but existing database records may still contain older wording depending on your environment.
-
-## Recommended Deployment Sequence
-
-For an existing environment:
-
-1. Back up the database.
-2. Apply all pending SQL migrations in order.
-3. Verify `jobs` and `applications` contain the structured screening columns.
-4. Start the app and test:
-   - public `/jobs`
-   - employer job creation
-   - seeker application flow
-   - employer candidate review
-   - PayChangu webhook handling
-
-For a fresh environment:
-
-1. Provision Supabase.
-2. Apply `supabase/schema.sql` or run the migrations in order.
-3. Configure environment variables.
-4. Run `npm install`.
-5. Run `npm run dev`.
-
-## Current Status
-
-What is working now:
-
-- lean public board
-- structured job posting
-- structured application screening
-- employer candidate shortlist flow
-- seeker saved jobs and applications
-- payments and badges / plus plan
-- TypeScript clean source tree
-
-What is still worth a future pass:
-
-- deeper review of legacy privacy and verification fields that are still intentionally in use
-- lockfile refresh after dependency removals
-- optional pruning of older marketing/help copy that is no longer essential
-
-## Owner Note
-
-This README describes the platform as it operates now, not the older AI-driven version.
+*WorkBridge — Built for Malawi. Built to grow.*

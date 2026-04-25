@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { User, Employer } from "@/types";
-import { LayoutDashboard, Briefcase, Settings, Users, PlusCircle, Lock, DollarSign } from "lucide-react";
+import { LayoutDashboard, Briefcase, Settings, Users, PlusCircle, Lock, DollarSign, Search, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
@@ -15,6 +15,8 @@ const employerNavGroups: NavGroup[] = [
         title: "Workspace",
         items: [
             { label: "Overview", href: "/dashboard/employer", icon: LayoutDashboard },
+            { label: "Discover", href: "/dashboard/employer/discover", icon: Search },
+            { label: "Saved Talent", href: "/dashboard/employer/talent/saved", icon: Bookmark },
             { label: "Jobs", href: "/dashboard/employer/jobs", icon: Briefcase },
             { label: "Candidates", href: "/dashboard/employer/candidates", icon: Users },
             { label: "Billing", href: "/dashboard/employer/billing", icon: DollarSign },

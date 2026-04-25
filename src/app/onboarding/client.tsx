@@ -35,6 +35,8 @@ type MeData = {
         salaryExpectation?: number;
         experience?: Experience[];
         education?: Education[];
+        searchIntent?: string;
+        profileVisibility?: string;
     };
     employer?: {
         companyName?: string;
@@ -681,10 +683,18 @@ function Step4({
 
 function Step5({
     salaryExpectation,
+    searchIntent,
+    profileVisibility,
     setSalaryExpectation,
+    setSearchIntent,
+    setProfileVisibility,
 }: {
     salaryExpectation: string;
+    searchIntent: string;
+    profileVisibility: string;
     setSalaryExpectation: (v: string) => void;
+    setSearchIntent: (v: string) => void;
+    setProfileVisibility: (v: string) => void;
 }) {
     return (
         <div className="space-y-5">
@@ -706,6 +716,37 @@ function Step5({
                     placeholder="e.g. 150,000"
                     className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 />
+            </div>
+            
+            <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                    What are you looking for right now?
+                </label>
+                <select
+                    value={searchIntent}
+                    onChange={(e) => setSearchIntent(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                >
+                    <option value="ACTIVELY_LOOKING">Actively looking for jobs</option>
+                    <option value="OPEN_TO_OFFERS">Open to offers</option>
+                    <option value="SEEKING_INTERNSHIP">Seeking an internship or attachment</option>
+                    <option value="NOT_LOOKING">Not looking</option>
+                </select>
+            </div>
+            
+            <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                    Profile Visibility
+                </label>
+                <select
+                    value={profileVisibility}
+                    onChange={(e) => setProfileVisibility(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                >
+                    <option value="PUBLIC">Public (Employers can see your full profile)</option>
+                    <option value="ANONYMOUS">Anonymous (Employers see your skills/experience but not your name)</option>
+                    <option value="HIDDEN">Hidden (You will not appear in the discover pool)</option>
+                </select>
             </div>
         </div>
     );
@@ -743,6 +784,8 @@ export function JobSeekerOnboarding({ me }: { me: NonNullable<MeData> }) {
     const [salaryExpectation, setSalaryExpectation] = useState(
         me.jobSeeker?.salaryExpectation ? String(me.jobSeeker.salaryExpectation) : ""
     );
+    const [searchIntent, setSearchIntent] = useState(me.jobSeeker?.searchIntent || "ACTIVELY_LOOKING");
+    const [profileVisibility, setProfileVisibility] = useState(me.jobSeeker?.profileVisibility || "PUBLIC");
 
     const saveCurrentStep = async (skipSave = false): Promise<boolean> => {
         if (skipSave) return true;
@@ -815,6 +858,8 @@ export function JobSeekerOnboarding({ me }: { me: NonNullable<MeData> }) {
                             salaryExpectation: salaryExpectation ? parseInt(salaryExpectation) : undefined,
                             experience,
                             education,
+                            searchIntent,
+                            profileVisibility,
                         }),
                     });
                 }
@@ -879,7 +924,11 @@ export function JobSeekerOnboarding({ me }: { me: NonNullable<MeData> }) {
                 {step === 5 && (
                     <Step5
                         salaryExpectation={salaryExpectation}
+                        searchIntent={searchIntent}
+                        profileVisibility={profileVisibility}
                         setSalaryExpectation={setSalaryExpectation}
+                        setSearchIntent={setSearchIntent}
+                        setProfileVisibility={setProfileVisibility}
                     />
                 )}
 

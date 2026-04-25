@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { User, Application, SavedJob } from "@/types";
+import { Application, SavedJob } from "@/types";
 import { useUser } from "@/context/UserContext";
 import Link from "next/link";
-import { Briefcase, BookmarkCheck, CheckCircle2, Loader2 } from "lucide-react";
+import { Briefcase, BookmarkCheck, CheckCircle2, Loader2, MapPin } from "lucide-react";
 import { PageHeader, StatCard, SectionCard, Badge } from "@/components/dashboard/ui";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ export default function SeekerDashboardPage() {
     const { user } = useUser();
     const [applications, setApplications] = useState<Application[]>([]);
     const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
+    const [recommendedJobs, setRecommendedJobs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const searchParams = useSearchParams();
 
@@ -27,12 +28,17 @@ export default function SeekerDashboardPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [appRes, savedRes] = await Promise.all([
+                const [appRes, savedRes, recRes] = await Promise.all([
                     apiFetch("/api/applications"),
                     apiFetch("/api/seeker/saved-jobs"),
+                    apiFetch("/api/seeker/jobs/recommended"),
                 ]);
                 if (appRes.ok) setApplications(await appRes.json());
                 if (savedRes.ok) setSavedJobs(await savedRes.json());
+                if (recRes.ok) {
+                    const recData = await recRes.json();
+                    setRecommendedJobs(recData.jobs || []);
+                }
             } finally {
                 setLoading(false);
             }
@@ -100,6 +106,35 @@ export default function SeekerDashboardPage() {
                             </div>
                         )}
                     </SectionCard>
+
+                    {recommendedJobs.length > 0 && (
+                        <SectionCard title="Recommended for You" action={{ label: "Browse all jobs", href: "/dashboard/seeker/jobs" }}>
+                            <div className="divide-y divide-stone-200/70 dark:divide-slate-800">
+                                {recommendedJobs.map((job) => (
+                                    <Link key={job.id} href={`/jobs/${job.id}`} className="flex items-center justify-between gap-4 px-6 py-4 transition-colors hover:bg-stone-50 dark:hover:bg-slate-900/50">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-stone-200 bg-stone-100 dark:border-slate-700 dark:bg-slate-800">
+                                                {job.employers?.logo_url ? (
+                                                    <img src={job.employers.logo_url} alt="Logo" className="h-full w-full object-cover" />
+                                                ) : (
+                                                    <Briefcase size={14} className="text-slate-400" />
+                                                )}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{job.title}</p>
+                                                <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                                                    <MapPin size={11} />{job.location}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <span className="flex-shrink-0 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                                            Match
+                                        </span>
+                                    </Link>
+                                ))}
+                            </div>
+                        </SectionCard>
+                    )}
                 </div>
 
                 <div className="space-y-6">

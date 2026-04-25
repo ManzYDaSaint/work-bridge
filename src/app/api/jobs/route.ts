@@ -113,9 +113,9 @@ export async function POST(request: Request) {
         const plan = employerData?.plan || 'FREE';
         const jobCount = employerData?.jobs?.length || 0;
 
-        if (plan === 'FREE' && jobCount >= 3) {
+        if (plan === 'FREE' && jobCount >= 2) {
             return NextResponse.json({
-                error: "Plan Limit Reached. You have reached the maximum of 3 free jobs. Upgrade to Premium to unlock: Unlimited Job Deployments, Advanced Talent Filtering, Elite Badge Visibility, and Priority Selection Signals."
+                error: "Plan Limit Reached. You have reached the maximum of 2 free jobs. Upgrade to Premium to unlock: Unlimited Job Deployments, Advanced Talent Filtering, Elite Badge Visibility, and Priority Selection Signals."
             }, { status: 403 });
         }
 

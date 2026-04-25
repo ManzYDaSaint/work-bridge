@@ -1,53 +1,77 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+
+const faqs = [
+    {
+        q: "Who is WorkBridge for?",
+        a: "WorkBridge is for anyone in Malawi looking for work, internships, or attachments — and for employers and recruiters who want to find great local talent. Students and fresh graduates are especially welcome.",
+    },
+    {
+        q: "How does the Talent Marketplace work?",
+        a: "Job seekers build a full professional profile with their skills, experience, and certifications. Employers can then search this pool and filter by skill, seniority, and search intent. Both sides are matched automatically based on skills.",
+    },
+    {
+        q: "Can employers contact candidates directly?",
+        a: "Yes. Employers can send a direct 'Invite to Apply' message to any visible candidate directly on the platform — no external email or phone call needed to make initial contact.",
+    },
+    {
+        q: "What are the profile visibility options?",
+        a: "Seekers choose one of three visibility levels: Public (full profile visible), Anonymous (skills and experience visible but name and contacts hidden), or Hidden (does not appear in any employer search).",
+    },
+    {
+        q: "How does skill-based matching work?",
+        a: "When an employer posts a job, WorkBridge immediately surfaces candidates whose listed skills overlap with the job's requirements. Seekers also see a 'Recommended for You' widget showing active jobs that match their skills.",
+    },
+    {
+        q: "Is there a free plan?",
+        a: "Yes. Both seekers and employers can use the platform's core features for free. Premium plans unlock extras like profile badges, priority visibility, and additional employer features.",
+    },
+];
 
 export default function FAQ() {
-    const faqs = [
-        {
-            q: "How does candidate matching work?",
-            a: "WorkBridge uses structured requirements like must-have skills, screening questions, and experience expectations to help employers compare applicants clearly.",
-        },
-        {
-            q: "Are the academic qualifications verified?",
-            a: "Certificates can be uploaded and stored with the profile, and employers can review them alongside the rest of a candidate's application.",
-        },
-        {
-            q: "Why are candidate names hidden initially?",
-            a: "We employ Zero-Bias Discovery. When employers view the talent pipeline, real names and photos are redacted until the candidate is explicitly shortlisted, ensuring decisions are based purely on merit.",
-        },
-        {
-            q: "Can employers shortlist candidates privately first?",
-            a: "Yes. Employers can review structured candidate information, shortlist strong applicants, and request profile reveal only when there is genuine interest.",
-        },
-    ];
+    const [openIndex, setOpenIndex] = useState<number | null>(null);
 
     return (
-        <section id="faq" className="py-32 bg-white dark:bg-[#020617]">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6">
-                <div className="text-center mb-20">
-                    <h2 className="text-3xl md:text-5xl font-black mb-6 tracking-tight">Frequently Asked Questions</h2>
-                    <p className="text-lg text-slate-500 max-w-2xl mx-auto">Everything you need to know about getting started with WorkBridge.</p>
+        <section id="faq" className="py-24 bg-white dark:bg-slate-950">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6">
+                <div className="text-center mb-14">
+                    <p className="inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-stone-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 mb-4">
+                        FAQ
+                    </p>
+                    <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+                        Common questions
+                    </h2>
+                    <p className="mt-4 text-base text-slate-500 dark:text-slate-400">
+                        Everything you need to know about getting started.
+                    </p>
                 </div>
 
-                <div className="grid gap-6">
+                <div className="space-y-3">
                     {faqs.map((faq, i) => (
-                        <motion.div
+                        <div
                             key={i}
-                            initial={{ opacity: 0, y: 10 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: i * 0.1 }}
-                            className="collapse collapse-arrow bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/50 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                            className="rounded-2xl border border-stone-200 bg-stone-50 dark:border-slate-800 dark:bg-slate-900 overflow-hidden"
                         >
-                            <input type="checkbox" name={`faq-accordion-${i}`} />
-                            <div className="collapse-title text-xl font-bold px-8 py-6">
-                                {faq.q}
-                            </div>
-                            <div className="collapse-content px-8 pb-6 text-slate-500 dark:text-slate-400 leading-relaxed">
-                                <p>{faq.a}</p>
-                            </div>
-                        </motion.div>
+                            <button
+                                onClick={() => setOpenIndex(openIndex === i ? null : i)}
+                                className="flex w-full items-center justify-between px-6 py-5 text-left"
+                            >
+                                <span className="text-sm font-semibold text-slate-900 dark:text-white pr-4">
+                                    {faq.q}
+                                </span>
+                                <ChevronDown
+                                    size={18}
+                                    className={`flex-shrink-0 text-slate-400 transition-transform duration-200 ${openIndex === i ? "rotate-180" : ""}`}
+                                />
+                            </button>
+                            {openIndex === i && (
+                                <div className="px-6 pb-5 text-sm leading-relaxed text-slate-500 dark:text-slate-400 border-t border-stone-200 dark:border-slate-800 pt-4">
+                                    {faq.a}
+                                </div>
+                            )}
+                        </div>
                     ))}
                 </div>
             </div>

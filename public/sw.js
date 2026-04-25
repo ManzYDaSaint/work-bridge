@@ -1,4 +1,4 @@
-/* eslint-disable no-restricted-globals */
+ 
 
 const CACHE_NAME = "workbridge-shell-v2";
 const APP_SHELL = [

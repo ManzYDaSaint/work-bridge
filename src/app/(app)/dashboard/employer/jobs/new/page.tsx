@@ -112,14 +112,14 @@ export default function NewJobPage() {
 
     const isFreePlan = !profile?.plan || profile.plan === "FREE";
     const jobsCount = profile?._count?.jobs || 0;
-    const limitReached = isFreePlan && jobsCount >= 3;
+    const limitReached = isFreePlan && jobsCount >= 2;
 
     if (limitReached) {
         return (
             <div className="max-w-2xl mx-auto space-y-6 pb-16 px-1">
                 <PageHeader
                     title="Job limit reached"
-                    subtitle="Free plan includes up to 3 active listings"
+                    subtitle="Free plan includes up to 2 active listings"
                     action={{ label: "Back to jobs", href: "/dashboard/employer/jobs", variant: "secondary" }}
                 />
                 <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/20 p-6 sm:p-8 text-center">
@@ -154,7 +154,7 @@ export default function NewJobPage() {
                 <p className="font-semibold text-slate-900 dark:text-white">Plan usage</p>
                 <p className="mt-1 text-slate-600 dark:text-slate-400">
                     {isFreePlan
-                        ? `Free plan: ${jobsCount}/3 active listings used. Upgrade for unlimited roles and priority visibility.`
+                        ? `Free plan: ${jobsCount}/2 active listings used. Upgrade for unlimited roles and priority visibility.`
                         : "Premium plan: unlimited active listings and advanced hiring controls."}
                 </p>
                 <Link href="/dashboard/employer/billing" className="mt-2 inline-flex text-xs font-semibold text-[#16324f] hover:underline dark:text-slate-200">

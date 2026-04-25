@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { User, JobSeeker } from "@/types";
 import {
-    LayoutDashboard, Briefcase, BookmarkCheck, UserCircle2
+    LayoutDashboard, Briefcase, BookmarkCheck, UserCircle2, Sparkles
 } from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
@@ -23,6 +23,7 @@ const seekerNavGroups: NavGroup[] = [
     {
         items: [
             { label: "Profile", href: "/dashboard/seeker/profile", icon: UserCircle2 },
+            { label: "Upgrade Pro", href: "/dashboard/seeker/billing", icon: Sparkles },
         ]
     }
 ];

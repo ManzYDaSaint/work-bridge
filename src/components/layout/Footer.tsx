@@ -11,7 +11,7 @@ const social = [
 
 export default function Footer() {
     return (
-        <footer className="relative z-10 w-full border-t border-stone-200/80 dark:border-slate-800 mt-16">
+        <footer className="relative z-10 w-full border-t border-slate-300 dark:border-slate-800 mt-16">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-14">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-10">
                     <div className="space-y-4 max-w-sm">
@@ -69,7 +69,7 @@ export default function Footer() {
                     </nav>
                 </div>
 
-                <div className="mt-10 pt-8 border-t border-stone-200/70 dark:border-slate-800 text-center sm:text-left text-xs text-slate-400">
+                <div className="mt-10 pt-8 border-t border-slate-300 dark:border-slate-800 text-center sm:text-left text-xs text-slate-400">
                     &copy; {new Date().getFullYear()} WorkBridge · Built for Malawi, open to remote, hybrid, and on-site work
                 </div>
             </div>
