@@ -334,7 +334,7 @@ export default function JobDetailPage() {
                                                 </div>
                                                 <Badge
                                                     label={formatIntent(candidate.search_intent)}
-                                                    variant={candidate.search_intent === "SEEKING_INTERNSHIP" ? "orange" : "blue"}
+                                                    variant={candidate.search_intent === "SEEKING_INTERNSHIP" ? "yellow" : "blue"}
                                                     className="flex-shrink-0 text-[10px]"
                                                 />
                                             </div>
