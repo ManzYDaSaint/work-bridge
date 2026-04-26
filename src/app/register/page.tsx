@@ -63,7 +63,7 @@ function RegisterForm() {
             toast.message(employerGuidance);
         }
 
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
             email,
             password: formData.password,
             options: {
@@ -85,7 +85,7 @@ function RegisterForm() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify({ email, password: formData.password, role }),
+                body: JSON.stringify({ email, password: formData.password, role, userId: signUpData.user?.id }),
             });
             if (!regRes.ok) {
                 const regBody = await regRes.json().catch(() => ({}));

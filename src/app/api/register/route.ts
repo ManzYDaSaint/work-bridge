@@ -7,7 +7,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { email, role, full_name, companyName, industry, location } = body;
+        const { email, role, full_name, companyName, industry, location, userId } = body;
         const registrationEmail = String(email || "").trim().toLowerCase();
         const emailValidation = canUseEmailForRegistration(registrationEmail);
         if (!emailValidation.ok) {
@@ -23,7 +23,11 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
         }
 
-        const { data: { user }, error: lookupError } = await supabase.auth.admin.getUserByEmail(registrationEmail);
+        if (!userId) {
+            return NextResponse.json({ error: "Missing user ID" }, { status: 400 });
+        }
+
+        const { data: { user }, error: lookupError } = await supabase.auth.admin.getUserById(userId);
         if (lookupError || !user) {
             return NextResponse.json({ error: "User not found after registration" }, { status: 404 });
         }
