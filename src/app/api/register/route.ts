@@ -1,8 +1,8 @@
-import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { sendWelcomeEmail } from "@/lib/resend";
 import { canUseEmailForRegistration, isFreeEmailDomain } from "@/lib/email-safety";
 import { notifyAdmin } from "@/lib/notifications";
+import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export async function POST(request: Request) {
     try {
@@ -14,13 +14,18 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: emailValidation.reason || "Invalid email" }, { status: 400 });
         }
 
-        const supabase = await createSupabaseServerClient();
+        // Use the service-role admin client — no session cookie needed.
+        // The browser client's signUp() session cookie may not have propagated
+        // to the server yet, so auth.getUser() on the server client would return
+        // 401. The admin client looks the user up directly by email.
+        const supabase = getSupabaseAdminClient();
+        if (!supabase) {
+            return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+        }
 
-        // Get the authenticated user from the session (signUp just happened)
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-        if (authError || !user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        const { data: { user }, error: lookupError } = await supabase.auth.admin.getUserByEmail(registrationEmail);
+        if (lookupError || !user) {
+            return NextResponse.json({ error: "User not found after registration" }, { status: 404 });
         }
 
         // 1. Create Public User Record

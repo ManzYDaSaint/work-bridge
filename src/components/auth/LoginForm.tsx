@@ -11,6 +11,7 @@ import { showErrorToast } from "@/lib/toasts";
 export default function LoginForm() {
     const searchParams = useSearchParams();
     const isTimeout = searchParams.get("timeout") === "true";
+    const isNoProfile = searchParams.get("error") === "no_profile";
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -60,6 +61,15 @@ export default function LoginForm() {
                     <div className="flex items-start gap-3">
                         <Clock size={16} className="mt-0.5 shrink-0" />
                         <p className="text-sm">Session timed out after inactivity. Please sign in again.</p>
+                    </div>
+                </div>
+            )}
+
+            {isNoProfile && (
+                <div className="mb-5 rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3 text-red-900 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-200">
+                    <div className="flex items-start gap-3">
+                        <Clock size={16} className="mt-0.5 shrink-0" />
+                        <p className="text-sm">Your account profile wasn&apos;t set up correctly. Please sign in again — it will be fixed automatically.</p>
                     </div>
                 </div>
             )}

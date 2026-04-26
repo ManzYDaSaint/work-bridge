@@ -81,20 +81,26 @@ function RegisterForm() {
         }
 
         try {
-            await fetch("/api/register", {
+            const regRes = await fetch("/api/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
                 body: JSON.stringify({ email, password: formData.password, role }),
             });
+            if (!regRes.ok) {
+                const regBody = await regRes.json().catch(() => ({}));
+                console.error("[register] profile creation failed:", regBody);
+                toast.warning("Account created but profile setup had an issue. Please contact support if login fails.");
+            }
             await fetch("/api/metrics/track", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
                 body: JSON.stringify({ eventName: "register_completed", stage: "register", role }),
             });
-        } catch {
-            // Non-blocking post-signup hooks
+        } catch (err) {
+            console.error("[register] post-signup hook error:", err);
+            // Non-blocking — don't block navigation but do log
         }
 
         toast.success("Account created. Verify your email, then complete onboarding.");

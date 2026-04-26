@@ -22,16 +22,7 @@ export default async function DashboardRedirect() {
         redirect(`/dashboard/${profile.role === "ADMIN" ? "admin" : profile.role === "EMPLOYER" ? "employer" : "seeker"}`);
     }
 
-    // Fallback if profile doesn't exist yet
-    return (
-        <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-[#020617]">
-            <div className="animate-pulse flex flex-col items-center gap-6">
-                <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin shadow-2xl shadow-blue-500/20" />
-                <div className="flex flex-col items-center gap-2">
-                    <p className="font-black text-slate-900 dark:text-white tracking-[0.2em] text-xs">Initializing Session</p>
-                    <p className="text-[10px] font-bold text-slate-400 tracking-widest">Bridging your workspace...</p>
-                </div>
-            </div>
-        </div>
-    );
+    // Fallback if profile doesn't exist yet — redirect to login with an error
+    // hint rather than showing an infinite spinner.
+    redirect("/login?error=no_profile");
 }
