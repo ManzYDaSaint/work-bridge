@@ -10,7 +10,7 @@ export function CompanyAvatar({ logoUrl, name, size = "md" }: { logoUrl?: string
             logoUrl ? "bg-white dark:bg-white border-stone-200 dark:border-slate-700" : "bg-stone-50 dark:bg-slate-900 border-stone-200 dark:border-slate-800")}>
             {logoUrl ? (
                 <div className="relative w-full h-full">
-                    <Image src={logoUrl} alt={name} fill className="object-contain p-1.5" unoptimized />
+                    <Image src={logoUrl} alt={name} fill className="object-contain p-1.5" />
                 </div>
             ) : (
                 <span className="font-semibold text-[#16324f] dark:text-slate-200 leading-none">

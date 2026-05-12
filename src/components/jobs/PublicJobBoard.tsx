@@ -3,15 +3,21 @@
 import { AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { apiFetch, apiFetchJson } from "@/lib/api";
 import { useUser } from "@/context/UserContext";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import { cn, formatJobType, formatWorkMode, timeAgo } from "@/lib/utils";
 import { ArrowUpRight, Bookmark, BookmarkCheck, Briefcase, MapPin, Search, SlidersHorizontal } from "lucide-react";
 import { Pagination, CompanyAvatar } from "@/components/dashboard/ui";
-import JobDetailModal, { type PublicViewerMode } from "./JobDetailModal";
 import { toast } from "sonner";
 import type { Job, ScreeningAnswer } from "@/types";
+import { type PublicViewerMode } from "./JobDetailModal";
+
+const JobDetailModal = dynamic(() => import("./JobDetailModal"), { 
+    ssr: false,
+    loading: () => <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm animate-pulse" />
+});
 
 type ExtendedJob = Omit<Job, "employer"> & {
     employer: {
@@ -308,23 +314,40 @@ export default function PublicJobBoard() {
             router.push("/login");
             return;
         }
+
+        // Optimistic update
+        const wasSaved = savedJobIds.has(jobId);
+        setSavedJobIds((prev) => {
+            const next = new Set(prev);
+            if (wasSaved) next.delete(jobId);
+            else next.add(jobId);
+            return next;
+        });
+
         try {
             const data = await apiFetchJson<{ saved: boolean }>("/api/seeker/saved-jobs", {
                 method: "POST",
                 body: JSON.stringify({ jobId }),
             });
 
+            // Sync with actual server state
             setSavedJobIds((prev) => {
                 const next = new Set(prev);
                 if (data.saved) next.add(jobId);
                 else next.delete(jobId);
                 return next;
             });
-            router.refresh();
-
+            
             if (data.saved) toast.success("Job bookmarked.");
             else toast.success("Bookmark removed.");
         } catch (error: any) {
+            // Rollback on error
+            setSavedJobIds((prev) => {
+                const next = new Set(prev);
+                if (wasSaved) next.add(jobId);
+                else next.delete(jobId);
+                return next;
+            });
             toast.error(error.message || "Could not update saved jobs.");
         }
     };

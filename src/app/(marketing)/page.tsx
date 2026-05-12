@@ -1,11 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import PricingSection from "@/components/marketing/PricingSection";
-import LogoMarquee from "@/components/marketing/LogoMarquee";
-import HowItWorks from "@/components/marketing/HowItWorks";
-import Features from "@/components/marketing/Features";
-import FAQ from "@/components/marketing/FAQ";
+import dynamic from "next/dynamic";
 import { motion, Variants } from "framer-motion";
 import {
     GraduationCap,
@@ -20,12 +16,19 @@ import {
     Shield,
 } from "lucide-react";
 
+// Lazy load sections for better initial load time
+const PricingSection = dynamic(() => import("@/components/marketing/PricingSection"), { ssr: true });
+const LogoMarquee = dynamic(() => import("@/components/marketing/LogoMarquee"), { ssr: false });
+const HowItWorks = dynamic(() => import("@/components/marketing/HowItWorks"), { ssr: true });
+const Features = dynamic(() => import("@/components/marketing/Features"), { ssr: true });
+const FAQ = dynamic(() => import("@/components/marketing/FAQ"), { ssr: true });
+
 const sectionVariants: Variants = {
-    hidden: { opacity: 0, y: 30 },
+    hidden: { opacity: 0, y: 15 }, // Reduced y distance for faster painting
     visible: {
         opacity: 1,
         y: 0,
-        transition: { duration: 0.6, ease: "easeOut" }
+        transition: { duration: 0.4, ease: "easeOut" } // Faster duration
     }
 };
 

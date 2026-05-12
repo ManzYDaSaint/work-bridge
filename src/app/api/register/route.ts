@@ -28,8 +28,22 @@ export async function POST(request: Request) {
         }
 
         const { data: { user }, error: lookupError } = await supabase.auth.admin.getUserById(userId);
+
+        // When email confirmation is required, Supabase's signUp() returns a
+        // placeholder user ID before the email is verified. getUserById() may
+        // return 404 or a user with no identities (not yet confirmed).
+        // In that case we return success — the DB trigger `on_auth_user_created`
+        // will insert the row into `users` once the user confirms their email.
         if (lookupError || !user) {
-            return NextResponse.json({ error: "User not found after registration" }, { status: 404 });
+            console.warn("[register] user not yet confirmed in auth (pending email verification), skipping profile upsert.");
+            return NextResponse.json({ success: true, pending: true });
+        }
+
+        // identities is empty when the signup is awaiting email confirmation
+        const isPendingConfirmation = Array.isArray(user.identities) && user.identities.length === 0;
+        if (isPendingConfirmation) {
+            console.warn("[register] user signup pending email confirmation, skipping profile upsert.");
+            return NextResponse.json({ success: true, pending: true });
         }
 
         // 1. Create Public User Record

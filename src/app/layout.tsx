@@ -82,6 +82,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={jakarta.variable}>
+      <head>
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
+      </head>
       <body className={`${jakarta.className} antialiased min-h-screen flex flex-col`}>
         <Toaster position="top-right" richColors />
         <PWARegister />

@@ -238,6 +238,45 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Auto-create public.users (and role profile) when a new auth user is inserted.
+-- This fires on email confirmation when email verification is enabled, or
+-- immediately on signUp() when email verification is disabled.
+CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+  v_role TEXT;
+BEGIN
+  v_role := COALESCE(NEW.raw_user_meta_data->>'role', 'JOB_SEEKER');
+  IF v_role NOT IN ('ADMIN', 'EMPLOYER', 'JOB_SEEKER') THEN
+    v_role := 'JOB_SEEKER';
+  END IF;
+
+  INSERT INTO public.users (id, email, role)
+  VALUES (NEW.id, NEW.email, v_role::public.user_role)
+  ON CONFLICT (id) DO NOTHING;
+
+  IF v_role = 'JOB_SEEKER' THEN
+    INSERT INTO public.job_seekers (id, full_name, location)
+    VALUES (NEW.id, COALESCE(split_part(NEW.email, '@', 1), ''), 'To be updated')
+    ON CONFLICT (id) DO NOTHING;
+  ELSIF v_role = 'EMPLOYER' THEN
+    INSERT INTO public.employers (id, company_name, industry, location, status, recruiter_verified)
+    VALUES (NEW.id, 'New Company', 'To be updated', 'To be updated', 'PENDING', FALSE)
+    ON CONFLICT (id) DO NOTHING;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
+
 -- ==========================================
 -- 3. ROW LEVEL SECURITY (RLS)
 -- ==========================================

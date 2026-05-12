@@ -11,23 +11,6 @@ import { UserProvider, useUser } from "@/context/UserContext";
 import { useEffect } from "react";
 
 
-const seekerNavGroups: NavGroup[] = [
-    {
-        items: [
-            { label: "Home", href: "/dashboard/seeker", icon: LayoutDashboard },
-            { label: "Find Jobs", href: "/dashboard/seeker/jobs", icon: Briefcase },
-            { label: "Applications", href: "/dashboard/seeker/applications", icon: Briefcase },
-            { label: "Saved Jobs", href: "/dashboard/seeker/saved", icon: BookmarkCheck },
-        ]
-    },
-    {
-        items: [
-            { label: "Profile", href: "/dashboard/seeker/profile", icon: UserCircle2 },
-            { label: "Upgrade Pro", href: "/dashboard/seeker/billing", icon: Sparkles },
-        ]
-    }
-];
-
 export default function SeekerLayoutClient({
     children,
     initialUser,
@@ -52,6 +35,25 @@ function SeekerLayoutInner({ children }: { children: React.ReactNode }) {
     }, [refreshUser]);
 
     if (!user) return null;
+
+    // Defined inside the component so the same module-instance is used on
+    // both the server and client — avoids icon-reference hydration mismatches.
+    const seekerNavGroups: NavGroup[] = [
+        {
+            items: [
+                { label: "Home", href: "/dashboard/seeker", icon: LayoutDashboard },
+                { label: "Find Jobs", href: "/dashboard/seeker/jobs", icon: Briefcase },
+                { label: "Applications", href: "/dashboard/seeker/applications", icon: Briefcase },
+                { label: "Saved Jobs", href: "/dashboard/seeker/saved", icon: BookmarkCheck },
+            ]
+        },
+        {
+            items: [
+                { label: "Profile", href: "/dashboard/seeker/profile", icon: UserCircle2 },
+                { label: "Upgrade Pro", href: "/dashboard/seeker/billing", icon: Sparkles },
+            ]
+        }
+    ];
 
     const seekerProfile: JobSeeker | null = user.jobSeeker ?? null;
 

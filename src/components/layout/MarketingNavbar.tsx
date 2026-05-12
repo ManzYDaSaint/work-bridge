@@ -61,6 +61,7 @@ export default function MarketingNavbar() {
 
     return (
         <header className="sticky top-0 z-50 flex flex-col items-center px-3 sm:px-4 pt-3 sm:pt-4">
+            {/* Force recompile to fix stale hydration state */}
             <nav
                 className={cn(
                     "w-full max-w-6xl flex items-center justify-between gap-x-3 sm:gap-4 min-h-12 sm:min-h-14 px-3 sm:px-5 py-2 rounded-[1.25rem] border transition-colors relative z-50",

@@ -1,7 +1,5 @@
- 
-
-const CACHE_NAME = "workbridge-shell-v2";
-const APP_SHELL = [
+const CACHE_NAME = "workbridge-v3";
+const STATIC_ASSETS = [
     "/",
     "/jobs",
     "/manifest.json",
@@ -13,13 +11,15 @@ const APP_SHELL = [
     "/logo.svg",
 ];
 
+// 1. Install - Cache Shell
 self.addEventListener("install", (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
     );
     self.skipWaiting();
 });
 
+// 2. Activate - Cleanup old caches
 self.addEventListener("activate", (event) => {
     event.waitUntil(
         caches.keys().then((keys) =>
@@ -33,55 +33,67 @@ self.addEventListener("activate", (event) => {
     event.waitUntil(self.clients.claim());
 });
 
+// 3. Fetch - Smart Caching
 self.addEventListener("fetch", (event) => {
-    if (event.request.method !== "GET") {
-        return;
-    }
+    const { request } = event;
+    const url = new URL(request.url);
 
-    const acceptsHtml = event.request.headers.get("accept")?.includes("text/html");
+    // Skip non-GET requests
+    if (request.method !== "GET") return;
 
-    if (acceptsHtml) {
+    // Strategy for API/Data (Stale-While-Revalidate)
+    if (url.origin === self.location.origin && (url.pathname.startsWith("/api/") || url.pathname === "/jobs")) {
         event.respondWith(
-            fetch(event.request)
-                .then((response) => {
-                    const responseClone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-                    return response;
-                })
-                .catch(async () => {
-                    const cached = await caches.match(event.request);
-                    return cached || caches.match("/offline.html");
-                })
+            caches.open(CACHE_NAME).then((cache) => {
+                return cache.match(request).then((cachedResponse) => {
+                    const fetchPromise = fetch(request).then((networkResponse) => {
+                        cache.put(request, networkResponse.clone());
+                        return networkResponse;
+                    });
+                    return cachedResponse || fetchPromise;
+                });
+            })
         );
         return;
     }
 
+    // Strategy for Static Assets (Cache First)
     event.respondWith(
-        caches.match(event.request).then((cached) => {
-            if (cached) {
-                return cached;
-            }
-
-            return fetch(event.request).then((response) => {
+        caches.match(request).then((cached) => {
+            return cached || fetch(request).then((response) => {
+                // Don't cache external API calls or non-standard responses
+                if (!response || response.status !== 200 || response.type !== 'basic') {
+                    return response;
+                }
                 const responseClone = response.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+                caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
                 return response;
             });
+        }).catch(() => {
+            // Fallback for HTML pages
+            if (request.headers.get("accept")?.includes("text/html")) {
+                return caches.match("/offline.html");
+            }
         })
     );
 });
 
+// 4. Background Sync Placeholder
+self.addEventListener("sync", (event) => {
+    if (event.tag === "sync-applications") {
+        console.log("Background sync for applications triggered");
+        // Logic to retry failed applications would go here
+    }
+});
+
+// 5. Notifications
 self.addEventListener("notificationclick", (event) => {
     event.notification.close();
-
     event.waitUntil(
         self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
             for (const client of clientList) {
-                if ("focus" in client) {
-                    return client.focus();
-                }
+                if ("focus" in client) return client.focus();
             }
-
             return self.clients.openWindow("/");
         })
     );
