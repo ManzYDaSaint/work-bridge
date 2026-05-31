@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     const auth = await validateAuth();
     if (auth.error) return auth.error;
@@ -14,16 +14,14 @@ export async function GET(
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    const { id } = await params;
     const supabase = await createSupabaseServerClient();
-    
-    // First fetch the seeker
+
+    // Fetch the seeker profile
     const { data: seeker, error } = await supabase
         .from("job_seekers")
-        .select(`
-            *,
-            users (email)
-        `)
-        .eq("id", params.id)
+        .select(`*, users (email)`)
+        .eq("id", id)
         .single();
 
     if (error || !seeker) {
@@ -34,7 +32,7 @@ export async function GET(
         return NextResponse.json({ error: "Candidate profile is not visible" }, { status: 404 });
     }
 
-    // Increment profile views in the background (no await needed for the response)
+    // Increment seeker's profile_views counter in the background
     supabase
         .from("job_seekers")
         .update({ profile_views: (seeker.profile_views || 0) + 1 })
@@ -45,19 +43,56 @@ export async function GET(
     const { data: certificates } = await supabase
         .from("certificates")
         .select("*")
-        .eq("seeker_id", params.id)
+        .eq("seeker_id", id)
         .order("issue_date", { ascending: false });
 
-    // Check Employer Plan
-    let isPremium = false;
-    if (auth.role === "EMPLOYER") {
-        const { data: empData } = await supabase.from("employers").select("plan").eq("id", auth.userId).single();
-        isPremium = empData?.plan === "PREMIUM";
+    // --- Contact View Limit: 30 unique candidates/month ---
+    const isAnonymous = seeker.profile_visibility === "ANONYMOUS";
+    let canSeeContact = false;
+    let contactLimitReached = false;
+
+    if (!isAnonymous && auth.role === "EMPLOYER") {
+        const startOfMonth = new Date(
+            new Date().getFullYear(),
+            new Date().getMonth(),
+            1
+        ).toISOString();
+
+        // Count how many unique candidates this employer has revealed contact for this month
+        const { count: monthlyViewCount } = await supabase
+            .from("employer_contact_views")
+            .select("id", { count: "exact", head: true })
+            .eq("employer_id", auth.userId)
+            .gte("viewed_at", startOfMonth);
+
+        const underLimit = (monthlyViewCount || 0) < 30;
+
+        if (underLimit) {
+            canSeeContact = true;
+
+            // Record this view if not already recorded this month (dedup)
+            const { data: alreadyViewed } = await supabase
+                .from("employer_contact_views")
+                .select("id")
+                .eq("employer_id", auth.userId)
+                .eq("seeker_id", seeker.id)
+                .gte("viewed_at", startOfMonth)
+                .maybeSingle();
+
+            if (!alreadyViewed) {
+                // Non-blocking background insert — counts toward monthly limit
+                supabase
+                    .from("employer_contact_views")
+                    .insert({ employer_id: auth.userId, seeker_id: seeker.id })
+                    .then();
+            }
+        } else {
+            contactLimitReached = true;
+        }
     }
 
-    // Handle anonymity and gating
-    const isAnonymous = seeker.profile_visibility === "ANONYMOUS";
-    const canSeeContact = isPremium && !isAnonymous;
+    // ADMIN always sees contact
+    if (auth.role === "ADMIN") canSeeContact = true;
 
     const publicProfile = {
         id: seeker.id,
@@ -72,14 +107,19 @@ export async function GET(
         portfolio_links: seeker.portfolio_links || [],
         seniority_level: seeker.seniority_level,
         employment_type: seeker.employment_type,
+        employment_status: seeker.employment_status ?? null,
         search_intent: seeker.search_intent,
         qualification: seeker.qualification,
-        isContactGated: !canSeeContact, // Flag for the frontend
-        contact: canSeeContact ? {
-            email: seeker.users?.email,
-            phone: seeker.phone,
-            whatsapp: seeker.whatsapp
-        } : null
+        // Contact gating — driven by monthly view limit, not plan
+        isContactGated: !canSeeContact,
+        contactLimitReached,   // true = limit hit (vs. anonymous = different message)
+        contact: canSeeContact
+            ? {
+                  email: seeker.users?.email,
+                  phone: seeker.phone,
+                  whatsapp: seeker.whatsapp,
+              }
+            : null,
     };
 
     return NextResponse.json(publicProfile);

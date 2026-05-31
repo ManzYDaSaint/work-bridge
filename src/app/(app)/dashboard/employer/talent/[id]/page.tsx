@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { apiFetch, apiFetchJson } from "@/lib/api";
-import { Loader2, MapPin, Briefcase, GraduationCap, ChevronLeft, Award, ExternalLink, Mail, Phone, MessageSquare, Bookmark, BookmarkMinus, Send } from "lucide-react";
+import { Loader2, MapPin, Briefcase, GraduationCap, ChevronLeft, Award, ExternalLink, Mail, Phone, MessageSquare, Bookmark, BookmarkMinus } from "lucide-react";
 import { Badge, SectionCard } from "@/components/dashboard/ui";
+import LimitBanner from "@/components/dashboard/LimitBanner";
 import { toast } from "sonner";
 
 interface PublicProfile {
@@ -20,6 +21,7 @@ interface PublicProfile {
     portfolio_links: string[];
     seniority_level: string | null;
     employment_type: string | null;
+    employment_status: string | null;
     search_intent: string;
     qualification: string | null;
     contact: {
@@ -28,6 +30,7 @@ interface PublicProfile {
         whatsapp?: boolean;
     } | null;
     isContactGated?: boolean;
+    contactLimitReached?: boolean;
 }
 
 export default function TalentProfilePage() {
@@ -38,11 +41,7 @@ export default function TalentProfilePage() {
     const [error, setError] = useState<string | null>(null);
     const [isSaved, setIsSaved] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [showInviteModal, setShowInviteModal] = useState(false);
-    const [employerJobs, setEmployerJobs] = useState<{id: string; title: string}[]>([]);
-    const [selectedJobId, setSelectedJobId] = useState("");
-    const [inviteMessage, setInviteMessage] = useState("");
-    const [sendingInvite, setSendingInvite] = useState(false);
+
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -75,42 +74,7 @@ export default function TalentProfilePage() {
         checkSaved();
     }, [params.id]);
 
-    const fetchEmployerJobs = async () => {
-        try {
-            const res = await apiFetch("/api/employer/jobs?status=ACTIVE");
-            if (res.ok) {
-                const data = await res.json();
-                setEmployerJobs(data.jobs || []);
-            }
-        } catch (e) {}
-    };
 
-    const handleOpenInvite = () => {
-        fetchEmployerJobs();
-        setShowInviteModal(true);
-    };
-
-    const handleSendInvite = async () => {
-        setSendingInvite(true);
-        try {
-            await apiFetchJson("/api/employer/messages/invite", {
-                method: "POST",
-                body: JSON.stringify({
-                    seeker_id: params.id,
-                    job_id: selectedJobId || undefined,
-                    message: inviteMessage || undefined,
-                })
-            });
-            toast.success("Invite sent successfully!");
-            setShowInviteModal(false);
-            setInviteMessage("");
-            setSelectedJobId("");
-        } catch (error: any) {
-            toast.error(error.message || "Failed to send invite");
-        } finally {
-            setSendingInvite(false);
-        }
-    };
 
     if (loading) {
         return <div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-[#16324f]" /></div>;
@@ -136,20 +100,57 @@ export default function TalentProfilePage() {
         }
     };
 
+    const formatEmploymentStatus = (status: string | null): { label: string; color: string } => {
+        switch (status) {
+            case "EMPLOYED_FULL_TIME": return { label: "Employed (Full-time)", color: "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800" };
+            case "EMPLOYED_PART_TIME": return { label: "Employed (Part-time)", color: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800" };
+            case "UNEMPLOYED": return { label: "Not Currently Employed", color: "text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950/30 dark:border-red-800" };
+            case "FREELANCING": return { label: "Freelancing / Self-employed", color: "text-purple-700 bg-purple-50 border-purple-200 dark:text-purple-400 dark:bg-purple-950/30 dark:border-purple-800" };
+            case "STUDENT": return { label: "Student", color: "text-yellow-700 bg-yellow-50 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-950/30 dark:border-yellow-800" };
+            case "RECENT_GRADUATE": return { label: "Recent Graduate", color: "text-teal-700 bg-teal-50 border-teal-200 dark:text-teal-400 dark:bg-teal-950/30 dark:border-teal-800" };
+            case "BETWEEN_JOBS": return { label: "Between Jobs", color: "text-orange-700 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-950/30 dark:border-orange-800" };
+            default: return { label: "Status not set", color: "text-slate-500 bg-stone-50 border-stone-200 dark:text-slate-400 dark:bg-slate-900 dark:border-slate-700" };
+        }
+    };
+
     const toggleSave = async () => {
         setSaving(true);
         try {
             if (isSaved) {
-                await apiFetch(`/api/employer/talent/${params.id}/save`, { method: "DELETE" });
+                const res = await apiFetch(`/api/employer/talent/${params.id}/save`, { method: "DELETE" });
+                if (!res.ok) throw new Error("Failed to unsave candidate");
                 setIsSaved(false);
                 toast.success("Removed from saved candidates");
             } else {
-                await apiFetch(`/api/employer/talent/${params.id}/save`, { method: "POST" });
+                const res = await apiFetch(`/api/employer/talent/${params.id}/save`, { method: "POST" });
+                if (!res.ok) {
+                    const err = await res.json();
+                    if (res.status === 403 && err.error?.includes("limit")) {
+                        toast.error(err.error, {
+                            action: {
+                                label: "Request Access",
+                                onClick: async () => {
+                                    try {
+                                        await apiFetchJson("/api/early-access", {
+                                            method: "POST",
+                                            body: JSON.stringify({ featureRequested: "MORE_SAVED_CANDIDATES" })
+                                        });
+                                        toast.success("You've been added to the early access waitlist!");
+                                    } catch (e: any) {
+                                        toast.error(e.message || "Failed to request access");
+                                    }
+                                }
+                            }
+                        });
+                        return;
+                    }
+                    throw new Error(err.error || "Failed to save candidate");
+                }
                 setIsSaved(true);
                 toast.success("Saved to your candidates");
             }
-        } catch (error) {
-            toast.error("Failed to update status");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to update status");
         } finally {
             setSaving(false);
         }
@@ -187,6 +188,14 @@ export default function TalentProfilePage() {
                             )}
                             <div className="mt-3 flex flex-wrap gap-2">
                                 <Badge label={formatIntent(profile.search_intent)} variant={profile.search_intent === "SEEKING_INTERNSHIP" ? "yellow" : "blue"} />
+                                {profile.employment_status && (() => {
+                                    const s = formatEmploymentStatus(profile.employment_status);
+                                    return (
+                                        <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${s.color}`}>
+                                            {s.label}
+                                        </span>
+                                    );
+                                })()}
                                 {profile.seniority_level && <Badge label={profile.seniority_level} variant="secondary" />}
                                 {profile.employment_type && <Badge label={profile.employment_type} variant="secondary" />}
                             </div>
@@ -203,12 +212,6 @@ export default function TalentProfilePage() {
                             }`}
                         >
                             {isSaved ? <><BookmarkMinus size={16} /> Saved</> : <><Bookmark size={16} /> Save</>}
-                        </button>
-                        <button 
-                            onClick={handleOpenInvite}
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#16324f] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90"
-                        >
-                            <Send size={16} /> Invite to Apply
                         </button>
                     </div>
                 </div>
@@ -306,17 +309,11 @@ export default function TalentProfilePage() {
                 </div>
 
                 <div className="space-y-6">
-                    {profile.isContactGated ? (
-                        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-center dark:border-amber-900/50 dark:bg-amber-950/20">
-                            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-amber-200 dark:bg-amber-900/50">
-                                <Award size={18} className="text-amber-700 dark:text-amber-400" />
-                            </div>
-                            <h4 className="font-semibold text-slate-900 dark:text-white">Premium Feature</h4>
-                            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Upgrade to Employer Premium to unlock direct candidate contact info and headhunt straight from the database.</p>
-                            <a href="/dashboard/employer/billing" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white hover:bg-amber-700">
-                                Upgrade Plan
-                            </a>
-                        </div>
+                    {profile.contactLimitReached ? (
+                        <LimitBanner
+                            message="You've used your 30 contact views this month. We're working on higher plans — want early access?"
+                            featureRequested="MORE_CANDIDATE_VIEWS"
+                        />
                     ) : profile.contact ? (
                         <SectionCard title="Contact Candidate">
                             <div className="space-y-4 p-5">
@@ -345,7 +342,7 @@ export default function TalentProfilePage() {
                                 <Mail size={18} className="text-slate-500 dark:text-slate-400" />
                             </div>
                             <h4 className="font-semibold text-slate-900 dark:text-white">Anonymous Candidate</h4>
-                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">This candidate has hidden their contact information. You can reach out to them directly if they apply to one of your roles.</p>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">This candidate has chosen to keep their contact information hidden. They will appear in your inbox if they apply to one of your roles.</p>
                         </div>
                     )}
 
@@ -381,64 +378,7 @@ export default function TalentProfilePage() {
             </div>
         </div>
 
-        {/* Invite to Apply Modal */}
-        {showInviteModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                <div className="w-full max-w-lg rounded-3xl border border-stone-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-                    <div className="border-b border-stone-200 p-6 dark:border-slate-800">
-                        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Invite to Apply</h2>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                            Send a direct message to {profile.full_name} inviting them to apply.
-                        </p>
-                    </div>
-                    <div className="space-y-4 p-6">
-                        <div>
-                            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                For which role? (optional)
-                            </label>
-                            <select
-                                value={selectedJobId}
-                                onChange={e => setSelectedJobId(e.target.value)}
-                                className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                            >
-                                <option value="">-- General invite --</option>
-                                {employerJobs.map(job => (
-                                    <option key={job.id} value={job.id}>{job.title}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                                Custom message (optional)
-                            </label>
-                            <textarea
-                                value={inviteMessage}
-                                onChange={e => setInviteMessage(e.target.value)}
-                                rows={4}
-                                placeholder="Leave blank to send the default invite message..."
-                                className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white resize-none"
-                            />
-                        </div>
-                    </div>
-                    <div className="flex items-center justify-end gap-3 border-t border-stone-200 p-6 dark:border-slate-800">
-                        <button
-                            onClick={() => setShowInviteModal(false)}
-                            className="rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleSendInvite}
-                            disabled={sendingInvite}
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#16324f] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-                        >
-                            {sendingInvite ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                            Send Invite
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
+
         </>
     );
 }

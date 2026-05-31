@@ -12,6 +12,9 @@ export async function GET(request: Request) {
     const skillsParam = searchParams.get("skills");
     const intentParam = searchParams.get("intent");
     const seniorityParam = searchParams.get("seniority");
+    const locationParam = searchParams.get("location");
+    const qualificationParam = searchParams.get("qualification");
+    const hasResumeParam = searchParams.get("hasResume");
 
     const supabase = await createSupabaseServerClient();
 
@@ -29,9 +32,11 @@ export async function GET(request: Request) {
             avatar_url,
             seniority_level,
             employment_type,
+            employment_status,
             search_intent,
             profile_visibility,
-            portfolio_links
+            portfolio_links,
+            resume_url
         `)
         .in("profile_visibility", ["PUBLIC", "ANONYMOUS"])
         .order("created_at", { ascending: false });
@@ -45,11 +50,25 @@ export async function GET(request: Request) {
         query = query.eq("seniority_level", seniorityParam);
     }
 
+    if (locationParam && locationParam.trim()) {
+        query = query.ilike("location", `%${locationParam.trim()}%`);
+    }
+
+    if (qualificationParam && qualificationParam !== "ALL") {
+        query = query.ilike("qualification", `%${qualificationParam}%`);
+    }
+
+    if (hasResumeParam === "true") {
+        query = query.not("resume_url", "is", null);
+    }
+
     if (skillsParam) {
-        // Assume comma separated skills
-        const skillsArray = skillsParam.split(",").map((s) => s.trim()).filter(Boolean);
-        if (skillsArray.length > 0) {
-            query = query.contains("skills", skillsArray);
+        const keywords = skillsParam.split(",").map((s) => s.trim()).filter(Boolean);
+        if (keywords.length > 0) {
+            const orConditions = keywords.map(kw => 
+                `full_name.ilike.%${kw}%,bio.ilike.%${kw}%,skills.cs.{"${kw}"}`
+            );
+            query = query.or(orConditions.join(","));
         }
     }
 
@@ -60,18 +79,32 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Failed to fetch talent pool" }, { status: 500 });
     }
 
+    // Fetch saved candidate IDs for this employer
+    const { data: savedList } = await supabase
+        .from("employer_saved_candidates")
+        .select("seeker_id")
+        .eq("employer_id", auth.userId);
+        
+    const savedIds = new Set((savedList || []).map((s: any) => s.seeker_id));
+
     // Mask anonymous profiles
     const processedSeekers = (seekers || []).map((seeker) => {
+        const isSaved = savedIds.has(seeker.id);
         if (seeker.profile_visibility === "ANONYMOUS") {
             return {
                 ...seeker,
+                is_saved: isSaved,
                 full_name: "Anonymous Candidate",
                 avatar_url: null,
                 location: seeker.location ? "Location Hidden" : null,
                 portfolio_links: [],
+                resume_url: null,
             };
         }
-        return seeker;
+        return {
+            ...seeker,
+            is_saved: isSaved
+        };
     });
 
     const response = NextResponse.json({ seekers: processedSeekers });

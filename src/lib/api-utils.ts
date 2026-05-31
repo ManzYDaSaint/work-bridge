@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "./supabase-server";
 import { recordAuditLog } from "./audit";
 import { NextResponse } from "next/server";
+import { getAuthOptional } from "@/lib/auth-guard";
 
 type ApiHandler = (request: Request, ...args: any[]) => Promise<NextResponse>;
 
@@ -10,7 +11,8 @@ type ApiHandler = (request: Request, ...args: any[]) => Promise<NextResponse>;
 export function withAudit(handler: ApiHandler, actionName?: string) {
     return async (request: Request, ...args: any[]) => {
         const supabase = await createSupabaseServerClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const auth = await getAuthOptional();
+        const user = auth.user;
 
         const path = new URL(request.url).pathname;
         const method = request.method;

@@ -28,10 +28,8 @@ export async function validateAuth(
 ): Promise<AuthValidationResult> {
     const supabase = await createSupabaseServerClient();
 
-    // Prefer local cookie session to avoid an Auth API call on every route hit.
-    // Fallback to `getUser()` only when session is absent/stale.
-    const { data: { session } } = await supabase.auth.getSession();
-    let user = session?.user ?? null;
+    // Use getUser() for secure authentication (validates with Auth server).
+    let { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (!user) {
         // If cookies are missing on this request (rare dev cross-origin cases),
@@ -47,20 +45,16 @@ export async function validateAuth(
                 }
             }
         } catch {
-            // Continue to cookie-based fallback below.
+            // Continue to error handling below.
         }
 
         if (!user) {
-            const { data: { user: fetched }, error: authError } = await supabase.auth.getUser();
-            if (authError || !fetched) {
-                return {
-                    userId: "",
-                    role: "JOB_SEEKER",
-                    user: null,
-                    error: NextResponse.json({ error: "Unauthorized access detected. Please sign in." }, { status: 401 })
-                };
-            }
-            user = fetched;
+            return {
+                userId: "",
+                role: "JOB_SEEKER",
+                user: null,
+                error: NextResponse.json({ error: "Unauthorized access detected. Please sign in." }, { status: 401 })
+            };
         }
     }
 
@@ -137,4 +131,51 @@ export async function validateAuth(
         role,
         user
     };
+}
+
+export type AuthRouteHandler<T extends any[] = any[]> = (
+    request: Request,
+    auth: AuthValidationResult,
+    ...args: T
+) => Promise<NextResponse>;
+
+export function withAuth<T extends any[]>(
+    handler: AuthRouteHandler<T>,
+    allowedRoles?: UserRole[],
+    requireMFA: boolean = false,
+    requireApprovedEmployer: boolean = false
+) {
+    return async (request: Request, ...args: T): Promise<NextResponse> => {
+        const auth = await validateAuth(allowedRoles, requireMFA, requireApprovedEmployer);
+        if (auth.error) return auth.error;
+        return handler(request, auth, ...args);
+    };
+}
+
+export async function requireAuth(
+    allowedRoles?: UserRole[],
+    requireMFA: boolean = false,
+    requireApprovedEmployer: boolean = false
+): Promise<AuthValidationResult> {
+    const auth = await validateAuth(allowedRoles, requireMFA, requireApprovedEmployer);
+    if (auth.error) {
+        throw new Error("Unauthorized");
+    }
+    return auth;
+}
+
+/**
+ * Attempts to validate auth but returns a neutral result when unauthenticated.
+ * Useful for endpoints that optionally use the current user if available.
+ */
+export async function getAuthOptional(): Promise<AuthValidationResult> {
+    const auth = await validateAuth();
+    if (auth.error) {
+        return {
+            userId: "",
+            role: "JOB_SEEKER",
+            user: null
+        };
+    }
+    return auth;
 }

@@ -6,6 +6,7 @@ import Image from "next/image";
 import ThemeController from "./ThemeController";
 import { cn } from "@/lib/utils";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
+import { useAuth } from "@/context/AuthContext";
 
 import { Menu, X, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,11 +22,10 @@ function usePostJobHref(user: { id: string } | null, role: string | null) {
 
 export default function MarketingNavbar() {
     const [isScrolled, setIsScrolled] = useState(false);
-    const [user, setUser] = useState<{ id: string } | null>(null);
+    const { user: authUser } = useAuth();
     const [role, setRole] = useState<string | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
-    const supabase = createBrowserSupabaseClient();
 
     useEffect(() => {
         setMounted(true);
@@ -36,28 +36,22 @@ export default function MarketingNavbar() {
 
     useEffect(() => {
         if (!mounted) return;
-        const load = async () => {
-            const {
-                data: { user: u },
-            } = await supabase.auth.getUser();
-            setUser(u ? { id: u.id } : null);
-            if (!u) {
+
+        const loadRole = async () => {
+            if (!authUser) {
                 setRole(null);
                 return;
             }
-            const { data } = await supabase.from("users").select("role").eq("id", u.id).single();
+
+            const supabase = createBrowserSupabaseClient();
+            const { data } = await supabase.from("users").select("role").eq("id", authUser.id).single();
             setRole(data?.role ?? null);
         };
-        load();
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange(() => {
-            load();
-        });
-        return () => subscription.unsubscribe();
-    }, [supabase, mounted]);
 
-    const postJobHref = usePostJobHref(user, role);
+        loadRole();
+    }, [authUser?.id, mounted]);
+
+    const postJobHref = usePostJobHref(authUser ? { id: authUser.id } : null, role);
 
     return (
         <header className="sticky top-0 z-50 flex flex-col items-center px-3 sm:px-4 pt-3 sm:pt-4">
@@ -108,7 +102,7 @@ export default function MarketingNavbar() {
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                        {user ? (
+                        {authUser ? (
                             <Link
                                 href="/dashboard"
                                 className="px-3 sm:px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-semibold hover:opacity-90 transition-opacity whitespace-nowrap"
@@ -173,7 +167,7 @@ export default function MarketingNavbar() {
                                 
                                 <div className="h-px bg-stone-200 dark:bg-slate-800 my-2" />
                                 
-                                {user ? (
+                                {authUser ? (
                                     <Link
                                         href="/dashboard"
                                         onClick={() => setIsMenuOpen(false)}

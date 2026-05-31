@@ -27,6 +27,7 @@ export async function GET() {
                 avatar_url,
                 seniority_level,
                 employment_type,
+                employment_status,
                 search_intent,
                 profile_visibility
             )
@@ -56,6 +57,7 @@ export async function GET() {
                 avatar_url: isAnonymous ? null : seeker.avatar_url,
                 seniority_level: seeker.seniority_level,
                 employment_type: seeker.employment_type,
+                employment_status: seeker.employment_status ?? null,
                 search_intent: seeker.search_intent,
                 profile_visibility: seeker.profile_visibility
             }

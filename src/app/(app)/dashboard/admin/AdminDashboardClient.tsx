@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import { useRouter } from "next/navigation";
 import { AdminMetrics, AuditLog, AuditLogResponse, Employer, User } from "@/types";
 import { CheckCircle, XCircle, Users, Briefcase, UserIcon, ShieldCheck, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { signOutAndRedirect } from "@/lib/auth-utils";
 
 type AdminTab = "metrics" | "employers" | "users" | "audit";
 
@@ -41,7 +41,6 @@ export default function AdminDashboardClient() {
     const [auditFilters, setAuditFilters] = useState({ userId: "", action: "", method: "", path: "", minStatus: "", maxStatus: "" });
     const [fetchLoading, setFetchLoading] = useState(true);
     const router = useRouter();
-    const supabase = createBrowserSupabaseClient();
 
     const fetchData = async () => {
         try {
@@ -107,8 +106,7 @@ export default function AdminDashboardClient() {
     };
 
     const handleLogout = async () => {
-        await supabase.auth.signOut();
-        router.push("/login");
+        await signOutAndRedirect();
     };
 
     const statusBadge = (status: string) => {

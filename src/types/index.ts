@@ -52,12 +52,16 @@ export interface JobSeeker {
     completion?: number;
     isSubscribed?: boolean;
     avatarUrl?: string;
+    resumeUrl?: string;
+    resume_url?: string;
+    employmentStatus?: string | null;
     hasBadge?: boolean;
     qualification?: string | null;
     preferredWorkModes?: string[];
     preferredJobTypes?: string[];
     preferredLocations?: string[];
     preferredSkills?: string[];
+    publicSlug?: string | null;
     education?: Array<Record<string, unknown>>;
     /** Filled by GET /api/me and server layouts */
     applicationsThisMonth?: number;

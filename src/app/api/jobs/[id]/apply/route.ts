@@ -76,22 +76,22 @@ export async function POST(
         );
     }
 
-    // Limit non-subscribed users to 1 application per month
-    if (!seekerProfile.is_subscribed) {
-        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-        const { count } = await supabase
-            .from("applications")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", auth.userId)
-            .gte("created_at", startOfMonth);
+    // --- Application Limit: 10 per calendar month ---
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+    const { count: monthlyAppCount } = await supabase
+        .from("applications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", auth.userId)
+        .gte("created_at", startOfMonth);
 
-        if ((count || 0) >= 1) {
-            return NextResponse.json(
-                { error: "You have reached your 1 application per month limit. Upgrade to Premium for unlimited applications." },
-                { status: 403 }
-            );
-        }
+    if ((monthlyAppCount || 0) >= 10) {
+        return NextResponse.json(
+            { error: "You've reached the 10 applications/month limit. We're working on higher plans — want early access?" },
+            { status: 403 }
+        );
     }
+
+
 
     const screeningResult = evaluateCandidateMatch(
         {

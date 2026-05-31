@@ -1,59 +1,88 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
+import { isFreeEmailDomain } from "@/lib/email-safety";
+import { getAuthOptional } from "@/lib/auth-guard";
+
+type AuthRole = "JOB_SEEKER" | "EMPLOYER";
+
+function normalizeRequestedRole(role: string | null): AuthRole | null {
+    const normalized = role?.toLowerCase();
+    if (normalized === "employer") return "EMPLOYER";
+    if (normalized === "seeker" || normalized === "job_seeker" || normalized === "candidate") return "JOB_SEEKER";
+    return null;
+}
+
+function isFreshOAuthUser(createdAt?: string): boolean {
+    if (!createdAt) return false;
+    const createdTime = new Date(createdAt).getTime();
+    if (Number.isNaN(createdTime)) return false;
+    return Date.now() - createdTime < 5 * 60 * 1000;
+}
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get("code");
     const next = searchParams.get("next") ?? "/dashboard";
+    const requestedRole = normalizeRequestedRole(searchParams.get("role"));
 
     if (code) {
         const supabase = await createSupabaseServerClient();
         const { error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (!error) {
-            // After email confirmation, ensure the user's profile row exists.
-            // The /api/register call at signup is skipped when email confirmation
-            // is required (Supabase returns an unconfirmed placeholder user).
-            // This is the guaranteed moment the real user exists in auth.users.
+            // After email confirmation or OAuth, ensure the user's public profile rows exist.
             try {
-                const { data: { user } } = await supabase.auth.getUser();
+                const auth = await getAuthOptional();
+                const user = auth.user;
 
                 if (user) {
                     const adminClient = getSupabaseAdminClient();
                     if (adminClient) {
-                        // Check if profile already exists (e.g. email confirm disabled)
                         const { data: existing } = await adminClient
                             .from("users")
-                            .select("id")
+                            .select("id, role, created_at")
                             .eq("id", user.id)
                             .maybeSingle();
 
-                        if (!existing) {
-                            // Profile missing — create it now using metadata saved at signup
-                            const role = (user.user_metadata?.role as string) || "JOB_SEEKER";
-                            await adminClient.from("users").upsert({
+                        const metadataRole = normalizeRequestedRole(user.user_metadata?.role as string | null);
+                        const existingRole = existing?.role as AuthRole | undefined;
+                        const canApplyRequestedRole = !existing || isFreshOAuthUser(user.created_at);
+                        const effectiveRole = requestedRole && canApplyRequestedRole
+                            ? requestedRole
+                            : existingRole || metadataRole || "JOB_SEEKER";
+                        const email = user.email ?? "";
+                        const displayName = user.user_metadata?.full_name || user.user_metadata?.name || email.split("@")[0] || "";
+
+                        await adminClient.from("users").upsert({
+                            id: user.id,
+                            email,
+                            role: effectiveRole,
+                        });
+
+                        if (effectiveRole === "JOB_SEEKER") {
+                            await adminClient.from("job_seekers").upsert({
                                 id: user.id,
-                                email: user.email,
-                                role,
+                                full_name: displayName,
+                                location: "To be updated",
+                                avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
                             });
 
-                            // Create role-specific profile row
-                            if (role === "JOB_SEEKER") {
-                                await adminClient.from("job_seekers").upsert({
-                                    id: user.id,
-                                    full_name: user.email?.split("@")[0] ?? "",
-                                    location: "To be updated",
-                                });
-                            } else if (role === "EMPLOYER") {
-                                await adminClient.from("employers").upsert({
-                                    id: user.id,
-                                    company_name: "New Company",
-                                    industry: "To be updated",
-                                    location: "To be updated",
-                                    status: "PENDING",
-                                    recruiter_verified: false,
-                                });
+                            if (canApplyRequestedRole) {
+                                await adminClient.from("employers").delete().eq("id", user.id);
+                            }
+                        } else if (effectiveRole === "EMPLOYER") {
+                            await adminClient.from("employers").upsert({
+                                id: user.id,
+                                company_name: user.user_metadata?.company_name ?? null,
+                                industry: null,
+                                location: null,
+                                status: "PENDING",
+                                recruiter_verified: email ? !isFreeEmailDomain(email) : false,
+                            });
+
+                            if (canApplyRequestedRole) {
+                                await adminClient.from("job_seekers").delete().eq("id", user.id);
                             }
                         }
                     }

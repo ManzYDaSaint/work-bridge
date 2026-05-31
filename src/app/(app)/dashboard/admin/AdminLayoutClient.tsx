@@ -2,8 +2,8 @@
 
 import { User } from "@/types";
 import { LayoutDashboard, Users, ShieldCheck, Briefcase } from "lucide-react";
-import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
+import { signOutAndRedirect } from "@/lib/auth-utils";
 
 const adminNavGroups: NavGroup[] = [
     {
@@ -24,12 +24,10 @@ export default function AdminLayoutClient({
     children: React.ReactNode;
     initialUser: User;
 }) {
-    const supabase = createBrowserSupabaseClient();
     const user = initialUser;
 
     const handleLogout = async () => {
-        await supabase.auth.signOut();
-        window.location.assign("/login");
+        await signOutAndRedirect();
     };
 
     const adminName = user?.email?.split("@")[0] || "Admin";

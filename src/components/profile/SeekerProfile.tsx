@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch, apiFetchJson } from "@/lib/api";
 import { JobSeeker } from "@/types";
-import { Camera, Check, Loader2, Plus, Trash2, Award, ExternalLink } from "lucide-react";
+import { Camera, Check, Loader2, Plus, Trash2, Award, ExternalLink, FileText, UploadCloud } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { seekerProfileSchema, type SeekerProfileValues } from "@/lib/validations/profile";
@@ -17,6 +17,7 @@ interface SeekerProfileData extends JobSeeker {
     searchIntent?: "ACTIVELY_LOOKING" | "OPEN_TO_OFFERS" | "SEEKING_INTERNSHIP" | "NOT_LOOKING";
     profileVisibility?: "PUBLIC" | "ANONYMOUS" | "HIDDEN";
     portfolioLinks?: string[];
+    publicSlug?: string | null;
     profileViews?: number;
 }
 
@@ -36,6 +37,8 @@ export default function SeekerProfile() {
     const [newLink, setNewLink] = useState("");
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
+    const [resumeUrl, setResumeUrl] = useState<string | null>(null);
+    const [uploadingResume, setUploadingResume] = useState(false);
     
     // Certificates state
     const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -69,6 +72,7 @@ export default function SeekerProfile() {
             searchIntent: profile.searchIntent ?? "ACTIVELY_LOOKING",
             profileVisibility: profile.profileVisibility ?? "HIDDEN",
             portfolioLinks: profile.portfolioLinks ?? [],
+            employmentStatus: profile.employmentStatus ?? "",
         } : undefined,
     });
 
@@ -83,6 +87,7 @@ export default function SeekerProfile() {
             const data: SeekerProfileData = await res.json();
             setProfile(data);
             setAvatarUrl((data as any).avatarUrl ?? null);
+            setResumeUrl(data.resumeUrl ?? null);
         } finally {
             setLoading(false);
         }
@@ -173,6 +178,46 @@ export default function SeekerProfile() {
         }
     };
 
+    const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingResume(true);
+        try {
+            const formData = new FormData();
+            formData.append("resume", file);
+            const res = await apiFetch("/api/profile/resume", { method: "POST", body: formData });
+            const json = await res.json();
+            if (res.ok && json.url) {
+                setResumeUrl(json.url);
+                router.refresh();
+                toast.success("Resume updated");
+            } else {
+                toast.error(json.error || "Upload failed");
+            }
+        } catch (error: any) {
+            toast.error(error.message || "An error occurred");
+        } finally {
+            setUploadingResume(false);
+            e.target.value = "";
+        }
+    };
+
+    const handleResumeDelete = async () => {
+        if (!confirm("Are you sure you want to delete your resume?")) return;
+        try {
+            const res = await apiFetch("/api/profile/resume", { method: "DELETE" });
+            if (res.ok) {
+                setResumeUrl(null);
+                router.refresh();
+                toast.success("Resume deleted");
+            } else {
+                toast.error("Failed to delete resume");
+            }
+        } catch {
+            toast.error("Failed to delete resume");
+        }
+    };
+
     const onSubmit = async (data: SeekerProfileValues) => {
         setSaving(true);
         try {
@@ -196,6 +241,8 @@ export default function SeekerProfile() {
     if (!profile) return null;
 
     const inputClass = "w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white";
+    const publicCareerPath = profile.publicSlug ? `/in/${profile.publicSlug}` : profile.id ? `/career/${profile.id}` : null;
+    const isPublicCareerVisible = profile.profileVisibility === "PUBLIC" || profile.profileVisibility === "ANONYMOUS";
 
     return (
         <div className="space-y-6 pb-20">
@@ -283,6 +330,59 @@ export default function SeekerProfile() {
                                 </button>
                             </div>
                         </form>
+                    </SectionCard>
+
+                    <SectionCard title="Resume">
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                                Upload a resume to apply to jobs and stand out to recruiters. We support PDF, DOC, or DOCX up to 5MB.
+                            </p>
+                            
+                            {resumeUrl ? (
+                                <div className="flex items-center justify-between rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                                    <div className="flex items-center gap-3">
+                                        <div className="rounded-xl bg-[#16324f]/10 p-3 text-[#16324f] dark:bg-white/10 dark:text-slate-200">
+                                            <FileText size={24} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-900 dark:text-white">Your Resume</p>
+                                            <a 
+                                                href={resumeUrl} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer" 
+                                                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#16324f] hover:underline dark:text-slate-300"
+                                            >
+                                                View uploaded resume <ExternalLink size={12} />
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        type="button" 
+                                        onClick={handleResumeDelete} 
+                                        className="rounded-xl p-2.5 text-slate-400 hover:bg-stone-100 hover:text-red-500 dark:hover:bg-slate-800"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50/50 py-8 px-4 text-center hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-900/30 dark:hover:bg-slate-900/50">
+                                    <div className="mb-3 rounded-full bg-stone-100 p-3 text-slate-500 dark:bg-slate-800">
+                                        {uploadingResume ? <Loader2 size={24} className="animate-spin text-[#16324f]" /> : <UploadCloud size={24} />}
+                                    </div>
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                                        {uploadingResume ? "Uploading..." : "Click to upload resume"}
+                                    </p>
+                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">PDF, DOC, or DOCX (max. 5MB)</p>
+                                    <input 
+                                        type="file" 
+                                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
+                                        className="hidden" 
+                                        onChange={handleResumeUpload} 
+                                        disabled={uploadingResume} 
+                                    />
+                                </label>
+                            )}
+                        </div>
                     </SectionCard>
 
                     <SectionCard title="Education">
@@ -394,6 +494,20 @@ export default function SeekerProfile() {
                             </div>
                             
                             <div>
+                                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Employment Status</label>
+                                <select {...register("employmentStatus")} className={inputClass}>
+                                    <option value="">Select your current situation</option>
+                                    <option value="EMPLOYED_FULL_TIME">Employed (Full-time)</option>
+                                    <option value="EMPLOYED_PART_TIME">Employed (Part-time)</option>
+                                    <option value="UNEMPLOYED">Not Currently Employed</option>
+                                    <option value="FREELANCING">Freelancing / Self-employed</option>
+                                    <option value="STUDENT">Student</option>
+                                    <option value="RECENT_GRADUATE">Recent Graduate</option>
+                                    <option value="BETWEEN_JOBS">Between Jobs</option>
+                                </select>
+                            </div>
+                            
+                            <div>
                                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Current Intent</label>
                                 <select {...register("searchIntent")} className={inputClass}>
                                     <option value="ACTIVELY_LOOKING">Actively looking for jobs</option>
@@ -452,6 +566,18 @@ export default function SeekerProfile() {
                         <div className="space-y-3 p-6 text-sm text-slate-600 dark:text-slate-400">
                             <p>Completion: <span className="font-semibold text-slate-900 dark:text-white">{profile.completion ?? 0}%</span></p>
                             <p>Skills: <span className="font-semibold text-slate-900 dark:text-white">{profile.skills?.length ?? 0} added</span></p>
+                            <p>Resume: <span className={`font-semibold ${resumeUrl ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>{resumeUrl ? "Uploaded" : "Missing"}</span></p>
+                            <p>Status: <span className="font-semibold text-slate-900 dark:text-white">{profile.employmentStatus ? profile.employmentStatus.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "Not set"}</span></p>
+                            <div className="mt-4 border-t border-stone-200 pt-3 dark:border-slate-800">
+                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Public career page</p>
+                                {publicCareerPath && isPublicCareerVisible ? (
+                                    <a href={publicCareerPath} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-[#16324f] hover:underline dark:text-slate-100">
+                                        View share page <ExternalLink size={14} />
+                                    </a>
+                                ) : (
+                                    <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">Set visibility to Public or Anonymous to activate your share page.</p>
+                                )}
+                            </div>
                             <div className="mt-4 border-t border-stone-200 pt-3 dark:border-slate-800">
                                 <p className="flex items-center justify-between">
                                     Profile Views

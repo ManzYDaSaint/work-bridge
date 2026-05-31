@@ -2,12 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { User, Employer } from "@/types";
-import { LayoutDashboard, Briefcase, Settings, Users, PlusCircle, Lock, DollarSign, Search, Bookmark } from "lucide-react";
+import { LayoutDashboard, Briefcase, Settings, Users, PlusCircle, Lock, Search, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
 import { UserProvider, useUser } from "@/context/UserContext";
 import { useEffect } from "react";
+import { signOutAndRedirect } from "@/lib/auth-utils";
 import { PendingBanner } from "@/components/dashboard/employer/PendingBanner";
 
 const employerNavGroups: NavGroup[] = [
@@ -19,7 +19,6 @@ const employerNavGroups: NavGroup[] = [
             { label: "Saved Talent", href: "/dashboard/employer/talent/saved", icon: Bookmark },
             { label: "Jobs", href: "/dashboard/employer/jobs", icon: Briefcase },
             { label: "Candidates", href: "/dashboard/employer/candidates", icon: Users },
-            { label: "Billing", href: "/dashboard/employer/billing", icon: DollarSign },
         ]
     },
     {
@@ -46,7 +45,6 @@ export default function EmployerLayoutClient({
 
 function EmployerLayoutInner({ children }: { children: React.ReactNode }) {
     const router = useRouter();
-    const supabase = createBrowserSupabaseClient();
     const { user, refreshUser } = useUser();
     
     // Sync with DB on mount to fix stale SSR data
@@ -59,13 +57,7 @@ function EmployerLayoutInner({ children }: { children: React.ReactNode }) {
     const employerProfile: Employer | null = user.employer ?? null;
 
     const handleLogout = async () => {
-        try {
-            await supabase.auth.signOut();
-        } catch (err) {
-            console.error("Logout error:", err);
-        } finally {
-            window.location.assign("/login");
-        }
+        await signOutAndRedirect();
     };
 
     const isApproved = employerProfile?.status === "APPROVED";

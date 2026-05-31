@@ -8,6 +8,7 @@ import Image from "next/image";
 import { Briefcase, User, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import AuthLayout from "@/components/auth/AuthLayout";
+import GoogleAuthButtons from "@/components/auth/GoogleAuthButtons";
 import { cn } from "@/lib/utils";
 import {
     canUseEmailForRegistration,
@@ -152,6 +153,14 @@ function RegisterForm() {
                             <Briefcase size={14} />
                             Employer
                         </button>
+                    </div>
+
+                    <GoogleAuthButtons mode="register" role={role} />
+
+                    <div className="my-5 flex items-center gap-3">
+                        <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                        <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">or email</span>
+                        <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">

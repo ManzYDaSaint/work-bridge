@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 
 // Lazy load sections for better initial load time
-const PricingSection = dynamic(() => import("@/components/marketing/PricingSection"), { ssr: true });
 const LogoMarquee = dynamic(() => import("@/components/marketing/LogoMarquee"), { ssr: false });
 const HowItWorks = dynamic(() => import("@/components/marketing/HowItWorks"), { ssr: true });
 const Features = dynamic(() => import("@/components/marketing/Features"), { ssr: true });
@@ -259,8 +258,7 @@ export default function LandingPage() {
             {/* ─── FAQ ─────────────────────────────────────────────────── */}
             <FAQ />
 
-            {/* ─── PRICING ─────────────────────────────────────────────── */}
-            <PricingSection />
+
 
             {/* ─── FINAL CTA ───────────────────────────────────────────── */}
             <section className="px-4 sm:px-6 max-w-6xl mx-auto py-20">

@@ -19,6 +19,7 @@ interface SavedCandidate {
         avatar_url: string | null;
         seniority_level: string | null;
         employment_type: string | null;
+        employment_status: string | null;
         search_intent: string;
         profile_visibility: string;
     };
@@ -64,6 +65,19 @@ export default function SavedTalentPage() {
             case "OPEN_TO_OFFERS": return "Open to Offers";
             case "SEEKING_INTERNSHIP": return "Seeking Internship";
             default: return "Unknown";
+        }
+    };
+
+    const formatEmploymentStatus = (status: string | null): { label: string; color: string } => {
+        switch (status) {
+            case "EMPLOYED_FULL_TIME": return { label: "Employed (FT)", color: "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-900" };
+            case "EMPLOYED_PART_TIME": return { label: "Employed (PT)", color: "text-blue-700 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-900" };
+            case "UNEMPLOYED": return { label: "Unemployed", color: "text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950/30 dark:border-red-900" };
+            case "FREELANCING": return { label: "Freelancing", color: "text-purple-700 bg-purple-50 border-purple-200 dark:text-purple-400 dark:bg-purple-950/30 dark:border-purple-900" };
+            case "STUDENT": return { label: "Student", color: "text-yellow-700 bg-yellow-50 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-950/30 dark:border-yellow-900" };
+            case "RECENT_GRADUATE": return { label: "Recent Graduate", color: "text-teal-700 bg-teal-50 border-teal-200 dark:text-teal-400 dark:bg-teal-950/30 dark:border-teal-900" };
+            case "BETWEEN_JOBS": return { label: "Between Jobs", color: "text-orange-700 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-950/30 dark:border-orange-900" };
+            default: return { label: "Status Unknown", color: "text-slate-500 bg-stone-50 border-stone-200 dark:text-slate-400 dark:bg-slate-900 dark:border-slate-800" };
         }
     };
 
@@ -118,8 +132,12 @@ export default function SavedTalentPage() {
                                     </button>
                                 </div>
 
-                                <div className="mt-4 flex flex-wrap gap-2">
+                                <div className="mt-4 flex flex-wrap items-center gap-2">
                                     <Badge label={formatIntent(seeker.search_intent)} variant={seeker.search_intent === "SEEKING_INTERNSHIP" ? "yellow" : "blue"} />
+                                    {seeker.employment_status && (() => {
+                                        const s = formatEmploymentStatus(seeker.employment_status);
+                                        return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${s.color}`}>{s.label}</span>;
+                                    })()}
                                     {seeker.seniority_level && <Badge label={seeker.seniority_level} variant="secondary" />}
                                 </div>
 

@@ -1,6 +1,7 @@
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { buildPublicJobSlug } from "@/lib/public-slugs";
 
 export async function GET(
     request: Request,
@@ -114,7 +115,7 @@ export async function POST(
             return NextResponse.json({ error: "Original job not found" }, { status: 404 });
         }
 
-        const { data: newJob, error: insertError } = await supabase
+        const { data: createdJob, error: insertError } = await supabase
             .from("jobs")
             .insert({
                 employer_id: auth.userId,
@@ -137,6 +138,16 @@ export async function POST(
             .single();
 
         if (insertError) throw insertError;
+
+        const publicSlug = buildPublicJobSlug(createdJob.title, createdJob.id);
+        const { data: newJob, error: slugError } = await supabase
+            .from("jobs")
+            .update({ public_slug: publicSlug })
+            .eq("id", createdJob.id)
+            .select()
+            .single();
+
+        if (slugError) throw slugError;
 
         return NextResponse.json({ success: true, job: newJob });
     } catch (error: any) {

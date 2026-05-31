@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Clock } from "lucide-react";
 import { showErrorToast } from "@/lib/toasts";
+import GoogleAuthButtons from "@/components/auth/GoogleAuthButtons";
 
 export default function LoginForm() {
     const searchParams = useSearchParams();
@@ -75,6 +76,14 @@ export default function LoginForm() {
             )}
 
             <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/80 sm:p-7">
+                <GoogleAuthButtons mode="login" />
+
+                <div className="my-5 flex items-center gap-3">
+                    <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                    <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">or email</span>
+                    <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                </div>
+
                 <form onSubmit={handlePasswordLogin} className="space-y-4">
                     <div className="space-y-1.5">
                         <label htmlFor="email" className="text-xs font-medium text-slate-600 dark:text-slate-300">Email</label>

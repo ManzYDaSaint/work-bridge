@@ -1,152 +1,140 @@
-import { JobSeeker, ScreeningAnswer, ScreeningBreakdownItem, ScreeningQuestion } from "@/types";
-
-type ScreeningJob = {
-    skills?: string[] | null;
-    must_have_skills?: string[] | null;
-    nice_to_have_skills?: string[] | null;
-    minimum_years_experience?: number | null;
-    qualification?: string | null;
-    screening_questions?: ScreeningQuestion[] | null;
-};
-
-export interface ScreeningResult {
+export interface CandidateMatchResult {
     score: number;
     meetsRequiredCriteria: boolean;
     summary: string;
+    breakdown: any[];
     matchedSkills: string[];
     missingSkills: string[];
     yearsExperience: number;
-    breakdown: ScreeningBreakdownItem[];
-}
-
-const normalize = (value?: string | null) => (value || "").trim().toLowerCase();
-
-const uniqueNormalizedList = (values?: string[] | null) =>
-    Array.from(new Map((values || []).map((value) => [normalize(value), value.trim()])).values()).filter(Boolean);
-
-export function calculateYearsExperience(experience?: JobSeeker["experience"]): number {
-    if (!experience?.length) return 0;
-
-    const totalMs = experience.reduce((sum, item) => {
-        const start = item?.startDate ? new Date(item.startDate).getTime() : NaN;
-        const end = item?.endDate ? new Date(item.endDate).getTime() : Date.now();
-        if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return sum;
-        return sum + (end - start);
-    }, 0);
-
-    const years = totalMs / (1000 * 60 * 60 * 24 * 365.25);
-    return Math.round(years * 10) / 10;
 }
 
 export function evaluateCandidateMatch(
-    seeker: Pick<JobSeeker, "skills" | "experience" | "qualification">,
-    job: ScreeningJob,
-    answers: Record<string, ScreeningAnswer> = {}
-): ScreeningResult {
-    const seekerSkillMap = new Map(uniqueNormalizedList(seeker.skills).map((skill) => [normalize(skill), skill]));
-    const mustHaveSkills = uniqueNormalizedList(job.must_have_skills?.length ? job.must_have_skills : job.skills);
-    const niceToHaveSkills = uniqueNormalizedList(job.nice_to_have_skills);
-    const matchedSkills = mustHaveSkills.filter((skill) => seekerSkillMap.has(normalize(skill)));
-    const missingSkills = mustHaveSkills.filter((skill) => !seekerSkillMap.has(normalize(skill)));
-    const matchedNiceToHave = niceToHaveSkills.filter((skill) => seekerSkillMap.has(normalize(skill)));
-    const yearsExperience = calculateYearsExperience(seeker.experience);
-    const minimumYearsExperience = Math.max(0, job.minimum_years_experience || 0);
+    seeker: {
+        skills: string[];
+        experience: any[];
+        qualification: string | null;
+    },
+    job: {
+        must_have_skills?: string[];
+        nice_to_have_skills?: string[];
+        minimum_years_experience?: number;
+        qualification?: string | null;
+        screening_questions?: any;
+    },
+    screeningAnswers: Record<string, any>
+): CandidateMatchResult {
+    const seekerSkills = (seeker.skills || []).map(s => s.toLowerCase().trim());
+    const mustHave = (job.must_have_skills || []).map(s => s.toLowerCase().trim());
+    const niceToHave = (job.nice_to_have_skills || []).map(s => s.toLowerCase().trim());
 
-    const requiredQualification = normalize(job.qualification);
-    const candidateQualification = (seeker as any).qualification ? normalize((seeker as any).qualification) : "";
+    // 1. Skill Matching
+    const matchedSkills: string[] = [];
+    const missingSkills: string[] = [];
 
-    const breakdown: ScreeningBreakdownItem[] = [];
+    for (const skill of mustHave) {
+        if (seekerSkills.includes(skill)) {
+            matchedSkills.push(skill);
+        } else {
+            missingSkills.push(skill);
+        }
+    }
+
+    // 2. Experience Matching (simplified calculation)
+    let yearsExperience = 0;
+    if (Array.isArray(seeker.experience)) {
+        for (const exp of seeker.experience) {
+            if (exp.startDate) {
+                const start = new Date(exp.startDate);
+                const end = exp.endDate ? new Date(exp.endDate) : new Date();
+                const diffYears = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+                yearsExperience += Math.max(0, diffYears);
+            }
+        }
+    }
+    yearsExperience = Math.round(yearsExperience * 10) / 10;
+
+    // 3. Screening Questions & Required Criteria
     let meetsRequiredCriteria = true;
-    let totalScore = 0;
+    const breakdown: any[] = [];
 
-    if (requiredQualification) {
-        const qualMet = candidateQualification && (candidateQualification === requiredQualification || candidateQualification.includes(requiredQualification) || requiredQualification.includes(candidateQualification));
-        if (!qualMet) meetsRequiredCriteria = false;
-        totalScore += qualMet ? 20 : 0;
+    const reqExp = job.minimum_years_experience || 0;
+    if (yearsExperience < reqExp) {
+        meetsRequiredCriteria = false;
         breakdown.push({
-            label: "Qualification",
-            met: !!qualMet,
-            required: true,
-            detail: qualMet
-                ? `Matched required qualification: ${job.qualification}`
-                : `Required: ${job.qualification}. Candidate has: ${(seeker as any).qualification || "None"}`,
+            type: "EXPERIENCE",
+            passed: false,
+            message: `Requires ${reqExp} years of experience, candidate has ${yearsExperience} years.`,
+        });
+    } else {
+        breakdown.push({
+            type: "EXPERIENCE",
+            passed: true,
+            message: `Meets experience requirement (${yearsExperience}/${reqExp} years).`,
         });
     }
 
-    if (mustHaveSkills.length > 0) {
-        const mustHaveRatio = matchedSkills.length / mustHaveSkills.length;
-        totalScore += mustHaveRatio * 60;
-        const met = matchedSkills.length === mustHaveSkills.length;
-        if (!met) meetsRequiredCriteria = false;
-        breakdown.push({
-            label: "Must-have skills",
-            met,
-            required: true,
-            detail: matchedSkills.length
-                ? `Matched ${matchedSkills.length}/${mustHaveSkills.length}: ${matchedSkills.join(", ")}`
-                : `No must-have skills matched. Missing: ${missingSkills.join(", ")}`,
-        });
-    }
-
-    if (niceToHaveSkills.length > 0) {
-        const niceToHaveRatio = matchedNiceToHave.length / niceToHaveSkills.length;
-        totalScore += niceToHaveRatio * 20;
-        breakdown.push({
-            label: "Nice-to-have skills",
-            met: matchedNiceToHave.length > 0,
-            detail: matchedNiceToHave.length
-                ? `Matched ${matchedNiceToHave.length}/${niceToHaveSkills.length}: ${matchedNiceToHave.join(", ")}`
-                : "No optional skills matched yet.",
-        });
-    }
-
-    if (minimumYearsExperience > 0) {
-        const experienceMet = yearsExperience >= minimumYearsExperience;
-        if (!experienceMet) meetsRequiredCriteria = false;
-        totalScore += experienceMet ? 20 : Math.max(0, (yearsExperience / minimumYearsExperience) * 20);
-        breakdown.push({
-            label: "Experience",
-            met: experienceMet,
-            required: true,
-            detail: `${yearsExperience} year${yearsExperience === 1 ? "" : "s"} logged vs ${minimumYearsExperience} required`,
-        });
-    }
-
-    const questions = job.screening_questions || [];
-    if (questions.length > 0) {
-        const questionWeight = 20 / questions.length;
-        questions.forEach((question) => {
-            const answer = answers[question.id];
-            const met = answer === question.expectedAnswer;
-            if (met) totalScore += questionWeight;
-            if (question.required && !met) meetsRequiredCriteria = false;
+    // Verify qualification
+    if (job.qualification && job.qualification.trim()) {
+        const jobQual = job.qualification.toLowerCase().trim();
+        const seekerQual = (seeker.qualification || "").toLowerCase().trim();
+        if (!seekerQual.includes(jobQual)) {
+            meetsRequiredCriteria = false;
             breakdown.push({
-                label: question.question,
-                met,
-                required: question.required,
-                detail: answer
-                    ? `Candidate answered ${answer.toLowerCase()}, expected ${question.expectedAnswer.toLowerCase()}`
-                    : "No answer provided.",
+                type: "QUALIFICATION",
+                passed: false,
+                message: `Requires qualification: "${job.qualification}".`,
             });
-        });
+        } else {
+            breakdown.push({
+                type: "QUALIFICATION",
+                passed: true,
+                message: `Meets qualification requirement.`,
+            });
+        }
     }
 
-    const roundedScore = Math.max(0, Math.min(100, Math.round(totalScore)));
-    const summaryParts = [
-        `${matchedSkills.length}/${mustHaveSkills.length || 0} must-have skills matched`,
-        minimumYearsExperience > 0 ? `${yearsExperience}/${minimumYearsExperience} years experience` : null,
-        questions.length > 0
-            ? `${questions.filter((question) => answers[question.id] === question.expectedAnswer).length}/${questions.length} screening checks passed`
-            : null,
-    ].filter(Boolean);
+    // Verify screening questions
+    const screeningQuestions = Array.isArray(job.screening_questions)
+        ? job.screening_questions
+        : [];
+
+    for (const question of screeningQuestions) {
+        if (question.required) {
+            const answerObj = screeningAnswers[question.id];
+            const answerValue = typeof answerObj === "object" && answerObj !== null ? answerObj.answer : answerObj;
+            const expected = (question.expectedAnswer || "YES").toLowerCase().trim();
+            const actual = String(answerValue || "").toLowerCase().trim();
+            
+            const passed = actual === expected;
+            if (!passed) {
+                meetsRequiredCriteria = false;
+            }
+            breakdown.push({
+                type: "SCREENING",
+                questionId: question.id,
+                passed,
+                message: passed ? `Passed screening question.` : `Failed screening question: ${question.question}`,
+            });
+        }
+    }
+
+    // Calculate score
+    const totalMustHave = mustHave.length;
+    const skillsScore = totalMustHave > 0 ? (matchedSkills.length / totalMustHave) * 60 : 60;
+    const screeningScore = meetsRequiredCriteria ? 40 : 10;
+    const score = Math.round(skillsScore + screeningScore);
+
+    const summary = meetsRequiredCriteria
+        ? `Candidate meets all basic eligibility criteria and matches ${matchedSkills.length}/${totalMustHave} required skills.`
+        : `Candidate does not meet all required screening criteria.`;
 
     return {
-        score: roundedScore,
+        score,
         meetsRequiredCriteria,
-        summary: summaryParts.join(" • "),
+        summary,
+        breakdown,
         matchedSkills,
         missingSkills,
         yearsExperience,
-        breakdown,
     };
 }

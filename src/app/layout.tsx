@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-import Analytics from "@/components/Analytics";
+
 import { Toaster } from "sonner";
 import PWARegister from "@/components/pwa/PWARegister";
+import FeedbackButton from "@/components/ui/FeedbackButton";
+import { AuthProvider } from "@/context/AuthContext";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -85,12 +88,21 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="anonymous" />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
+        {process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN && (
+          <Script
+            src="https://plausible.io/js/script.js"
+            strategy="afterInteractive"
+            data-domain={process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN}
+          />
+        )}
       </head>
       <body className={`${jakarta.className} antialiased min-h-screen flex flex-col`}>
         <Toaster position="top-right" richColors />
         <PWARegister />
-        <Analytics />
-        <main className="flex-grow">{children}</main>
+        <AuthProvider>
+          <main className="flex-grow">{children}</main>
+        </AuthProvider>
+        <FeedbackButton />
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { buildPublicProfileSlug } from "@/lib/public-slugs";
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +31,13 @@ export async function GET() {
             completion: 0,
             hasBadge: false,
             avatarUrl: null,
+            resumeUrl: null,
+            resume_url: null,
+            employmentStatus: null,
             searchIntent: "ACTIVELY_LOOKING",
             profileVisibility: "HIDDEN",
             portfolioLinks: [],
+            publicSlug: null,
         });
         emptyResponse.headers.set("Cache-Control", "no-store, max-age=0");
         return emptyResponse;
@@ -55,10 +60,15 @@ export async function GET() {
         completion: profile.completion,
         isSubscribed: profile.is_subscribed,
         has_badge: profile.has_badge ?? false,
+        avatarUrl: profile.avatar_url ?? null,
         avatar_url: profile.avatar_url ?? null,
+        resumeUrl: profile.resume_url ?? null,
+        resume_url: profile.resume_url ?? null,
+        employmentStatus: profile.employment_status ?? null,
         searchIntent: profile.search_intent,
         profileVisibility: profile.profile_visibility,
         portfolioLinks: profile.portfolio_links || [],
+        publicSlug: profile.public_slug || buildPublicProfileSlug(profile.full_name, profile.id),
     });
     response.headers.set("Cache-Control", "no-store, max-age=0");
     return response;
@@ -106,11 +116,12 @@ export async function PUT(request: Request) {
         // Check if this seeker should auto-receive a badge (first 100 free)
         const { data: currentProfile } = await supabase
             .from("job_seekers")
-            .select("has_badge")
+            .select("has_badge, public_slug")
             .eq("id", auth.userId)
             .single();
 
         let has_badge = currentProfile?.has_badge ?? false;
+        const public_slug = currentProfile?.public_slug || buildPublicProfileSlug(body.full_name, auth.userId);
 
         if (!has_badge) {
             const { count } = await supabase
@@ -139,9 +150,11 @@ export async function PUT(request: Request) {
                 salary_expectation: body.salaryExpectation,
                 seniority_level: body.seniorityLevel,
                 employment_type: body.employmentType,
+                employment_status: body.employmentStatus || null,
                 search_intent: body.searchIntent || "ACTIVELY_LOOKING",
                 profile_visibility: body.profileVisibility || "HIDDEN",
                 portfolio_links: body.portfolioLinks || [],
+                public_slug,
                 completion,
                 has_badge,
             })

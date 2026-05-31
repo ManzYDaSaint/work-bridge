@@ -1,13 +1,10 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { withAuth } from "@/lib/auth-guard";
 import { NextResponse } from "next/server";
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (request, auth) => {
     const supabase = await createSupabaseServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const userId = auth.userId;
 
     try {
         const formData = await request.formData();
@@ -17,19 +14,17 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "No file provided" }, { status: 400 });
         }
 
-        // Validate image type
         if (!file.type.startsWith("image/")) {
             return NextResponse.json({ error: "Only image files are allowed" }, { status: 400 });
         }
 
-        // Max 5MB
         if (file.size > 5 * 1024 * 1024) {
             return NextResponse.json({ error: "Image must be under 5MB" }, { status: 400 });
         }
 
         const fileExt = file.name.split(".").pop() || "jpg";
         const timestamp = Date.now();
-        const filePath = `${user.id}/avatar_${timestamp}.${fileExt}`;
+        const filePath = `${userId}/avatar_${timestamp}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
             .from("avatars")
@@ -46,21 +41,19 @@ export async function POST(request: Request) {
 
         const avatarUrl = publicUrlData.publicUrl;
 
-        // Update job_seekers record
         const { error: updateError } = await supabase
             .from("job_seekers")
             .update({ avatar_url: avatarUrl })
-            .eq("id", user.id);
+            .eq("id", userId);
 
         if (updateError) {
-            // Upsert if record doesn't exist yet
             if (updateError.code === "PGRST116" || updateError.code === "23503") {
-                const { data: userData } = await supabase.from("users").select("email").eq("id", user.id).single();
+                const { data: userData } = await supabase.from("users").select("email").eq("id", userId).single();
                 const fallbackName = userData?.email?.split("@")[0] || "";
                 await supabase.from("job_seekers").upsert({
-                    id: user.id,
+                    id: userId,
                     avatar_url: avatarUrl,
-                    full_name: fallbackName
+                    full_name: fallbackName,
                 });
             } else {
                 throw updateError;
@@ -72,4 +65,4 @@ export async function POST(request: Request) {
         console.error("Avatar upload error:", error);
         return NextResponse.json({ error: error.message || "Upload failed" }, { status: 500 });
     }
-}
+}, undefined, false, false);

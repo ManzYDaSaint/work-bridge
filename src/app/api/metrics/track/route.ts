@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getAuthOptional } from "@/lib/auth-guard";
 
 export async function POST(request: Request) {
     try {
@@ -14,8 +15,8 @@ export async function POST(request: Request) {
         const cookieStore = await cookies();
         const variant = cookieStore.get("wb_exp_onboarding")?.value || null;
 
-        const { data: { session } } = await supabase.auth.getSession();
-        const user = session?.user ?? null;
+        const auth = await getAuthOptional();
+        const user = auth.user;
 
         const sessionId = cookieStore.get("sb-access-token")?.value?.slice(0, 24) || null;
 

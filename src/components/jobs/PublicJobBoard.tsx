@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { apiFetch, apiFetchJson } from "@/lib/api";
 import { useUser } from "@/context/UserContext";
-import { createBrowserSupabaseClient } from "@/lib/supabase-client";
+import { useAuth } from "@/context/AuthContext";
 import { cn, formatJobType, formatWorkMode, timeAgo } from "@/lib/utils";
 import { ArrowUpRight, Bookmark, BookmarkCheck, Briefcase, MapPin, Search, SlidersHorizontal } from "lucide-react";
 import { Pagination, CompanyAvatar } from "@/components/dashboard/ui";
@@ -252,19 +252,17 @@ export default function PublicJobBoard() {
         fetchData(currentPage, q || undefined, workMode, type);
     }, [currentPage, searchParams]);
 
+    const { user: authUser } = useAuth();
+    const authUserIdRef = useRef<string | null>(authUser?.id ?? null);
+
     useEffect(() => {
-        const supabase = createBrowserSupabaseClient();
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((event) => {
-            // Only re-fetch if auth state actually changes (login/logout/token refresh)
-            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-                const q = searchParams.get("query") || "";
-                fetchData(pageRef.current, q || undefined, selectedWorkMode, selectedType);
-            }
-        });
-        return () => subscription.unsubscribe();
-    }, []); // Removed dependencies that cause redundant triggers
+        if (authUser?.id === authUserIdRef.current) return;
+
+        authUserIdRef.current = authUser?.id ?? null;
+        refreshUser();
+        const q = searchParams.get("query") || "";
+        fetchData(pageRef.current, q || undefined, selectedWorkMode, selectedType);
+    }, [authUser?.id, refreshUser, selectedWorkMode, selectedType, searchParams]);
 
     const pushFilters = (next: { query?: string; workMode?: string; type?: string }) => {
         const qs = new URLSearchParams();
@@ -302,7 +300,27 @@ export default function PublicJobBoard() {
                 }).catch(() => undefined);
             } else {
                 const err = await res.json();
-                toast.error(err.error || "Failed to apply");
+                const msg = err.error || "Failed to apply";
+                if (res.status === 403 && msg.includes("limit")) {
+                    toast.error(msg, {
+                        action: {
+                            label: "Request Access",
+                            onClick: async () => {
+                                try {
+                                    await apiFetchJson("/api/early-access", {
+                                        method: "POST",
+                                        body: JSON.stringify({ featureRequested: "MORE_APPLICATIONS" })
+                                    });
+                                    toast.success("You've been added to the early access waitlist!");
+                                } catch (e: any) {
+                                    toast.error(e.message || "Failed to request access");
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    toast.error(msg);
+                }
             }
         } catch {
             toast.error("An error occurred.");

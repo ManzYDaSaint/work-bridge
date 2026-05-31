@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { withAuth } from "@/lib/auth-guard";
 import { NextResponse } from "next/server";
 
 /**
@@ -6,29 +7,22 @@ import { NextResponse } from "next/server";
  * Employers can view the qualifications (certificates) of a specific candidate
  * recommended for their job. Ownership of the job is verified before responding.
  */
-export async function GET(
-    _request: Request,
-    { params }: { params: Promise<{ id: string; candidateId: string }> }
-) {
+export const GET = withAuth(async (_request, auth, { params }) => {
     const { id: jobId, candidateId } = await params;
     const supabase = await createSupabaseServerClient();
+    const userId = auth.userId;
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    // Verify the employer owns this job
     const { data: job, error: jobErr } = await supabase
         .from("jobs")
         .select("id")
         .eq("id", jobId)
-        .eq("employer_id", user.id)
+        .eq("employer_id", userId)
         .single();
 
     if (jobErr || !job) {
         return NextResponse.json({ error: "Job not found or access denied" }, { status: 403 });
     }
 
-    // Fetch candidate's certificates (name is NOT exposed — anonymity preserved)
     const { data: certs, error: certsErr } = await supabase
         .from("certificates")
         .select("id, url, file_name, parsed_qualification, parsed_cert_name, is_name_verified, created_at")
@@ -42,10 +36,9 @@ export async function GET(
         url: c.url,
         fileName: c.file_name,
         parsedQualification: c.parsed_qualification,
-        // Redact the actual name on the cert for anonymity; employer only sees qualification type
         isNameVerified: c.is_name_verified,
         createdAt: c.created_at,
     }));
 
     return NextResponse.json(mapped);
-}
+}, ["EMPLOYER"], false, true);

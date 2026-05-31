@@ -11,7 +11,7 @@ import {
     parseScreeningQuestions,
 } from "@/lib/validations/job";
 import { apiFetchJson } from "@/lib/api";
-import { Briefcase, MapPin, Loader2, Sparkles, Calendar, DollarSign, ChevronDown, ChevronUp, Globe2 } from "lucide-react";
+import { Briefcase, MapPin, Loader2, Calendar, DollarSign, ChevronDown, ChevronUp, Globe2 } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/ui";
 import { useRouter } from "next/navigation";
 import { Employer } from "@/types";
@@ -94,9 +94,28 @@ export default function NewJobPage() {
             toast.success("Job posted");
             router.push("/dashboard/employer/jobs");
             router.refresh();
-        } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : "Could not post job";
-            toast.error(msg);
+        } catch (e: any) {
+            const msg = e.message || "Could not post job";
+            if (msg.includes("limit")) {
+                toast.error(msg, {
+                    action: {
+                        label: "Request Access",
+                        onClick: async () => {
+                            try {
+                                await apiFetchJson("/api/early-access", {
+                                    method: "POST",
+                                    body: JSON.stringify({ featureRequested: "MORE_JOBS" })
+                                });
+                                toast.success("You've been added to the early access waitlist!");
+                            } catch (err: any) {
+                                toast.error(err.message || "Failed to request access");
+                            }
+                        }
+                    }
+                });
+            } else {
+                toast.error(msg);
+            }
         } finally {
             setSaving(false);
         }
@@ -109,36 +128,6 @@ export default function NewJobPage() {
             </div>
         );
     }
-
-    const isFreePlan = !profile?.plan || profile.plan === "FREE";
-    const jobsCount = profile?._count?.jobs || 0;
-    const limitReached = isFreePlan && jobsCount >= 2;
-
-    if (limitReached) {
-        return (
-            <div className="max-w-2xl mx-auto space-y-6 pb-16 px-1">
-                <PageHeader
-                    title="Job limit reached"
-                    subtitle="Free plan includes up to 2 active listings"
-                    action={{ label: "Back to jobs", href: "/dashboard/employer/jobs", variant: "secondary" }}
-                />
-                <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/80 dark:bg-amber-950/20 p-6 sm:p-8 text-center">
-                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Upgrade to post more</h2>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
-                        Premium includes unlimited job posts and more visibility tools.
-                    </p>
-                    <Link
-                        href="/dashboard/employer/billing"
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 transition-colors"
-                    >
-                        <Sparkles size={18} />
-                        View billing plans
-                    </Link>
-                </div>
-            </div>
-        );
-    }
-
     const inputClass =
         "w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500";
 
@@ -149,18 +138,6 @@ export default function NewJobPage() {
                 subtitle="Add the basics in a minute — open “More options” for salary and deadline."
                 action={{ label: "Back", href: "/dashboard/employer/jobs", variant: "secondary" }}
             />
-
-            <div className="rounded-2xl border border-stone-200 bg-white/80 p-4 text-sm dark:border-slate-800 dark:bg-slate-900/70">
-                <p className="font-semibold text-slate-900 dark:text-white">Plan usage</p>
-                <p className="mt-1 text-slate-600 dark:text-slate-400">
-                    {isFreePlan
-                        ? `Free plan: ${jobsCount}/2 active listings used. Upgrade for unlimited roles and priority visibility.`
-                        : "Premium plan: unlimited active listings and advanced hiring controls."}
-                </p>
-                <Link href="/dashboard/employer/billing" className="mt-2 inline-flex text-xs font-semibold text-[#16324f] hover:underline dark:text-slate-200">
-                    Open billing details
-                </Link>
-            </div>
 
             {!isApproved && (
                 <p className="text-sm text-amber-800 dark:text-amber-200/90 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 rounded-xl px-4 py-3">

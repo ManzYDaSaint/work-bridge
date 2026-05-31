@@ -6,12 +6,11 @@ import Image from "next/image";
 import ThemeController from "./ThemeController";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { createBrowserSupabaseClient } from "@/lib/supabase-client";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Navbar() {
     const [isScrolled, setIsScrolled] = useState(false);
-    const [user, setUser] = useState<any>(null);
-    const supabase = createBrowserSupabaseClient();
+    const { user } = useAuth();
 
     useEffect(() => {
         const handleScroll = () => {
@@ -19,20 +18,8 @@ export default function Navbar() {
         };
         window.addEventListener("scroll", handleScroll);
 
-        const getUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            setUser(user);
-        };
-
-        getUser();
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null);
-        });
-
         return () => {
             window.removeEventListener("scroll", handleScroll);
-            subscription.unsubscribe();
         };
     }, []);
 

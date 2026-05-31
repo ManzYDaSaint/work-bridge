@@ -1,6 +1,7 @@
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { buildPublicJobSlug } from "@/lib/public-slugs";
 
 export const dynamic = "force-dynamic";
 
@@ -103,19 +104,16 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
 
-        // --- Subscription Limit Enforcement ---
-        const { data: employerData } = await supabase
-            .from("employers")
-            .select("plan, jobs(id)")
-            .eq("id", auth.userId)
-            .single();
+        // --- Active Job Limit (2 active jobs max) ---
+        const { count: activeJobCount } = await supabase
+            .from("jobs")
+            .select("id", { count: "exact", head: true })
+            .eq("employer_id", auth.userId)
+            .eq("status", "ACTIVE");
 
-        const plan = employerData?.plan || 'FREE';
-        const jobCount = employerData?.jobs?.length || 0;
-
-        if (plan === 'FREE' && jobCount >= 2) {
+        if ((activeJobCount || 0) >= 2) {
             return NextResponse.json({
-                error: "Plan Limit Reached. You have reached the maximum of 2 free jobs. Upgrade to Premium to unlock: Unlimited Job Deployments, Advanced Talent Filtering, Elite Badge Visibility, and Priority Selection Signals."
+                error: "You've reached the 2 active job limit. We're working on higher plans — want early access?"
             }, { status: 403 });
         }
 
@@ -140,7 +138,7 @@ export async function POST(request: Request) {
             deadlineRaw ||
             new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-        const { data, error } = await supabase
+        const { data: createdJob, error: insertError } = await supabase
             .from("jobs")
             .insert({
                 employer_id: auth.userId,
@@ -159,6 +157,16 @@ export async function POST(request: Request) {
                 deadline,
                 status: 'ACTIVE',
             })
+            .select()
+            .single();
+
+        if (insertError) throw insertError;
+
+        const publicSlug = buildPublicJobSlug(createdJob.title, createdJob.id);
+        const { data, error } = await supabase
+            .from("jobs")
+            .update({ public_slug: publicSlug })
+            .eq("id", createdJob.id)
             .select()
             .single();
 

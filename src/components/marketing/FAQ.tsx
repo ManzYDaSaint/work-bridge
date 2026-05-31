@@ -9,24 +9,20 @@ const faqs = [
         a: "WorkBridge is for anyone in Malawi looking for work, internships, or attachments — and for employers and recruiters who want to find great local talent. Students and fresh graduates are especially welcome.",
     },
     {
-        q: "How does the Talent Marketplace work?",
-        a: "Job seekers build a full professional profile with their skills, experience, and certifications. Employers can then search this pool and filter by skill, seniority, and search intent. Both sides are matched automatically based on skills.",
-    },
-    {
-        q: "Can employers contact candidates directly?",
-        a: "Yes. Employers can send a direct 'Invite to Apply' message to any visible candidate directly on the platform — no external email or phone call needed to make initial contact.",
+        q: "How can employers contact candidates?",
+        a: "Employers can view candidate contact details directly on their profiles (if allowed by visibility settings) and reach out to them via email, WhatsApp, or phone to invite them to apply.",
     },
     {
         q: "What are the profile visibility options?",
         a: "Seekers choose one of three visibility levels: Public (full profile visible), Anonymous (skills and experience visible but name and contacts hidden), or Hidden (does not appear in any employer search).",
     },
     {
-        q: "How does skill-based matching work?",
-        a: "When an employer posts a job, WorkBridge immediately surfaces candidates whose listed skills overlap with the job's requirements. Seekers also see a 'Recommended for You' widget showing active jobs that match their skills.",
+        q: "How do employers find candidates?",
+        a: "Employers can search the talent discover database and filter candidates by skills, seniority level, current employment status, location, and search intent.",
     },
     {
-        q: "Is there a free plan?",
-        a: "Yes. Both seekers and employers can use the platform's core features for free. Premium plans unlock extras like profile badges, priority visibility, and additional employer features.",
+        q: "Is there any cost to use WorkBridge?",
+        a: "No. WorkBridge is completely free for both job seekers and employers. You can list jobs, build profiles, and discover talent at no cost.",
     },
 ];
 

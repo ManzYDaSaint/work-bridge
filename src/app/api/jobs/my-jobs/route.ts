@@ -1,29 +1,15 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { withAuth } from "@/lib/auth-guard";
 import { NextResponse } from "next/server";
 
-export async function GET(request: Request) {
+export const GET = withAuth(async (request, auth) => {
     const supabase = await createSupabaseServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const userId = auth.userId;
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status") || "all";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const offset = (page - 1) * limit;
-
-    const { data: employer, error: empError } = await supabase
-        .from("employers")
-        .select("id")
-        .eq("id", user.id)
-        .single();
-
-    if (empError || !employer) {
-        return NextResponse.json({ error: "Employer profile not found" }, { status: 404 });
-    }
 
     let query = supabase
         .from("jobs")
@@ -32,7 +18,7 @@ export async function GET(request: Request) {
             employer:employers(company_name, id, description),
             applications(count)
         `, { count: 'exact' })
-        .eq("employer_id", employer.id);
+        .eq("employer_id", userId);
 
     if (status && status !== "all") {
         query = query.eq("status", status);
@@ -47,27 +33,25 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Failed to fetch jobs" }, { status: 500 });
     }
 
-    // Fetch shortlist counts for these specific jobs
-    const jobIds = data.map(j => j.id);
+    const jobIds = (data || []).map((j: any) => j.id);
     let shortlistCounts: Record<string, number> = {};
-    
+
     if (jobIds.length > 0) {
         const { data: shortlistedApps, error: sfError } = await supabase
             .from("applications")
             .select("job_id")
             .in("job_id", jobIds)
             .in("status", ["SHORTLISTED", "ACCEPTED"]);
-            
+
         if (!sfError && shortlistedApps) {
-            shortlistCounts = shortlistedApps.reduce((acc, app) => {
+            shortlistCounts = shortlistedApps.reduce((acc: Record<string, number>, app: any) => {
                 acc[app.job_id] = (acc[app.job_id] || 0) + 1;
                 return acc;
-            }, {} as Record<string, number>);
+            }, {});
         }
     }
 
-    // Format to camelCase
-    const formattedJobs = data.map(job => ({
+    const formattedJobs = (data || []).map((job: any) => ({
         id: job.id,
         title: job.title,
         description: job.description,
@@ -82,12 +66,12 @@ export async function GET(request: Request) {
         employer: job.employer ? {
             id: (job.employer as any).id,
             companyName: (job.employer as any).company_name,
-            description: (job.employer as any).description
+            description: (job.employer as any).description,
         } : undefined,
         _count: {
             applications: job.applications?.[0]?.count ?? 0,
-            shortlisted: shortlistCounts[job.id] || 0
-        }
+            shortlisted: shortlistCounts[job.id] || 0,
+        },
     }));
 
     return NextResponse.json({
@@ -95,6 +79,6 @@ export async function GET(request: Request) {
         total: count || 0,
         page,
         limit,
-        totalPages: Math.ceil((count || 0) / limit)
+        totalPages: Math.ceil((count || 0) / limit),
     });
-}
+});

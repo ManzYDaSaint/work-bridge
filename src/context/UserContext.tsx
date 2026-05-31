@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { User } from "@/types";
 import { apiFetch } from "@/lib/api";
+import { subscribeToAuthSignedIn, subscribeToAuthSignedOut } from "@/lib/auth-utils";
 
 interface UserContextType {
     user: User | null;
@@ -48,6 +49,23 @@ export function UserProvider({
             setUserState(initialUser);
         }
     }, [initialUser]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const unsubscribeSignedOut = subscribeToAuthSignedOut(() => {
+            setUserState(null);
+        });
+
+        const unsubscribeSignedIn = subscribeToAuthSignedIn(() => {
+            refreshUser();
+        });
+
+        return () => {
+            unsubscribeSignedOut();
+            unsubscribeSignedIn();
+        };
+    }, [refreshUser]);
 
     return (
         <UserContext.Provider value={{ user, setUser, refreshUser, loading }}>

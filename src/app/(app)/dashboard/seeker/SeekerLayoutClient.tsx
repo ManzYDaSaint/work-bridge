@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { User, JobSeeker } from "@/types";
 import {
-    LayoutDashboard, Briefcase, BookmarkCheck, UserCircle2, Sparkles
+    LayoutDashboard, Briefcase, BookmarkCheck, UserCircle2
 } from "lucide-react";
-import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
 import { UserProvider, useUser } from "@/context/UserContext";
 import { useEffect } from "react";
+import { signOutAndRedirect } from "@/lib/auth-utils";
 
 
 export default function SeekerLayoutClient({
@@ -26,7 +26,6 @@ export default function SeekerLayoutClient({
 }
 
 function SeekerLayoutInner({ children }: { children: React.ReactNode }) {
-    const supabase = createBrowserSupabaseClient();
     const { user, refreshUser } = useUser();
     
     // Sync with DB on mount to fix stale SSR data
@@ -50,7 +49,6 @@ function SeekerLayoutInner({ children }: { children: React.ReactNode }) {
         {
             items: [
                 { label: "Profile", href: "/dashboard/seeker/profile", icon: UserCircle2 },
-                { label: "Upgrade Pro", href: "/dashboard/seeker/billing", icon: Sparkles },
             ]
         }
     ];
@@ -58,8 +56,7 @@ function SeekerLayoutInner({ children }: { children: React.ReactNode }) {
     const seekerProfile: JobSeeker | null = user.jobSeeker ?? null;
 
     const handleLogout = async () => {
-        await supabase.auth.signOut();
-        window.location.assign("/login");
+        await signOutAndRedirect();
     };
 
     const fullName = seekerProfile?.full_name || user?.email?.split("@")[0] || "User";

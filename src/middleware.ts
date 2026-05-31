@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { AuthError } from "@supabase/supabase-js";
 import { rateLimit, getIP, rateLimitResponse } from "@/lib/rate-limit";
+import { getAuthOptional } from "@/lib/auth-guard";
 import { isOnboardingComplete } from "@/lib/onboarding";
 
 function isBenignUnauthenticatedAuthError(error: AuthError): boolean {
@@ -66,17 +67,9 @@ export async function middleware(request: NextRequest) {
 
     let user = null;
     if (shouldCallGetUser) {
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-
-        if (
-            authError &&
-            path !== "/login" &&
-            path !== "/register" &&
-            !isBenignUnauthenticatedAuthError(authError)
-        ) {
-            console.error(`[proxy.ts] Auth error for ${path}:`, authError.message);
-        }
-        user = authUser;
+        // Use centralized optional auth resolver to avoid duplicate Auth server calls
+        const auth = await getAuthOptional();
+        user = auth.user || null;
     }
 
     // 2. Session Idle Timeout Enforcement (30 Minutes)

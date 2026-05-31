@@ -48,6 +48,7 @@ CREATE TABLE public.job_seekers (
   completion INTEGER DEFAULT 0,
   search_intent TEXT DEFAULT 'ACTIVELY_LOOKING',
   profile_visibility TEXT DEFAULT 'HIDDEN',
+  public_slug TEXT,
   portfolio_links TEXT[] DEFAULT '{}',
   profile_views INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -91,6 +92,7 @@ CREATE TABLE public.jobs (
   deadline DATE,
   screening_questions JSONB DEFAULT '[]'::jsonb,
   status public.job_status DEFAULT 'PENDING' NOT NULL,
+  public_slug TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -259,8 +261,13 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
   IF v_role = 'JOB_SEEKER' THEN
-    INSERT INTO public.job_seekers (id, full_name, location)
-    VALUES (NEW.id, COALESCE(split_part(NEW.email, '@', 1), ''), 'To be updated')
+    INSERT INTO public.job_seekers (id, full_name, location, public_slug)
+    VALUES (
+      NEW.id,
+      COALESCE(split_part(NEW.email, '@', 1), ''),
+      'To be updated',
+      lower(regexp_replace(regexp_replace(COALESCE(split_part(NEW.email, '@', 1), 'candidate'), '[^a-zA-Z0-9]+', '-', 'g'), '(^-|-$)', '', 'g')) || '-' || left(replace(NEW.id::text, '-', ''), 8)
+    )
     ON CONFLICT (id) DO NOTHING;
   ELSIF v_role = 'EMPLOYER' THEN
     INSERT INTO public.employers (id, company_name, industry, location, status, recruiter_verified)
@@ -358,11 +365,13 @@ CREATE POLICY "Users can view own close requests" ON public.account_close_reques
 CREATE INDEX idx_users_email ON public.users(email);
 CREATE INDEX idx_users_role ON public.users(role);
 CREATE INDEX idx_jobs_status_created ON public.jobs(status, created_at DESC);
+CREATE UNIQUE INDEX idx_jobs_public_slug ON public.jobs(public_slug);
 CREATE INDEX idx_applications_status_created ON public.applications(status, created_at DESC);
 CREATE INDEX idx_notifications_unread ON public.notifications(user_id) WHERE is_read = false;
 CREATE INDEX idx_audit_logs_created ON public.audit_logs(created_at DESC);
 CREATE INDEX idx_job_seekers_visibility ON public.job_seekers(profile_visibility);
 CREATE INDEX idx_job_seekers_intent ON public.job_seekers(search_intent);
+CREATE UNIQUE INDEX idx_job_seekers_public_slug ON public.job_seekers(public_slug);
 
 -- ==========================================
 -- 5. AUTOMATED AUDITING TRIGGERS

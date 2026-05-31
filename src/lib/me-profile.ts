@@ -46,12 +46,14 @@ export async function buildMeProfile(
                   completion: userData.jobSeeker.completion,
                   isSubscribed: userData.jobSeeker.is_subscribed,
                   avatarUrl: userData.jobSeeker.avatar_url,
+                  resumeUrl: userData.jobSeeker.resume_url,
                   hasBadge: userData.jobSeeker.has_badge ?? false,
                   education: userData.jobSeeker.education || [],
                   preferredWorkModes: userData.jobSeeker.preferred_work_modes || [],
                   preferredJobTypes: userData.jobSeeker.preferred_job_types || [],
                   preferredLocations: userData.jobSeeker.preferred_locations || [],
                   preferredSkills: userData.jobSeeker.preferred_skills || [],
+                  publicSlug: userData.jobSeeker.public_slug ?? null,
               }
             : undefined,
         employer: userData.employer

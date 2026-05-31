@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { employerProfileSchema, EmployerProfileValues } from "@/lib/validations/employer";
 import { apiFetch, apiFetchJson } from "@/lib/api";
-import { Camera, Loader2, Check, Shield, CreditCard, AlertCircle, X } from "lucide-react";
+import { Camera, Loader2, Check, Shield, AlertCircle, X } from "lucide-react";
 import { PageHeader, SectionCard, Badge } from "@/components/dashboard/ui";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -233,22 +233,7 @@ export default function EmployerSettingsPage() {
                         </div>
                     </SectionCard>
 
-                    {/* Plan */}
-                    <SectionCard title="Plan">
-                        <div className="space-y-4 p-6">
-                            <div className="flex items-center justify-between">
-                                <p className="text-lg font-semibold text-slate-900 dark:text-white">{plan === "PREMIUM" ? "Premium" : "Free"}</p>
-                                <Badge label={plan} variant={plan === "PREMIUM" ? "green" : "secondary"} />
-                            </div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                                {plan === "PREMIUM" ? "Unlimited listings and expanded workflow tools." : "Basic plan with up to 3 active roles."}
-                            </p>
-                            <Link href="/dashboard/employer/billing" className="inline-flex items-center gap-2 text-sm font-semibold text-[#16324f] hover:underline dark:text-slate-200">
-                                <CreditCard size={16} />
-                                Manage billing
-                            </Link>
-                        </div>
-                    </SectionCard>
+
 
                     {/* Preferences */}
                     <SectionCard title="Preferences">
