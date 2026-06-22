@@ -46,10 +46,10 @@ export default function ForgotPasswordPage() {
                         className="w-16 h-16 flex items-center justify-center mb-6"
                     >
                         <div className="logo-black">
-                            <Image src="/logo-black.svg" alt="WorkBridge" width={64} height={64} priority style={{ width: "auto", height: "auto" }} />
+                            <Image src="/logo-black.svg" alt="Aganyu" width={64} height={64} priority style={{ width: "auto", height: "auto" }} />
                         </div>
                         <div className="logo-white">
-                            <Image src="/logo.svg" alt="WorkBridge" width={64} height={64} priority style={{ width: "auto", height: "auto" }} />
+                            <Image src="/logo.svg" alt="Aganyu" width={64} height={64} priority style={{ width: "auto", height: "auto" }} />
                         </div>
                     </motion.div>
                     <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter text-center">

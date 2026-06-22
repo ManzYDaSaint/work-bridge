@@ -65,7 +65,7 @@ export const PATCH = withAuth(async (request, auth) => {
                 const seekerEmail = application.user?.email;
                 const seekerName = (application.user as any)?.jobSeeker?.full_name || "Candidate";
                 const jobTitle = application.job?.title;
-                const companyName = (application.job as any)?.employer?.company_name || "WorkBridge Employer";
+                const companyName = (application.job as any)?.employer?.company_name || "Aganyu Employer";
 
                 if (seekerEmail && ["ACCEPTED", "REJECTED", "SHORTLISTED", "INTERVIEWING"].includes(status)) {
                     const emailResult = await sendApplicationStatusEmail(seekerEmail, {

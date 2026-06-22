@@ -92,27 +92,27 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
     if (!result) {
         return {
-            title: "Career profile not found | WorkBridge",
+            title: "Career profile not found | Aganyu",
             robots: { index: false, follow: false },
         };
     }
 
     const isAnonymous = result.profile.profile_visibility === "ANONYMOUS";
-    const name = isAnonymous ? "WorkBridge Candidate" : result.profile.full_name;
-    const description = result.profile.bio || `${name} career profile on WorkBridge.`;
+    const name = isAnonymous ? "Aganyu Candidate" : result.profile.full_name;
+    const description = result.profile.bio || `${name} career profile on Aganyu.`;
 
     return {
-        title: `${name} | WorkBridge Career Profile`,
+        title: `${name} | Aganyu Career Profile`,
         description,
         openGraph: {
-            title: `${name} | WorkBridge Career Profile`,
+            title: `${name} | Aganyu Career Profile`,
             description,
             type: "profile",
             images: result.profile.avatar_url && !isAnonymous ? [{ url: result.profile.avatar_url }] : [{ url: "/og-image.png" }],
         },
         twitter: {
             card: "summary_large_image",
-            title: `${name} | WorkBridge Career Profile`,
+            title: `${name} | Aganyu Career Profile`,
             description,
             images: result.profile.avatar_url && !isAnonymous ? [result.profile.avatar_url] : ["/og-image.png"],
         },
@@ -141,7 +141,7 @@ export default async function CareerPage({ params }: { params: Promise<{ id: str
                     <div className="min-w-0">
                         <div className="mb-6 flex flex-wrap items-center gap-2">
                             <span className="inline-flex items-center gap-1.5 rounded-full bg-[#16324f] px-3 py-1 text-xs font-semibold text-white">
-                                <Sparkles size={13} /> WorkBridge career page
+                                <Sparkles size={13} /> Aganyu career page
                             </span>
                             {profile.has_badge && (
                                 <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
@@ -183,7 +183,7 @@ export default async function CareerPage({ params }: { params: Promise<{ id: str
                             <p><span className="font-medium text-slate-950 dark:text-white">Experience entries:</span> {experience.length}</p>
                         </div>
                         <Link href="/register?role=employer" className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-[#16324f] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0f2439]">
-                            Contact through WorkBridge
+                            Contact through Aganyu
                         </Link>
                     </aside>
                 </div>

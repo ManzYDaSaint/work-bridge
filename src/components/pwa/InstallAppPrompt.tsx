@@ -83,11 +83,11 @@ export default function InstallAppPrompt() {
                                 { }
                                 <img
                                     src="/icons/icon-192.png"
-                                    alt="WorkBridge icon"
+                                    alt="Aganyu icon"
                                     className="w-12 h-12 rounded-2xl shadow-lg"
                                 />
                                 <div>
-                                    <p className="text-sm font-black leading-none">WorkBridge</p>
+                                    <p className="text-sm font-black leading-none">Aganyu</p>
                                     <p className="text-[11px] text-slate-400 mt-0.5">Free · No App Store needed</p>
                                 </div>
                             </div>
@@ -105,8 +105,8 @@ export default function InstallAppPrompt() {
                         <div className="px-5 pb-5 space-y-4">
                             <p className="text-sm text-slate-300 leading-relaxed">
                                 {isIOS
-                                    ? "Add WorkBridge to your Home Screen for an app-like experience — no App Store required."
-                                    : "Install WorkBridge on your device for faster access, offline job browsing, and real-time notifications."}
+                                    ? "Add Aganyu to your Home Screen for an app-like experience — no App Store required."
+                                    : "Install Aganyu on your device for faster access, offline job browsing, and real-time notifications."}
                             </p>
 
                             {isIOS ? (

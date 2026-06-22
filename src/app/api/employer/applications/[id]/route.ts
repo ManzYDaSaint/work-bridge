@@ -105,7 +105,7 @@ export const PATCH = withAuth(async (request, auth, { params }) => {
         const seekerEmail = application.user?.email;
         const seekerName = (application.user as any)?.jobSeeker?.full_name || "Candidate";
         const jobTitle = application.job?.title;
-        const companyName = (application.job as any)?.employer?.company_name || "WorkBridge Employer";
+        const companyName = (application.job as any)?.employer?.company_name || "Aganyu Employer";
 
         if (!seekerEmail) {
             console.warn(`[NOTIFICATION_DEBUG] SKIPPED: Seeker ${application.user_id} has no email or user record.`);

@@ -43,25 +43,25 @@ export default function Navbar() {
                                 <div className="logo-white">
                                     <Image
                                         src="/logo.svg"
-                                        alt="WorkBridge"
+                                        alt="Aganyu"
                                         width={48}
                                         height={48}
                                         priority
-                                    style={{ width: "auto", height: "auto" }} />
+                                        style={{ width: "auto", height: "auto" }} />
                                 </div>
                                 <div className="logo-black">
                                     <Image
                                         src="/logo-black.svg"
-                                        alt="WorkBridge"
+                                        alt="Aganyu"
                                         width={48}
                                         height={48}
                                         priority
-                                    style={{ width: "auto", height: "auto" }} />
+                                        style={{ width: "auto", height: "auto" }} />
                                 </div>
                             </div>
                         </div>
                         <span className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors hidden sm:block">
-                            WorkBridge
+                            Aganyu
                         </span>
                     </Link>
                 </div>

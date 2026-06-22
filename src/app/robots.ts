@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 
 export default function robots(): MetadataRoute.Robots {
-    const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://workbridge.mw';
+    const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://aganyu.mw';
 
     return {
         rules: {

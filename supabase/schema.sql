@@ -1,4 +1,4 @@
--- WorkBridge Supabase Schema Redesign (Production - Clean)
+-- Aganyu Supabase Schema Redesign (Production - Clean)
 
 -- ==========================================
 -- 0. EXTENSIONS & TYPES

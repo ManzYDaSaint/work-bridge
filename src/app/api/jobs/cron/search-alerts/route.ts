@@ -79,7 +79,7 @@ export async function GET(request: Request) {
                 console.log(`[JOB_ALERT] Found ${matches.length} matches for user ${alert.user_id}`);
                 
                 await sendJobAlertEmail(userEmail, {
-                    seekerName: "WorkBridge User",
+                    seekerName: "Aganyu User",
                     matchedJobs: matches as any
                 });
                 

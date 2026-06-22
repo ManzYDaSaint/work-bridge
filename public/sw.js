@@ -1,4 +1,4 @@
-const CACHE_NAME = "workbridge-v3";
+const CACHE_NAME = "aganyu-v3";
 const STATIC_ASSETS = [
     "/",
     "/jobs",
@@ -94,10 +94,10 @@ self.addEventListener("push", (event) => {
     try {
         payload = event.data.json();
     } catch {
-        payload = { title: "WorkBridge", body: event.data.text(), url: "/" };
+        payload = { title: "Aganyu", body: event.data.text(), url: "/" };
     }
 
-    const { title = "WorkBridge", body = "", icon = "/icons/icon-192.png", badge = "/icons/icon-192.png", url = "/", tag = "workbridge" } = payload;
+    const { title = "Aganyu", body = "", icon = "/icons/icon-192.png", badge = "/icons/icon-192.png", url = "/", tag = "aganyu" } = payload;
 
     event.waitUntil(
         self.registration.showNotification(title, {

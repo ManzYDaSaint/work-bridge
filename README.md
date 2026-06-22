@@ -1,12 +1,12 @@
-# WorkBridge — Talent Marketplace Platform
+# Aganyu — Talent Marketplace Platform
 
 > **Malawi's premier talent marketplace** connecting job seekers, students, and interns with employers through proactive discovery, skill-based matching, and a structured hiring pipeline.
 
 ---
 
-## What is WorkBridge?
+## What is Aganyu?
 
-WorkBridge has evolved from a traditional job board into a **proactive talent marketplace**. Instead of waiting for candidates to apply, employers can now discover, save, and directly invite talent — while job seekers build a rich, verifiable online presence that works for them 24/7.
+Aganyu has evolved from a traditional job board into a **proactive talent marketplace**. Instead of waiting for candidates to apply, employers can now discover, save, and directly invite talent — while job seekers build a rich, verifiable online presence that works for them 24/7.
 
 The platform serves three audiences:
 
@@ -125,8 +125,8 @@ New users (both students and graduates) complete a multi-step onboarding that ca
 ### 💳 Payments & Subscriptions
 
 - Powered by **PayChangu** (Airtel Money, TNM Mpamba, Card — MWK)
-- **WorkBridge Badge** — seeker credibility badge
-- **WorkBridge Plus** — premium seeker plan
+- **Aganyu Badge** — seeker credibility badge
+- **Aganyu Plus** — premium seeker plan
 
 ---
 
@@ -179,8 +179,7 @@ src/
 │   ├── supabase-server.ts    # Server Supabase client
 │   └── api.ts                # Client-side fetch helpers
 supabase/
-├── schema.sql                # Full canonical schema (source of truth)
-└── migrations/               # Incremental SQL migrations
+└── schema.sql                # Full canonical schema (source of truth)
 ```
 
 ---
@@ -245,23 +244,12 @@ RESEND_API_KEY=
 
 ### 3. Apply the database schema
 
-**Fresh database:**
 ```bash
-# Option A — apply the full canonical schema
+# Apply the full canonical schema
 psql -h <host> -U postgres -d postgres -f supabase/schema.sql
-
-# Option B — use Supabase CLI
-npx supabase db push
 ```
 
-**Existing database (apply incremental migrations):**
-```bash
-npx supabase db push
-```
-
-Key migrations to ensure are applied:
-- `20260424170000_add_talent_marketplace_fields.sql` — adds `search_intent`, `profile_visibility`, `portfolio_links` to `job_seekers`
-- `20260424210000_add_talent_marketplace_advanced.sql` — adds `profile_views` to `job_seekers` and creates `employer_saved_candidates` table
+For an existing database, back it up first, then reconcile it with `supabase/schema.sql`.
 
 ### 4. Run locally
 
@@ -282,15 +270,15 @@ npm run type-check
 **For a fresh environment:**
 
 1. Provision Supabase project
-2. Apply `supabase/schema.sql` or run all migrations in order
+2. Apply `supabase/schema.sql`
 3. Configure all environment variables in your deployment platform (Vercel, etc.)
 4. Deploy — `npm run build && npm start`
 
 **For an existing environment:**
 
 1. Back up the database
-2. Run `npx supabase db push` to apply pending migrations
-3. Verify the new columns are present (`profile_views`, `profile_visibility`, `search_intent`, `employer_saved_candidates` table)
+2. Reconcile the database with `supabase/schema.sql`
+3. Verify the required columns and tables are present
 4. Deploy the updated app
 
 ---
@@ -327,7 +315,7 @@ npm run type-check
 
 ## Privacy Design
 
-WorkBridge takes candidate privacy seriously. The platform enforces the following rules at every level:
+Aganyu takes candidate privacy seriously. The platform enforces the following rules at every level:
 
 - **`HIDDEN` profiles** never appear in employer discovery or matchmaking results
 - **`ANONYMOUS` profiles** show skills, experience, and bio — but name, avatar, location, and contact details are masked in all views (Discover page, Candidate Profile page, Suggested Candidates tab, Saved Talent page)
@@ -336,4 +324,4 @@ WorkBridge takes candidate privacy seriously. The platform enforces the followin
 
 ---
 
-*WorkBridge — Built for Malawi. Built to grow.*
+*Aganyu — Built for Malawi. Built to grow.*

@@ -279,7 +279,7 @@ export default function LandingPage() {
                             Ready to be discovered — or start discovering?
                         </h2>
                         <p className="text-lg text-slate-500 dark:text-slate-400 mb-12 max-w-md mx-auto font-medium">
-                            Join the WorkBridge marketplace for free. No credit card required.
+                            Join the Aganyu marketplace for free. No credit card required.
                         </p>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                             <Link
@@ -304,7 +304,7 @@ export default function LandingPage() {
             {/* ─── TRUST / LOGOS ───────────────────────────────────────── */}
             <div className="max-w-7xl mx-auto text-center pb-24 px-4">
                 <p className="text-slate-400 font-black tracking-[0.3em] uppercase text-[10px] mb-10 dark:text-slate-600">
-                    Companies hiring on WorkBridge
+                    Companies hiring on Aganyu
                 </p>
                 <LogoMarquee />
             </div>

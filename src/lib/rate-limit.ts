@@ -57,7 +57,7 @@ export function rateLimitResponse(request?: Request) {
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Slow Down | WorkBridge</title>
+                <title>Slow Down | Aganyu</title>
                 <style>
                     body { font-family: system-ui, -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-h: 100vh; margin: 0; background: #f8fafc; color: #0f172a; }
                     .card { background: white; padding: 2.5rem; border-radius: 1.5rem; shadow: 0 25px 50px -12px rgba(0,0,0,0.1); max-width: 400px; text-align: center; border: 1px solid #e2e8f0; }
@@ -72,7 +72,7 @@ export function rateLimitResponse(request?: Request) {
                 <div class="card">
                     <div class="icon">⏳</div>
                     <h1>Slow Down</h1>
-                    <p>You're moving a bit fast for our systems. Please wait a moment before trying again to ensure WorkBridge remains secure for everyone.</p>
+                    <p>You're moving a bit fast for our systems. Please wait a moment before trying again to ensure Aganyu remains secure for everyone.</p>
                     <a href="/dashboard" class="btn">Return to Safety</a>
                 </div>
             </body>

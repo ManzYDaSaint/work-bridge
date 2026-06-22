@@ -17,35 +17,35 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://workbridge.co"),
-  applicationName: "WorkBridge",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://aganyu.co"),
+  applicationName: "Aganyu",
   title: {
-    default: "WorkBridge | Malawi's modern job board",
-    template: "%s | WorkBridge",
+    default: "Aganyu | Malawi's modern job board",
+    template: "%s | Aganyu",
   },
   description: "A modern Malawian job board for remote, hybrid, and on-site roles across tech, operations, design, sales, and more.",
   keywords: ["Job Search", "Recruitment", "Malawi Jobs", "Remote Jobs", "Hybrid Jobs", "On-site Jobs", "Hiring", "Careers"],
-  authors: [{ name: "WorkBridge Team" }],
+  authors: [{ name: "Aganyu Team" }],
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "/",
-    title: "WorkBridge | Malawi's modern job board",
+    title: "Aganyu | Malawi's modern job board",
     description: "Browse remote, hybrid, and on-site roles across Malawi and beyond.",
-    siteName: "WorkBridge",
+    siteName: "Aganyu",
     images: [{
       url: "/og-image.png",
       width: 1200,
       height: 630,
-      alt: "WorkBridge - Malawi's modern job board",
+      alt: "Aganyu - Malawi's modern job board",
     }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "WorkBridge | Malawi's modern job board",
+    title: "Aganyu | Malawi's modern job board",
     description: "Browse remote, hybrid, and on-site roles across Malawi and beyond.",
     images: ["/og-image.png"],
-    creator: "@workbridge",
+    creator: "@aganyu",
   },
   robots: {
     index: true,
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "WorkBridge",
+    title: "Aganyu",
   },
   formatDetection: {
     telephone: false,

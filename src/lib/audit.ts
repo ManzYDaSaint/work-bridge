@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from "./supabase-server";
 import { sendAdminSecurityAlert } from "./resend";
 
 /**
- * WorkBridge Auditing System
+ * Aganyu Auditing System
  * -------------------------
  * 1. DATABASE AUTOMATED: INSERT, UPDATE, DELETE on high-risk tables (users, jobs, etc.)
  *    are handled by 'audit_trigger_function' in Postgres.

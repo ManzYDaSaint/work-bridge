@@ -84,16 +84,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
     if (!result) {
         return {
-            title: "Job not found | WorkBridge",
+            title: "Job not found | Aganyu",
             robots: { index: false, follow: false },
         };
     }
 
-    const company = result.employer?.company_name || "WorkBridge employer";
-    const description = result.job.description || `${company} is hiring ${result.job.title} on WorkBridge.`;
+    const company = result.employer?.company_name || "Aganyu employer";
+    const description = result.job.description || `${company} is hiring ${result.job.title} on Aganyu.`;
 
     return {
-        title: `${result.job.title} at ${company} | WorkBridge`,
+        title: `${result.job.title} at ${company} | Aganyu`,
         description,
         openGraph: {
             title: `${result.job.title} at ${company}`,
@@ -116,7 +116,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
     if (!result) notFound();
 
     const { job, employer } = result;
-    const company = employer?.company_name || "WorkBridge employer";
+    const company = employer?.company_name || "Aganyu employer";
     const skills = uniqueList([...(job.must_have_skills || []), ...(job.skills || []), ...(job.nice_to_have_skills || [])]);
     const applyHref = `/jobs?job=${job.id}`;
     const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");

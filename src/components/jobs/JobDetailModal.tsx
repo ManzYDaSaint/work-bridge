@@ -155,7 +155,7 @@ export default function JobDetailModal({
                         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
                             <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Complete your profile to apply.</p>
                             <p className="mt-1 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
-                                Your profile is {effectiveCompletion}% complete. WorkBridge requires a partially finished profile before applications go out.
+                                Your profile is {effectiveCompletion}% complete. Aganyu requires a partially finished profile before applications go out.
                             </p>
                             <Link href="/dashboard/seeker/profile" className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 hover:underline dark:text-amber-300">
                                 Finish profile <ExternalLink size={12} />

@@ -2,9 +2,9 @@ import { Resend } from "resend";
 
 export const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key");
 
-const BRAND_NAME = "WorkBridge";
+const BRAND_NAME = "Aganyu";
 const BRAND_COLOR = "#16324f";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_URL || "https://workbridge.co";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_URL || "https://aganyu.co";
 const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || `${BRAND_NAME} <onboarding@resend.dev>`;
 
 /**
@@ -52,7 +52,7 @@ export async function sendWelcomeEmail(to: string, name?: string) {
       return { success: false, error: "No recipient email" };
     }
 
-    const title = "Welcome to WorkBridge";
+    const title = "Welcome to Aganyu";
     const content = `
       <p>Hey ${name || "there"},</p>
       <p>Thanks for joining <strong>${BRAND_NAME}</strong>. You are now part of a focused hiring platform built for clear, fast job discovery and hiring.</p>
@@ -164,7 +164,7 @@ export async function sendAdminSecurityAlert(payload: {
 
     const data = await resend.emails.send({
       from: EMAIL_FROM,
-      to: ["admin@workbridge.com"],
+      to: ["admin@aganyu.com"],
       subject: `🚨 Security Alert: ${payload.event}`,
       html: renderEmailLayout(content, title),
     });
@@ -186,7 +186,7 @@ export async function sendEmployerVerificationEmail(to: string, payload: {
 
     const content = `
       <p>Dear ${payload.companyName} Team,</p>
-      <p>Your WorkBridge corporate account has been reviewed by our trust team.</p>
+      <p>Your Aganyu corporate account has been reviewed by our trust team.</p>
       <div style="padding: 20px; background: ${isApproved ? '#ecfdf5' : '#fff1f2'}; border-radius: 12px; margin: 20px 0; border-left: 4px solid ${isApproved ? '#10b981' : '#f43f5e'};">
         <p style="margin: 0; font-weight: 800; font-size: 18px; color: ${isApproved ? '#065f46' : '#9f1239'};">
           Status: ${payload.status}
@@ -197,7 +197,7 @@ export async function sendEmployerVerificationEmail(to: string, payload: {
         ? `<p>Your account is now <strong>fully activated</strong>. You can now deploy job roles and access the verified talent pool.</p>
            <a href="${APP_URL}/dashboard/employer" class="btn">Access Employer Dashboard</a>`
         : `<p>Unfortunately, your application did not meet our current verification standards. Please contact our support team if you believe this is an error.</p>
-           <a href="mailto:support@workbridge.io" class="btn">Contact Support</a>`
+           <a href="mailto:support@aganyu.io" class="btn">Contact Support</a>`
       }
       <p style="margin-top: 30px;">Best regards,<br/>The ${BRAND_NAME} Trust & Safety Team</p>
     `;
@@ -454,14 +454,14 @@ export async function sendJobAlertEmail(to: string, payload: {
       </p>
       
       <p style="margin-top: 32px; font-size: 12px; color: #94a3b8;">
-        You are receiving this because you set up a Job Alert on WorkBridge. You can manage your alerts from your dashboard.
+        You are receiving this because you set up a Job Alert on Aganyu. You can manage your alerts from your dashboard.
       </p>
     `;
 
     const data = await resend.emails.send({
       from: EMAIL_FROM,
       to: [to],
-      subject: `[WorkBridge] ${payload.matchedJobs.length} new ${payload.matchedJobs.length === 1 ? 'job' : 'jobs'} match your search alert`,
+      subject: `[Aganyu] ${payload.matchedJobs.length} new ${payload.matchedJobs.length === 1 ? 'job' : 'jobs'} match your search alert`,
       html: renderEmailLayout(content, title),
     });
 

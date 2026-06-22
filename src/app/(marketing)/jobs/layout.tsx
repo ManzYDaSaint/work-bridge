@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = constructMetadata({
     title: "Jobs",
-    description: "Browse open roles on WorkBridge — verified employers, privacy-first applications.",
+    description: "Browse open roles on Aganyu — verified employers, privacy-first applications.",
     canonical: "/jobs",
 });
 

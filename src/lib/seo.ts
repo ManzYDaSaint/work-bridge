@@ -10,7 +10,7 @@ interface SEOProps {
 }
 
 export function constructMetadata({
-    title = "WorkBridge - Malawi's modern job board",
+    title = "Aganyu - Malawi's modern job board",
     description = "Browse remote, hybrid, and on-site jobs with a calm, fast experience built for Malawi and beyond.",
     canonical = "/",
     ogImage = "/og-image.png",
@@ -28,7 +28,7 @@ export function constructMetadata({
             title,
             description,
             url: canonical,
-            siteName: "WorkBridge",
+            siteName: "Aganyu",
             images: [
                 {
                     url: finalOgImage,

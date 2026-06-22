@@ -5,8 +5,8 @@ import { ChevronDown } from "lucide-react";
 
 const faqs = [
     {
-        q: "Who is WorkBridge for?",
-        a: "WorkBridge is for anyone in Malawi looking for work, internships, or attachments — and for employers and recruiters who want to find great local talent. Students and fresh graduates are especially welcome.",
+        q: "Who is Aganyu for?",
+        a: "Aganyu is for anyone in Malawi looking for work, internships, or attachments — and for employers and recruiters who want to find great local talent. Students and fresh graduates are especially welcome.",
     },
     {
         q: "How can employers contact candidates?",
@@ -21,8 +21,8 @@ const faqs = [
         a: "Employers can search the talent discover database and filter candidates by skills, seniority level, current employment status, location, and search intent.",
     },
     {
-        q: "Is there any cost to use WorkBridge?",
-        a: "No. WorkBridge is completely free for both job seekers and employers. You can list jobs, build profiles, and discover talent at no cost.",
+        q: "Is there any cost to use Aganyu?",
+        a: "No. Aganyu is completely free for both job seekers and employers. You can list jobs, build profiles, and discover talent at no cost.",
     },
 ];
 

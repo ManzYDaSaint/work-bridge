@@ -3,10 +3,10 @@ import Link from "next/link";
 import Image from "next/image";
 
 const social = [
-    { Icon: Facebook, href: "https://facebook.com/workbridge.mw" },
-    { Icon: Instagram, href: "https://instagram.com/workbridge.mw" },
-    { Icon: Twitter, href: "https://twitter.com/workbridge_mw" },
-    { Icon: Linkedin, href: "https://linkedin.com/company/workbridge-mw" },
+    { Icon: Facebook, href: "https://facebook.com/aganyu.mw" },
+    { Icon: Instagram, href: "https://instagram.com/aganyu.mw" },
+    { Icon: Twitter, href: "https://twitter.com/aganyu_mw" },
+    { Icon: Linkedin, href: "https://linkedin.com/company/aganyu-mw" },
 ];
 
 export default function Footer() {
@@ -22,7 +22,7 @@ export default function Footer() {
                             <div className="logo-white">
                                 <Image src="/logo.svg" alt="" width={36} height={36} style={{ width: "auto", height: "auto" }} />
                             </div>
-                            <span className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">WorkBridge</span>
+                            <span className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Aganyu</span>
                         </div>
                         <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                             A lean, modern job board with Malawi at the center and roles from anywhere work can happen.
@@ -70,7 +70,7 @@ export default function Footer() {
                 </div>
 
                 <div className="mt-10 pt-8 border-t border-slate-300 dark:border-slate-800 text-center sm:text-left text-xs text-slate-400">
-                    &copy; {new Date().getFullYear()} WorkBridge · Built for Malawi, open to remote, hybrid, and on-site work
+                    &copy; {new Date().getFullYear()} Aganyu · Built for Malawi, open to remote, hybrid, and on-site work
                 </div>
             </div>
         </footer>

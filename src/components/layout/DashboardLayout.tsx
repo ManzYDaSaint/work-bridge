@@ -77,10 +77,10 @@ export default function DashboardLayout({
                             ) : (
                                 <>
                                     <div className="logo-black">
-                                        <Image src="/logo-black.svg" alt="WorkBridge" width={32} height={32} priority style={{ width: "auto", height: "auto" }} />
+                                        <Image src="/logo-black.svg" alt="Aganyu" width={32} height={32} priority style={{ width: "auto", height: "auto" }} />
                                     </div>
                                     <div className="logo-white">
-                                        <Image src="/logo.svg" alt="WorkBridge" width={32} height={32} priority style={{ width: "auto", height: "auto" }} />
+                                        <Image src="/logo.svg" alt="Aganyu" width={32} height={32} priority style={{ width: "auto", height: "auto" }} />
                                     </div>
                                 </>
                             )}
@@ -173,10 +173,10 @@ export default function DashboardLayout({
                             ) : (
                                 <>
                                     <div className="logo-black">
-                                        <Image src="/logo-black.svg" alt="WorkBridge" width={28} height={28} priority style={{ width: "auto", height: "auto" }} />
+                                        <Image src="/logo-black.svg" alt="Aganyu" width={28} height={28} priority style={{ width: "auto", height: "auto" }} />
                                     </div>
                                     <div className="logo-white">
-                                        <Image src="/logo.svg" alt="WorkBridge" width={28} height={28} priority style={{ width: "auto", height: "auto" }} />
+                                        <Image src="/logo.svg" alt="Aganyu" width={28} height={28} priority style={{ width: "auto", height: "auto" }} />
                                     </div>
                                 </>
                             )}

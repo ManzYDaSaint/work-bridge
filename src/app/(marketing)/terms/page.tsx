@@ -3,15 +3,15 @@ import { Shield, BookOpen, AlertCircle, Briefcase, FileText, CheckCircle } from 
 import React from 'react';
 
 export const metadata: Metadata = {
-    title: 'Terms of Service | WorkBridge',
-    description: 'Detailed Terms of Service and Operational agreements for using the WorkBridge platform.',
+    title: 'Terms of Service | Aganyu',
+    description: 'Detailed Terms of Service and Operational agreements for using the Aganyu platform.',
 };
 
 const sections = [
     {
         title: "1. Platform Architecture & User Integrity",
         icon: <Shield className="text-blue-500" size={24} />,
-        content: `WorkBridge operates a dual-sided marketplace consisting of "Job Seekers" and "Employers". By registering for either account type, you agree to provide completely accurate, current, and verifiable information. Employers are subject to manual administrative verification and may remain in a "PENDING" status until approved by our compliance team. Job Seekers must ensure maintaining accurate profiles. Fake or completely misrepresented profiles will trigger immediate administrative suspension.`
+        content: `Aganyu operates a dual-sided marketplace consisting of "Job Seekers" and "Employers". By registering for either account type, you agree to provide completely accurate, current, and verifiable information. Employers are subject to manual administrative verification and may remain in a "PENDING" status until approved by our compliance team. Job Seekers must ensure maintaining accurate profiles. Fake or completely misrepresented profiles will trigger immediate administrative suspension.`
     },
     {
         title: "2. Verifiable Credentials & Document Parsing",
@@ -21,7 +21,7 @@ const sections = [
     {
         title: "3. Structured Matching & Recruiting",
         icon: <BookOpen className="text-emerald-500" size={24} />,
-        content: `WorkBridge uses structured requirements, screening questions, and profile data to help employers review candidates consistently. WorkBridge does not guarantee employment or interview placements. Employers remain responsible for their own hiring decisions.`
+        content: `Aganyu uses structured requirements, screening questions, and profile data to help employers review candidates consistently. Aganyu does not guarantee employment or interview placements. Employers remain responsible for their own hiring decisions.`
     },
     {
         title: "4. Subscription Billing & Mobile Money",
@@ -31,7 +31,7 @@ const sections = [
     {
         title: "5. Platform Moderation & Audit Registry",
         icon: <AlertCircle className="text-rose-500" size={24} />,
-        content: `WorkBridge maintains an immutable Audit Registry. All administrative actions, critical account modifications, and systemic changes are recorded. Our administrators reserve the right to moderate, edit, or entirely remove job postings that violate local labor laws, contain discriminatory language, or are deemed fraudulent. We reserve the right to terminate access to any user found circumventing our security architectures.`
+        content: `Aganyu maintains an immutable Audit Registry. All administrative actions, critical account modifications, and systemic changes are recorded. Our administrators reserve the right to moderate, edit, or entirely remove job postings that violate local labor laws, contain discriminatory language, or are deemed fraudulent. We reserve the right to terminate access to any user found circumventing our security architectures.`
     }
 ];
 
@@ -51,7 +51,7 @@ export default function TermsPage() {
                         Terms of Service
                     </h1>
                     <p className="text-lg text-slate-600 dark:text-slate-400 font-medium max-w-2xl mx-auto leading-relaxed">
-                        Effective Date: February 2026. Governing the digital operational standards of the WorkBridge platform.
+                        Effective Date: February 2026. Governing the digital operational standards of the Aganyu platform.
                     </p>
                 </div>
 
@@ -84,10 +84,10 @@ export default function TermsPage() {
                             Questions? Reach our compliance team
                         </p>
                         <a
-                            href="mailto:legal@workbridge.mw"
+                            href="mailto:legal@aganyu.mw"
                             className="text-lg font-semibold text-[#16324f] dark:text-blue-400 hover:text-[#a65a2e] dark:hover:text-blue-300 transition-colors underline underline-offset-4"
                         >
-                            legal@workbridge.mw
+                            legal@aganyu.mw
                         </a>
                     </div>
                 </div>

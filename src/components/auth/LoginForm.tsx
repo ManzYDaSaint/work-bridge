@@ -47,10 +47,10 @@ export default function LoginForm() {
             <div className="mb-8 text-center">
                 <Link href="/" className="inline-flex items-center justify-center mb-5" aria-label="Go to home">
                     <div className="logo-black">
-                        <Image src="/logo-black.svg" alt="WorkBridge" width={48} height={48} priority style={{ width: "auto", height: "auto" }} />
+                        <Image src="/logo-black.svg" alt="Aganyu" width={48} height={48} priority style={{ width: "auto", height: "auto" }} />
                     </div>
                     <div className="logo-white">
-                        <Image src="/logo.svg" alt="WorkBridge" width={48} height={48} priority style={{ width: "auto", height: "auto" }} />
+                        <Image src="/logo.svg" alt="Aganyu" width={48} height={48} priority style={{ width: "auto", height: "auto" }} />
                     </div>
                 </Link>
                 <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Welcome back</h1>
@@ -128,7 +128,7 @@ export default function LoginForm() {
             </div>
 
             <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-                New to WorkBridge?{" "}
+                New to Aganyu?{" "}
                 <Link href="/register" className="font-medium text-slate-900 hover:underline dark:text-slate-100">
                     Create account
                 </Link>

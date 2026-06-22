@@ -69,7 +69,7 @@ export default function LiveActivity() {
                             <span className="text-blue-600">engagement.</span>
                         </h2>
                         <p className="text-xl text-slate-500 dark:text-slate-400 mb-10 font-light">
-                            See what's happening right now on WorkBridge. Our community is constantly growing and connecting.
+                            See what's happening right now on Aganyu. Our community is constantly growing and connecting.
                         </p>
 
                         <div className="grid grid-cols-2 gap-8">

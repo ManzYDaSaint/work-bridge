@@ -86,7 +86,7 @@ export default function MarketingNavbar() {
                         style={{ width: "auto", height: "auto" }} />
                     </div>
                     <span className="text-base sm:text-lg font-semibold tracking-tight text-slate-900 dark:text-white truncate hidden sm:block">
-                        WorkBridge
+                        Aganyu
                     </span>
                 </Link>
 

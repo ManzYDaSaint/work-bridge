@@ -3,7 +3,7 @@ import { getSupabaseAdminClient } from "./supabase-admin";
 
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY!;
-const vapidSubject = process.env.VAPID_SUBJECT || "mailto:hello@workbridge.co";
+const vapidSubject = process.env.VAPID_SUBJECT || "mailto:hello@aganyu.co";
 
 if (vapidPublicKey && vapidPrivateKey) {
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
@@ -45,7 +45,7 @@ export async function sendPushNotification(userId: string, payload: PushPayload)
         icon: payload.icon || "/icons/icon-192.png",
         badge: payload.badge || "/icons/icon-192.png",
         url: payload.url || "/",
-        tag: payload.tag || "workbridge-notification",
+        tag: payload.tag || "aganyu-notification",
         data: { url: payload.url || "/" },
     });
 

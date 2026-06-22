@@ -63,7 +63,7 @@ export default function Features() {
                         Everything you need to hire — or be hired
                     </h2>
                     <p className="mt-4 text-base text-slate-500 dark:text-slate-400 leading-relaxed">
-                        WorkBridge is more than a job board. It is a living talent marketplace where discovery, matching, and hiring happen in one place.
+                        Aganyu is more than a job board. It is a living talent marketplace where discovery, matching, and hiring happen in one place.
                     </p>
                 </div>
 

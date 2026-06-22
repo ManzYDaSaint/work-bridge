@@ -74,7 +74,7 @@ export default function CandidatesPage() {
     const openMailDraft = (app: any) => {
         const email = app?.user?.email;
         if (!email) return;
-        const subject = encodeURIComponent(`Update on your application: ${app?.job?.title || "WorkBridge"}`);
+        const subject = encodeURIComponent(`Update on your application: ${app?.job?.title || "Aganyu"}`);
         const body = encodeURIComponent(templateMessage(app));
         window.open(`mailto:${email}?subject=${subject}&body=${body}`, "_blank");
     };
@@ -84,7 +84,7 @@ export default function CandidatesPage() {
         if (!phone) return;
         const candidate = app?.user?.jobSeeker?.full_name || "Candidate";
         const role = app?.job?.title || "the role";
-        const text = encodeURIComponent(`Hi ${candidate}, this is from the team at WorkBridge. We're interested in your application for ${role}. Are you available for a quick chat?`);
+        const text = encodeURIComponent(`Hi ${candidate}, this is from the team at Aganyu. We're interested in your application for ${role}. Are you available for a quick chat?`);
         window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${text}`, "_blank");
     };
 

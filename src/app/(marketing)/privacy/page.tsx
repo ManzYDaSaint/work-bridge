@@ -3,20 +3,20 @@ import { EyeOff, Database, Bot, RefreshCw, Key, ShieldCheck } from 'lucide-react
 import React from 'react';
 
 export const metadata: Metadata = {
-    title: 'Privacy Pulse | WorkBridge',
-    description: 'Learn how WorkBridge protects your data with privacy-first hiring flows and secure data handling.',
+    title: 'Privacy Pulse | Aganyu',
+    description: 'Learn how Aganyu protects your data with privacy-first hiring flows and secure data handling.',
 };
 
 const principles = [
     {
         title: "Zero-Bias Anonymization Protocol",
         icon: <EyeOff className="text-purple-500" size={24} />,
-        content: `To ensure meritocratic hiring, WorkBridge institutes a Zero-Bias Discovery engine. When an employer browses the talent pipeline, Job Seeker names, photos, and direct contact details are redacted. The identity is only unmasked when the employer issues an official "Shortlist" invitation.`
+        content: `To ensure meritocratic hiring, Aganyu institutes a Zero-Bias Discovery engine. When an employer browses the talent pipeline, Job Seeker names, photos, and direct contact details are redacted. The identity is only unmasked when the employer issues an official "Shortlist" invitation.`
     },
     {
         title: "Structured Screening Privacy",
         icon: <Bot className="text-blue-500" size={24} />,
-        content: `Employers review structured candidate information such as skills, experience, and screening answers before any full profile reveal. WorkBridge keeps identifying details separate from early screening so hiring decisions can begin from relevant qualifications instead of personal identity.`
+        content: `Employers review structured candidate information such as skills, experience, and screening answers before any full profile reveal. Aganyu keeps identifying details separate from early screening so hiring decisions can begin from relevant qualifications instead of personal identity.`
     },
     {
         title: "Cryptographic Data Storage",
@@ -31,7 +31,7 @@ const principles = [
     {
         title: "Multi-Factor Continuity",
         icon: <Key className="text-amber-500" size={24} />,
-        content: `WorkBridge encourages robust authentication. Backup recovery codes are hashed cryptographically upon generation. Staff members within the Admin Dashboard cannot view your plaintext passwords or your raw generated MFA seeds.`
+        content: `Aganyu encourages robust authentication. Backup recovery codes are hashed cryptographically upon generation. Staff members within the Admin Dashboard cannot view your plaintext passwords or your raw generated MFA seeds.`
     },
     {
         title: "Data Deletion & Extraction",
@@ -56,7 +56,7 @@ export default function PrivacyPage() {
                         Privacy Pulse
                     </h1>
                     <p className="text-lg text-slate-600 dark:text-slate-400 font-medium max-w-2xl mx-auto leading-relaxed">
-                        Data ethics is not an afterthought at WorkBridge. We strictly isolate your personally identifiable information from early screening workflows.
+                        Data ethics is not an afterthought at Aganyu. We strictly isolate your personally identifiable information from early screening workflows.
                     </p>
                 </div>
 
@@ -86,7 +86,7 @@ export default function PrivacyPage() {
                     <div className="relative z-10 space-y-4">
                         <h4 className="text-2xl font-semibold text-white">Your Consent</h4>
                         <p className="text-blue-100/80 font-medium max-w-2xl mx-auto leading-relaxed italic">
-                            By interacting with the WorkBridge platform, authenticating via Supabase, and uploading academic credentials, you consent to this architectural privacy protocol.
+                            By interacting with the Aganyu platform, authenticating via Supabase, and uploading academic credentials, you consent to this architectural privacy protocol.
                         </p>
                     </div>
                 </div>

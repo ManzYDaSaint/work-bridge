@@ -10,7 +10,7 @@ interface ShareJobButtonProps {
     location?: string;
 }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_URL || "https://workbridge.co";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_URL || "https://aganyu.co";
 
 export default function ShareJobButton({ jobId, jobTitle, companyName, location }: ShareJobButtonProps) {
     const [open, setOpen] = useState(false);
@@ -19,7 +19,7 @@ export default function ShareJobButton({ jobId, jobTitle, companyName, location 
     const jobUrl = `${APP_URL}/jobs/${jobId}`;
 
     const waText = encodeURIComponent(
-        `🚀 *${jobTitle}*${companyName ? ` at *${companyName}*` : ""}${location ? ` in ${location}` : ""}\n\nApply now on WorkBridge:\n${jobUrl}`
+        `🚀 *${jobTitle}*${companyName ? ` at *${companyName}*` : ""}${location ? ` in ${location}` : ""}\n\nApply now on Aganyu:\n${jobUrl}`
     );
     const whatsappUrl = `https://wa.me/?text=${waText}`;
 

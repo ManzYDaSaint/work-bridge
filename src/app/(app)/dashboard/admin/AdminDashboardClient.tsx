@@ -138,7 +138,7 @@ export default function AdminDashboardClient() {
                     <div className="flex justify-between h-20 items-center">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-xl shadow-blue-500/20">W</div>
-                            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white hidden sm:block uppercase">WorkBridge <span className="text-blue-600">Admin</span></h1>
+                            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white hidden sm:block uppercase">Aganyu <span className="text-blue-600">Admin</span></h1>
                         </div>
                         <div className="flex items-center gap-6">
                             <div className="hidden lg:flex items-center bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/50">
@@ -187,7 +187,7 @@ export default function AdminDashboardClient() {
                             </div>
                         )}
                         <p className="text-slate-500 dark:text-slate-400 text-lg font-medium leading-relaxed">
-                            Global oversight of the WorkBridge ecosystem. Monitor metrics, validate credentials, and audit system integrity.
+                            Global oversight of the Aganyu ecosystem. Monitor metrics, validate credentials, and audit system integrity.
                         </p>
                     </div>
                 </div>

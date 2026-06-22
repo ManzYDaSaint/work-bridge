@@ -73,7 +73,7 @@ export default function HowItWorks() {
                         Built for both sides of the table
                     </h2>
                     <p className="mt-4 text-base text-slate-500 dark:text-slate-400 leading-relaxed">
-                        Whether you are looking for work or looking for talent — WorkBridge is designed to make the connection faster, smarter, and more human.
+                        Whether you are looking for work or looking for talent — Aganyu is designed to make the connection faster, smarter, and more human.
                     </p>
                 </div>
 

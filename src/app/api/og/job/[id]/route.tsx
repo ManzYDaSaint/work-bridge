@@ -28,7 +28,7 @@ export async function GET(
             return new Response("Job not found", { status: 404 });
         }
 
-        const companyName = (job.employer as any)?.company_name || "WorkBridge Partner";
+        const companyName = (job.employer as any)?.company_name || "Aganyu Partner";
 
         // 2. Render dynamic OG image
         return new ImageResponse(
@@ -55,7 +55,7 @@ export async function GET(
                             borderRadius: '8px',
                             marginRight: '16px'
                         }} />
-                        <span style={{ color: '#fff', fontSize: '32px', fontWeight: 'bold', letterSpacing: '-0.05em' }}>WorkBridge</span>
+                        <span style={{ color: '#fff', fontSize: '32px', fontWeight: 'bold', letterSpacing: '-0.05em' }}>Aganyu</span>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column' }}>

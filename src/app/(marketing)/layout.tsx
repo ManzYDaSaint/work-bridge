@@ -4,7 +4,7 @@ import { constructMetadata } from "@/lib/seo";
 import { Metadata } from "next";
 
 export const metadata: Metadata = constructMetadata({
-    title: "WorkBridge",
+    title: "Aganyu",
     description: "Privacy-first job matching for job seekers and employers.",
     canonical: "/",
 });

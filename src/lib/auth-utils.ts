@@ -2,8 +2,8 @@
 
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 
-const AUTH_SIGNED_OUT_EVENT = "workbridge:auth-signed-out";
-const AUTH_SIGNED_IN_EVENT = "workbridge:auth-signed-in";
+const AUTH_SIGNED_OUT_EVENT = "aganyu:auth-signed-out";
+const AUTH_SIGNED_IN_EVENT = "aganyu:auth-signed-in";
 
 export function dispatchAuthSignedOutEvent() {
     if (typeof window === "undefined") return;

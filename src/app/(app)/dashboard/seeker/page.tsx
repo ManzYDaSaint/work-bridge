@@ -21,8 +21,8 @@ export default function SeekerDashboardPage() {
 
     useEffect(() => {
         const payment = searchParams.get("payment");
-        if (payment === "badge_success") toast.success("WorkBridge Badge Activated");
-        else if (payment === "plus_success") toast.success("WorkBridge Plus Activated");
+        if (payment === "badge_success") toast.success("Aganyu Badge Activated");
+        else if (payment === "plus_success") toast.success("Aganyu Plus Activated");
         else if (payment === "success") toast.success("Payment successful");
     }, [searchParams]);
 
