@@ -86,15 +86,47 @@ self.addEventListener("sync", (event) => {
     }
 });
 
-// 5. Notifications
+// 5. Push Notifications — receive server push and display native notification
+self.addEventListener("push", (event) => {
+    if (!event.data) return;
+
+    let payload = {};
+    try {
+        payload = event.data.json();
+    } catch {
+        payload = { title: "WorkBridge", body: event.data.text(), url: "/" };
+    }
+
+    const { title = "WorkBridge", body = "", icon = "/icons/icon-192.png", badge = "/icons/icon-192.png", url = "/", tag = "workbridge" } = payload;
+
+    event.waitUntil(
+        self.registration.showNotification(title, {
+            body,
+            icon,
+            badge,
+            tag,               // Replaces existing notification with same tag (no stacking)
+            renotify: true,    // Still vibrate/sound even if replacing
+            data: { url },
+        })
+    );
+});
+
+// 6. Notification click — focus existing window or open new one
 self.addEventListener("notificationclick", (event) => {
     event.notification.close();
+    const targetUrl = event.notification.data?.url || "/";
+
     event.waitUntil(
         self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+            // Try to focus an existing tab pointing to this URL
             for (const client of clientList) {
-                if ("focus" in client) return client.focus();
+                if (client.url.includes(self.location.origin) && "focus" in client) {
+                    client.navigate(targetUrl);
+                    return client.focus();
+                }
             }
-            return self.clients.openWindow("/");
+            // Otherwise open a new window
+            return self.clients.openWindow(targetUrl);
         })
     );
 });

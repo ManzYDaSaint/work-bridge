@@ -73,7 +73,7 @@ export default function MarketingNavbar() {
                             height={36}
                             className="shrink-0"
                             priority
-                        />
+                        style={{ width: "auto", height: "auto" }} />
                     </div>
                     <div className="logo-white">
                         <Image
@@ -83,7 +83,7 @@ export default function MarketingNavbar() {
                             height={36}
                             className="shrink-0"
                             priority
-                        />
+                        style={{ width: "auto", height: "auto" }} />
                     </div>
                     <span className="text-base sm:text-lg font-semibold tracking-tight text-slate-900 dark:text-white truncate hidden sm:block">
                         WorkBridge

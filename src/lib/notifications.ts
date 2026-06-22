@@ -1,11 +1,14 @@
 import { getSupabaseAdminClient } from "./supabase-admin";
+import { sendPushNotification } from "./push-notifications";
 
 export type NotificationType = 
   | "APPLICATION_UPDATE" 
   | "NEW_APPLICATION" 
   | "SYSTEM" 
   | "VERIFICATION_UPDATE" 
-  | "PAYMENT_SUCCESS";
+  | "PAYMENT_SUCCESS"
+  | "REFERRAL_BONUS"
+  | "WARNING";
 
 export async function createNotification({
   userId,
@@ -51,6 +54,16 @@ export async function createNotification({
   }
 
   console.log(`[NOTIFICATION_DEBUG] SUCCESS: Notification created for user ${userId}`);
+
+  // Fire a Web Push notification to all the user's subscribed devices
+  // This runs fire-and-forget — don't await so we don't block the response
+  sendPushNotification(userId, {
+    title,
+    body: message,
+    url: link,
+    tag: type,
+  }).catch((err) => console.warn("[PUSH] Non-critical push failure:", err));
+
   return data;
 }
 

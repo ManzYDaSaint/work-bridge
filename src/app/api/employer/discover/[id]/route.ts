@@ -1,5 +1,5 @@
 import { validateAuth } from "@/lib/auth-guard";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -8,14 +8,14 @@ export async function GET(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const auth = await validateAuth();
+    const auth = await validateAuth(['EMPLOYER', 'ADMIN'], false, true);
     if (auth.error) return auth.error;
-    if (auth.role !== "EMPLOYER" && auth.role !== "ADMIN") {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
 
     const { id } = await params;
-    const supabase = await createSupabaseServerClient();
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) {
+        return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+    }
 
     // Fetch the seeker profile
     const { data: seeker, error } = await supabase
@@ -58,34 +58,33 @@ export async function GET(
             1
         ).toISOString();
 
-        // Count how many unique candidates this employer has revealed contact for this month
-        const { count: monthlyViewCount } = await supabase
-            .from("employer_contact_views")
-            .select("id", { count: "exact", head: true })
-            .eq("employer_id", auth.userId)
-            .gte("viewed_at", startOfMonth);
+        const { data: employerData } = await supabase
+            .from("employers")
+            .select("contact_limit_bonus")
+            .eq("id", auth.userId)
+            .single();
 
-        const underLimit = (monthlyViewCount || 0) < 30;
+        const bonus = employerData?.contact_limit_bonus || 0;
 
-        if (underLimit) {
-            canSeeContact = true;
-
-            // Record this view if not already recorded this month (dedup)
-            const { data: alreadyViewed } = await supabase
-                .from("employer_contact_views")
-                .select("id")
-                .eq("employer_id", auth.userId)
-                .eq("seeker_id", seeker.id)
-                .gte("viewed_at", startOfMonth)
-                .maybeSingle();
-
-            if (!alreadyViewed) {
-                // Non-blocking background insert — counts toward monthly limit
-                supabase
-                    .from("employer_contact_views")
-                    .insert({ employer_id: auth.userId, seeker_id: seeker.id })
-                    .then();
+        const { data: contactDecision, error: contactError } = await supabase.rpc(
+            "try_record_employer_contact_view",
+            {
+                p_employer_id: auth.userId,
+                p_seeker_id: seeker.id,
+                p_month_limit: 30 + bonus
             }
+        );
+
+        if (contactError) {
+            console.error("Contact view RPC failed:", contactError);
+            return NextResponse.json({ error: "Failed to determine contact visibility" }, { status: 500 });
+        }
+
+        const allowed = Array.isArray(contactDecision) ? contactDecision[0]?.can_see : contactDecision?.can_see;
+        const viewCount = Array.isArray(contactDecision) ? contactDecision[0]?.view_count : contactDecision?.view_count;
+
+        if (allowed) {
+            canSeeContact = true;
         } else {
             contactLimitReached = true;
         }

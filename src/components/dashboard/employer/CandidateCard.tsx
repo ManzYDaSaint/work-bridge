@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge, CompanyAvatar } from "@/components/dashboard/ui";
-import { CheckCircle, Loader2, Mail, MapPin, XCircle } from "lucide-react";
+import { CheckCircle, Loader2, Mail, MapPin, XCircle, Calendar } from "lucide-react";
 
 interface JobSeekerProfile {
     id: string;
@@ -36,7 +36,7 @@ interface ApplicationData {
 interface CandidateCardProps {
     application: ApplicationData;
     onViewProfile: () => void;
-    onStatusUpdate: (status: "SHORTLISTED" | "REJECTED" | "INTERVIEWING" | "ACCEPTED") => void;
+    onStatusUpdate: (status: "SHORTLISTED" | "REJECTED" | "INTERVIEWING" | "ACCEPTED", interviewLink?: string) => void;
     updating?: boolean;
 }
 
@@ -88,9 +88,22 @@ export default function CandidateCard({ application, onViewProfile, onStatusUpda
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
+                            onClick={() => {
+                                const link = window.prompt("Enter Interview Link (e.g. Calendly, Google Meet, Zoom) or leave blank:");
+                                onStatusUpdate("INTERVIEWING", link || undefined);
+                            }}
+                            disabled={app.status === "INTERVIEWING"}
+                            className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-blue-600 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300"
+                            title="Invite to Interview"
+                        >
+                            <Calendar size={16} />
+                        </button>
+                        <button
+                            type="button"
                             onClick={() => onStatusUpdate("SHORTLISTED")}
                             disabled={app.status === "SHORTLISTED"}
                             className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-emerald-600 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300"
+                            title="Shortlist"
                         >
                             <CheckCircle size={16} />
                         </button>
@@ -99,6 +112,7 @@ export default function CandidateCard({ application, onViewProfile, onStatusUpda
                             onClick={() => onStatusUpdate("REJECTED")}
                             disabled={app.status === "REJECTED"}
                             className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-red-600 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300"
+                            title="Reject"
                         >
                             <XCircle size={16} />
                         </button>

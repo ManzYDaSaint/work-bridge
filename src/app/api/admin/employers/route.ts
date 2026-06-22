@@ -6,6 +6,8 @@ import { createNotification } from "@/lib/notifications";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
+const ALLOWED_EMPLOYER_STATUSES = new Set(["PENDING", "APPROVED", "REJECTED"]);
+
 export async function GET() {
     const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
@@ -47,6 +49,14 @@ export async function PATCH(request: Request) {
     try {
         const { employerId, status, notes } = await request.json();
         const { user } = auth;
+
+        if (typeof employerId !== "string" || !employerId) {
+            return NextResponse.json({ error: "Valid employerId is required" }, { status: 400 });
+        }
+
+        if (!ALLOWED_EMPLOYER_STATUSES.has(status)) {
+            return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
+        }
 
         // 1. Update employer status
         const { data: updatedEmployer, error } = await supabase

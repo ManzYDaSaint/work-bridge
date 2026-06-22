@@ -15,7 +15,12 @@ type EmployerLite = {
 };
 
 function hasText(value?: string | null): boolean {
-    return !!value && value.trim().length > 0;
+    if (!value) return false;
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return false;
+    if (trimmed.toLowerCase() === "to be updated") return false;
+    if (trimmed.toLowerCase() === "new company") return false;
+    return true;
 }
 
 export function isOnboardingComplete(args: {

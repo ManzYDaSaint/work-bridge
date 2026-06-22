@@ -55,4 +55,4 @@ export const POST = withAuth(async (request, auth) => {
         console.error("Employer logo upload error:", error);
         return NextResponse.json({ error: error.message || "Upload failed" }, { status: 500 });
     }
-}, ["EMPLOYER"], false, true);
+}, ["EMPLOYER"], false, false);

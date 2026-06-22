@@ -112,9 +112,10 @@ export default function AdminAuditPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            <AnimatePresence mode="wait">
+                            <AnimatePresence>
                                 {loading ? (
                                     <motion.tr
+                                        key="loading"
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
@@ -128,6 +129,7 @@ export default function AdminAuditPage() {
                                     </motion.tr>
                                 ) : auditLogs.length === 0 ? (
                                     <motion.tr
+                                        key="empty"
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}

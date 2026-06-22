@@ -47,6 +47,11 @@ function renderEmailLayout(content: string, title: string) {
 
 export async function sendWelcomeEmail(to: string, name?: string) {
   try {
+    if (!to) {
+      console.error("[EMAIL_DEBUG] FAILED: No recipient email provided for welcome email");
+      return { success: false, error: "No recipient email" };
+    }
+
     const title = "Welcome to WorkBridge";
     const content = `
       <p>Hey ${name || "there"},</p>
@@ -56,6 +61,7 @@ export async function sendWelcomeEmail(to: string, name?: string) {
       <p style="margin-top: 30px;">Best regards,<br/>The ${BRAND_NAME} Team</p>
     `;
 
+    console.log(`[EMAIL_DEBUG] Sending welcome email to ${to}`);
     const data = await resend.emails.send({
       from: EMAIL_FROM,
       to: [to],
@@ -63,8 +69,15 @@ export async function sendWelcomeEmail(to: string, name?: string) {
       html: renderEmailLayout(content, title),
     });
 
+    if (data.error) {
+      console.error(`[EMAIL_DEBUG] FAILED to send welcome email to ${to}:`, data.error);
+      return { success: false, error: data.error };
+    }
+
+    console.log(`[EMAIL_DEBUG] SUCCESS: Welcome email sent to ${to}`);
     return { success: true, data };
   } catch (error) {
+    console.error(`[EMAIL_DEBUG] EXCEPTION sending welcome email to ${to}:`, error);
     return { success: false, error };
   }
 }
@@ -73,13 +86,19 @@ export async function sendApplicationStatusEmail(to: string, payload: {
   seekerName: string;
   jobTitle: string;
   companyName: string;
-  status: 'ACCEPTED' | 'REJECTED' | 'SHORTLISTED';
+  status: 'ACCEPTED' | 'REJECTED' | 'SHORTLISTED' | 'INTERVIEWING';
+  interviewLink?: string;
 }) {
   try {
+    if (!to) {
+      console.error(`[EMAIL_DEBUG] FAILED: No recipient email provided for application status email`);
+      return { success: false, error: "No recipient email" };
+    }
+
     const title = "Application Update Detected";
     const isPositive = payload.status !== 'REJECTED';
 
-    const content = `
+    let content = `
       <p>Hello ${payload.seekerName},</p>
       <p>Your application for <strong>${payload.jobTitle}</strong> at <strong>${payload.companyName}</strong> has been updated.</p>
       <div style="padding: 20px; background: ${isPositive ? '#ecfdf5' : '#fff1f2'}; border-radius: 12px; margin: 20px 0; border-left: 4px solid ${isPositive ? '#10b981' : '#f43f5e'};">
@@ -88,9 +107,23 @@ export async function sendApplicationStatusEmail(to: string, payload: {
         </p>
       </div>
       <p>${isPositive ? "The employer has matched with your profile. Sign in to view any next steps or interview requests." : "The employer has decided to move forward with other candidates at this time. Keep your profile updated for future matches."}</p>
+    `;
+
+    if (payload.status === 'INTERVIEWING' && payload.interviewLink) {
+        content += `
+            <div style="margin-top: 24px; padding: 20px; background: #eff6ff; border-radius: 12px; text-align: center;">
+                <p style="margin: 0 0 16px 0; color: #1e3a8a; font-weight: 600;">You have been invited to schedule an interview!</p>
+                <a href="${payload.interviewLink}" class="btn" style="background: #2563eb;">Schedule Interview</a>
+            </div>
+        `;
+    }
+
+    content += `
+      <br/>
       <a href="${APP_URL}/dashboard/seeker/applications" class="btn">View Application</a>
     `;
 
+    console.log(`[EMAIL_DEBUG] Sending application status email (${payload.status}) to ${to}`);
     const data = await resend.emails.send({
       from: EMAIL_FROM,
       to: [to],
@@ -98,8 +131,15 @@ export async function sendApplicationStatusEmail(to: string, payload: {
       html: renderEmailLayout(content, title),
     });
 
+    if (data.error) {
+      console.error(`[EMAIL_DEBUG] FAILED to send application status email to ${to}:`, data.error);
+      return { success: false, error: data.error };
+    }
+
+    console.log(`[EMAIL_DEBUG] SUCCESS: Application status email (${payload.status}) sent to ${to}`);
     return { success: true, data };
   } catch (error) {
+    console.error(`[EMAIL_DEBUG] EXCEPTION sending application status email to ${to}:`, error);
     return { success: false, error };
   }
 }
@@ -303,6 +343,11 @@ export async function sendNewApplicationEmail(to: string, payload: {
   candidateName: string;
 }) {
   try {
+    if (!to) {
+      console.error(`[EMAIL_DEBUG] FAILED: No recipient email provided for new application email`);
+      return { success: false, error: "No recipient email" };
+    }
+
     const title = "New application received";
     const content = `
       <p>Hello ${payload.employerName},</p>
@@ -316,6 +361,7 @@ export async function sendNewApplicationEmail(to: string, payload: {
       <a href="${APP_URL}/dashboard/employer/candidates" class="btn">Review Candidates</a>
     `;
 
+    console.log(`[EMAIL_DEBUG] Sending new application email to ${to} for job ${payload.jobTitle}`);
     const data = await resend.emails.send({
       from: EMAIL_FROM,
       to: [to],
@@ -323,8 +369,15 @@ export async function sendNewApplicationEmail(to: string, payload: {
       html: renderEmailLayout(content, title),
     });
 
+    if (data.error) {
+      console.error(`[EMAIL_DEBUG] FAILED to send new application email to ${to}:`, data.error);
+      return { success: false, error: data.error };
+    }
+
+    console.log(`[EMAIL_DEBUG] SUCCESS: New application email sent to ${to}`);
     return { success: true, data };
   } catch (error) {
+    console.error(`[EMAIL_DEBUG] EXCEPTION sending new application email to ${to}:`, error);
     return { success: false, error };
   }
 }
@@ -362,3 +415,60 @@ export async function sendPaymentConfirmationEmail(to: string, payload: {
     return { success: false, error };
   }
 }
+
+export async function sendJobAlertEmail(to: string, payload: {
+  seekerName: string;
+  matchedJobs: Array<{
+    id: string;
+    title: string;
+    location: string;
+    type: string;
+    employer: { company_name: string };
+  }>;
+}) {
+  try {
+    if (!to || !payload.matchedJobs || payload.matchedJobs.length === 0) return { success: false, error: "Invalid payload" };
+
+    const title = "New Job Matches Available";
+    
+    const jobsListHtml = payload.matchedJobs.map(job => `
+      <div style="padding: 16px; margin-bottom: 16px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+        <h3 style="margin: 0 0 4px 0; color: #0f172a; font-size: 16px;">${job.title}</h3>
+        <p style="margin: 0 0 12px 0; color: #64748b; font-size: 14px;">
+          ${job.employer?.company_name || 'Unknown Company'} • ${job.location || 'Remote'} • ${job.type}
+        </p>
+        <a href="${APP_URL}/jobs/${job.id}" style="display: inline-block; color: ${BRAND_COLOR}; text-decoration: none; font-weight: 600; font-size: 14px;">View Job &rarr;</a>
+      </div>
+    `).join('');
+
+    const content = `
+      <p>Hello ${payload.seekerName},</p>
+      <p>We found <strong>${payload.matchedJobs.length} new ${payload.matchedJobs.length === 1 ? 'job' : 'jobs'}</strong> that match your saved search alert.</p>
+      
+      <div style="margin: 24px 0;">
+        ${jobsListHtml}
+      </div>
+      
+      <p style="margin-top: 24px;">
+        <a href="${APP_URL}/jobs" class="btn">Search All Jobs</a>
+      </p>
+      
+      <p style="margin-top: 32px; font-size: 12px; color: #94a3b8;">
+        You are receiving this because you set up a Job Alert on WorkBridge. You can manage your alerts from your dashboard.
+      </p>
+    `;
+
+    const data = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: [to],
+      subject: `[WorkBridge] ${payload.matchedJobs.length} new ${payload.matchedJobs.length === 1 ? 'job' : 'jobs'} match your search alert`,
+      html: renderEmailLayout(content, title),
+    });
+
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error sending job alert email:", error);
+    return { success: false, error };
+  }
+}
+

@@ -113,32 +113,21 @@ export async function PUT(request: Request) {
         if (body.experience && body.experience.length > 0) completion += 10;
         if (body.education && body.education.length > 0) completion += 10;
 
-        // Check if this seeker should auto-receive a badge (first 100 free)
+        // Fetch current profile for slug and badge state
         const { data: currentProfile } = await supabase
             .from("job_seekers")
             .select("has_badge, public_slug")
             .eq("id", auth.userId)
             .single();
 
-        let has_badge = currentProfile?.has_badge ?? false;
         const public_slug = currentProfile?.public_slug || buildPublicProfileSlug(body.full_name, auth.userId);
 
-        if (!has_badge) {
-            const { count } = await supabase
-                .from("job_seekers")
-                .select("id", { count: "exact", head: true })
-                .eq("has_badge", true);
-
-            if ((count ?? 0) < 100) {
-                has_badge = true;
-            }
-        }
-
+        // Upsert the profile first (without touching has_badge — the DB function owns that)
         const { data, error } = await supabase
             .from("job_seekers")
             .upsert({
                 id: auth.userId,
-                full_name: seeker_name,
+                full_name: body.full_name,
                 bio: body.bio,
                 location: body.location,
                 phone: body.phone,
@@ -156,12 +145,53 @@ export async function PUT(request: Request) {
                 portfolio_links: body.portfolioLinks || [],
                 public_slug,
                 completion,
-                has_badge,
             })
             .select()
             .single();
 
+        // Fix: atomically try to grant the early-adopter badge via Postgres function.
+        // This replaces the previous read-count-then-write pattern which had a race condition
+        // where concurrent requests could both see count < 100 and both grant the badge.
+        if (!currentProfile?.has_badge) {
+            await supabase.rpc("try_grant_early_badge", { p_seeker_id: auth.userId });
+        }
+
         if (error) throw error;
+
+        // --- Referral Reward Logic ---
+        if (completion >= 60) {
+            // Atomically update the referral status to prevent concurrent requests from double-processing the referral
+            const { data: updatedReferrals } = await supabase
+                .from("referrals")
+                .update({ status: "COMPLETED" })
+                .eq("referred_id", auth.userId)
+                .eq("status", "PENDING")
+                .select("id, referrer_id");
+
+            const referral = updatedReferrals?.[0];
+
+            if (referral) {
+                // Grant bonus atomically via Postgres function to prevent lost updates
+                await supabase.rpc("increment_seeker_application_limit_bonus", {
+                    seeker_id: referral.referrer_id,
+                    increment_val: 5
+                });
+
+                // Notify referrer
+                try {
+                    const { createNotification } = await import("@/lib/notifications");
+                    await createNotification({
+                        userId: referral.referrer_id,
+                        title: "Referral Bonus Earned!",
+                        message: `A friend you invited completed their profile. You earned 5 bonus applications!`,
+                        type: "REFERRAL_BONUS",
+                        link: "/dashboard/seeker"
+                    });
+                } catch (e) {
+                    console.error("Failed to notify referrer:", e);
+                }
+            }
+        }
 
         const response = NextResponse.json({ success: true, profile: data });
         response.headers.set("Cache-Control", "no-store, max-age=0");

@@ -25,6 +25,7 @@ import { useUser } from "@/context/UserContext";
 import { Job, ScreeningAnswer } from "@/types";
 import { CompanyAvatar } from "@/components/dashboard/ui";
 export { CompanyAvatar } from "@/components/dashboard/ui";
+import ShareJobButton from "@/components/jobs/ShareJobButton";
 
 export interface ExtendedJob extends Omit<Job, "employer"> {
     employer: {
@@ -91,6 +92,12 @@ export default function JobDetailModal({
 
     useEffect(() => {
         setScreeningAnswers({});
+        
+        // Track the view
+        if (job.id) {
+            apiFetch(`/api/jobs/${job.id}/track-view`, { method: "POST" })
+                .catch((err) => console.error("Failed to track view", err));
+        }
     }, [job.id]);
 
     const screeningQuestions = job.screening_questions || [];
@@ -384,6 +391,12 @@ export default function JobDetailModal({
                             >
                                 {isSaved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
                             </button>
+                            <ShareJobButton
+                                jobId={job.id}
+                                jobTitle={job.title}
+                                companyName={job.employer?.companyName}
+                                location={job.location}
+                            />
                             {isApplied ? (
                                 <div className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 py-3 text-sm font-bold text-green-600 dark:border-green-800 dark:bg-green-900/20 sm:py-3.5">
                                     <CheckCircle2 size={18} /> Applied

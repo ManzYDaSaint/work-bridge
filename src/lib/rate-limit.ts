@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 interface RateLimitConfig {
     limit: number;
     window: number; // in milliseconds
@@ -40,9 +39,11 @@ export async function rateLimit(identifier: string, config: RateLimitConfig) {
     };
 }
 
-export async function getIP() {
-    const forwarded = (await headers()).get("x-forwarded-for");
+export function getIP(request: Request) {
+    const forwarded = request.headers.get("x-forwarded-for");
     if (forwarded) return forwarded.split(",")[0];
+    const realIp = request.headers.get("x-real-ip");
+    if (realIp) return realIp;
     return "127.0.0.1";
 }
 

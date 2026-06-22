@@ -119,7 +119,7 @@ export default function HowItWorks() {
 
                 {/* Steps Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                         {steps.map((step, i) => {
                             const Icon = step.icon;
                             return (

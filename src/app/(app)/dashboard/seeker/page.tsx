@@ -5,10 +5,12 @@ import { apiFetch } from "@/lib/api";
 import { Application, SavedJob } from "@/types";
 import { useUser } from "@/context/UserContext";
 import Link from "next/link";
-import { Briefcase, BookmarkCheck, CheckCircle2, Loader2, MapPin } from "lucide-react";
+import { Briefcase, BookmarkCheck, CheckCircle2, Copy, Loader2 } from "lucide-react";
 import { PageHeader, StatCard, SectionCard, Badge } from "@/components/dashboard/ui";
+import JobAlertsManager from "@/components/dashboard/seeker/JobAlertsManager";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import OnboardingChecklist from "@/components/dashboard/OnboardingChecklist";
 
 export default function SeekerDashboardPage() {
     const { user } = useUser();
@@ -61,6 +63,8 @@ export default function SeekerDashboardPage() {
                 <StatCard label="Saved jobs" value={savedJobs.length} icon={BookmarkCheck} iconBg="bg-amber-50 dark:bg-amber-950/30" iconColor="text-amber-600" />
             </div>
 
+            <OnboardingChecklist user={user} />
+
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
                 <div className="space-y-6">
                     <SectionCard title="Profile readiness">
@@ -82,6 +86,8 @@ export default function SeekerDashboardPage() {
                             </Link>
                         </div>
                     </SectionCard>
+
+                    <JobAlertsManager />
 
                     <SectionCard title="Recent applications" action={applications.length ? { label: "View all", href: "/dashboard/seeker/applications" } : undefined}>
                         {applications.length === 0 ? (
@@ -109,6 +115,26 @@ export default function SeekerDashboardPage() {
                         <div className="space-y-2 p-6">
                             <p className="text-md font-semibold text-slate-900 dark:text-white">{fullName}</p>
                             <p className="text-sm text-slate-500 dark:text-slate-400">{user?.jobSeeker?.location || "Location not added"}</p>
+                        </div>
+                    </SectionCard>
+
+                    <SectionCard title="Refer a Friend">
+                        <div className="space-y-4 p-6">
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                Get 5 extra application credits for every friend who signs up and completes their profile using your link.
+                            </p>
+                            {user?.jobSeeker?.publicSlug && (
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(`${window.location.origin}/register?ref=${user.jobSeeker?.publicSlug}`);
+                                        toast.success("Referral link copied!");
+                                    }}
+                                    className="flex w-full items-center justify-between gap-2 rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-stone-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                                >
+                                    Copy Invite Link
+                                    <Copy size={16} className="text-slate-400" />
+                                </button>
+                            )}
                         </div>
                     </SectionCard>
 

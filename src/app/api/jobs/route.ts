@@ -180,6 +180,7 @@ export async function POST(request: Request) {
             const notifications = allSeekers.map((seeker) => ({
                 user_id: seeker.id,
                 job_id: job.id,
+                title: "New job posted",
                 message: `New job posted: ${job.title} in ${job.location}. Review the structured requirements before you apply.`,
                 type: "GENERAL",
                 is_read: false,

@@ -1,6 +1,7 @@
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { recordAuditLog } from "@/lib/audit";
 
 export async function GET() {
     const auth = await validateAuth(['ADMIN'], false);
@@ -72,6 +73,15 @@ export async function DELETE(request: Request) {
             .eq("id", userId);
 
         if (error) throw error;
+
+        await recordAuditLog({
+            action: "users_DELETE",
+            path: "/api/admin/users",
+            method: "DELETE",
+            statusCode: 200,
+            userId: auth.user.id,
+            metadata: { deletedUserId: userId }
+        });
 
         return NextResponse.json({ success: true, metadata: { userId } });
     } catch (error) {

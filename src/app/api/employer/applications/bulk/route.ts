@@ -8,7 +8,7 @@ export const PATCH = withAuth(async (request, auth) => {
     const userId = auth.userId;
 
     try {
-        const { applicationIds, status } = await request.json();
+        const { applicationIds, status, interviewLink } = await request.json();
 
         if (!Array.isArray(applicationIds) || applicationIds.length === 0 || !status) {
             return NextResponse.json({ error: "Invalid request payload" }, { status: 400 });
@@ -36,9 +36,14 @@ export const PATCH = withAuth(async (request, auth) => {
             return NextResponse.json({ error: "Unauthorized to update one or more applications" }, { status: 403 });
         }
 
+        const updateData: any = { status };
+        if (status === "INTERVIEWING" && interviewLink) {
+            updateData.interview_link = interviewLink;
+        }
+
         const { data: applications, error: updateError } = await supabase
             .from("applications")
-            .update({ status })
+            .update(updateData)
             .in("id", applicationIds)
             .select(`
                 *,
@@ -54,20 +59,28 @@ export const PATCH = withAuth(async (request, auth) => {
             return NextResponse.json({ error: "Failed to update applications status" }, { status: 500 });
         }
 
-        Promise.allSettled(
+        // Send emails for updated applications
+        await Promise.allSettled(
             applications.map(async (application) => {
                 const seekerEmail = application.user?.email;
                 const seekerName = (application.user as any)?.jobSeeker?.full_name || "Candidate";
                 const jobTitle = application.job?.title;
                 const companyName = (application.job as any)?.employer?.company_name || "WorkBridge Employer";
 
-                if (seekerEmail && ["ACCEPTED", "REJECTED", "SHORTLISTED"].includes(status)) {
-                    await sendApplicationStatusEmail(seekerEmail, {
+                if (seekerEmail && ["ACCEPTED", "REJECTED", "SHORTLISTED", "INTERVIEWING"].includes(status)) {
+                    const emailResult = await sendApplicationStatusEmail(seekerEmail, {
                         seekerName,
                         jobTitle,
                         companyName,
                         status: status as any,
+                        interviewLink: status === "INTERVIEWING" ? application.interview_link : undefined,
                     });
+                    
+                    if (!emailResult.success) {
+                        console.error(`[EMAIL_DEBUG] Bulk: Failed to send email to ${seekerEmail}:`, emailResult.error);
+                    } else {
+                        console.log(`[EMAIL_DEBUG] Bulk: Email sent to ${seekerEmail}`);
+                    }
                 }
             })
         ).catch((err) => {

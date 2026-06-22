@@ -39,7 +39,6 @@ export async function GET() {
         description: profile.description,
         status: profile.status,
         logoUrl: profile.logo_url,
-        plan: profile.plan || 'FREE',
         recruiterVerified: profile.recruiter_verified ?? false,
     });
 }

@@ -51,6 +51,7 @@ CREATE TABLE public.job_seekers (
   public_slug TEXT,
   portfolio_links TEXT[] DEFAULT '{}',
   profile_views INTEGER DEFAULT 0,
+  application_limit_bonus INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -71,6 +72,7 @@ CREATE TABLE public.employers (
   application_alerts BOOLEAN DEFAULT TRUE,
   hiring_velocity BOOLEAN DEFAULT TRUE,
   candidate_privacy BOOLEAN DEFAULT FALSE,
+  contact_limit_bonus INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -125,6 +127,7 @@ CREATE TABLE public.notifications (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
   job_id UUID REFERENCES public.jobs(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
   message TEXT NOT NULL,
   link TEXT,
   is_read BOOLEAN DEFAULT FALSE,
@@ -226,6 +229,15 @@ CREATE TABLE public.employer_saved_candidates (
   UNIQUE(employer_id, seeker_id)
 );
 
+CREATE TABLE public.referrals (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  referrer_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  referred_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  status TEXT DEFAULT 'PENDING' NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(referred_id)
+);
+
 -- ==========================================
 -- 2. HELPER FUNCTIONS
 -- ==========================================
@@ -250,8 +262,12 @@ SECURITY DEFINER SET search_path = public
 AS $$
 DECLARE
   v_role TEXT;
+  v_referral_code TEXT;
+  v_referrer_id UUID;
 BEGIN
   v_role := COALESCE(NEW.raw_user_meta_data->>'role', 'JOB_SEEKER');
+  v_referral_code := NEW.raw_user_meta_data->>'referral_code';
+  
   IF v_role NOT IN ('ADMIN', 'EMPLOYER', 'JOB_SEEKER') THEN
     v_role := 'JOB_SEEKER';
   END IF;
@@ -269,6 +285,16 @@ BEGIN
       lower(regexp_replace(regexp_replace(COALESCE(split_part(NEW.email, '@', 1), 'candidate'), '[^a-zA-Z0-9]+', '-', 'g'), '(^-|-$)', '', 'g')) || '-' || left(replace(NEW.id::text, '-', ''), 8)
     )
     ON CONFLICT (id) DO NOTHING;
+    
+    IF v_referral_code IS NOT NULL THEN
+      SELECT id INTO v_referrer_id FROM public.job_seekers WHERE public_slug = v_referral_code;
+      IF v_referrer_id IS NOT NULL THEN
+        INSERT INTO public.referrals (referrer_id, referred_id, status)
+        VALUES (v_referrer_id, NEW.id, 'PENDING')
+        ON CONFLICT (referred_id) DO NOTHING;
+      END IF;
+    END IF;
+
   ELSIF v_role = 'EMPLOYER' THEN
     INSERT INTO public.employers (id, company_name, industry, location, status, recruiter_verified)
     VALUES (NEW.id, 'New Company', 'To be updated', 'To be updated', 'PENDING', FALSE)
@@ -304,6 +330,7 @@ ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.certificates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profile_reveals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.employer_saved_candidates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.referrals ENABLE ROW LEVEL SECURITY;
 
 -- ADMIN: Global Access
 CREATE POLICY "Admins have full access" ON public.users FOR ALL USING (public.is_admin());
@@ -313,13 +340,16 @@ CREATE POLICY "Admins have full access" ON public.jobs FOR ALL USING (public.is_
 CREATE POLICY "Admins have full access" ON public.applications FOR ALL USING (public.is_admin());
 CREATE POLICY "Admins have full access" ON public.notifications FOR ALL USING (public.is_admin());
 CREATE POLICY "Admins have full access" ON public.audit_logs FOR ALL USING (public.is_admin());
+CREATE POLICY "Admins have full access" ON public.referrals FOR ALL USING (public.is_admin());
 
 -- USERS
 CREATE POLICY "Users can view own record" ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can view own referrals" ON public.referrals FOR SELECT USING (auth.uid() = referrer_id OR auth.uid() = referred_id);
 
 -- JOB SEEKERS
 CREATE POLICY "Seekers can manage own profile" ON public.job_seekers FOR ALL USING (auth.uid() = id);
-CREATE POLICY "Everyone can view anonymized seeker data" ON public.job_seekers FOR SELECT TO authenticated USING (true);
+-- Removed broad authenticated SELECT policy to prevent clients from querying private fields directly.
+-- Public/anonymous seeker discovery must now go through server-side endpoints that only expose safe fields.
 CREATE POLICY "Approved employers can view full seeker profile" ON public.job_seekers FOR SELECT TO authenticated 
   USING (EXISTS (SELECT 1 FROM public.profile_reveals WHERE seeker_id = public.job_seekers.id AND employer_id = auth.uid() AND status = 'APPROVED'));
 

@@ -47,7 +47,7 @@ export default function Navbar() {
                                         width={48}
                                         height={48}
                                         priority
-                                    />
+                                    style={{ width: "auto", height: "auto" }} />
                                 </div>
                                 <div className="logo-black">
                                     <Image
@@ -56,7 +56,7 @@ export default function Navbar() {
                                         width={48}
                                         height={48}
                                         priority
-                                    />
+                                    style={{ width: "auto", height: "auto" }} />
                                 </div>
                             </div>
                         </div>

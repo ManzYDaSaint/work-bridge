@@ -10,6 +10,7 @@ import {
 import { Badge, SectionCard } from "@/components/dashboard/ui";
 import Link from "next/link";
 import { toast } from "sonner";
+import JobAnalyticsPanel from "@/components/dashboard/employer/JobAnalyticsPanel";
 
 interface JobDetail {
     id: string;
@@ -143,6 +144,9 @@ export default function JobDetailPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Performance Analytics */}
+            <JobAnalyticsPanel jobId={job.id} />
 
             {/* Job Content */}
             {/* Job Overview */}

@@ -12,7 +12,7 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id: jobId } = await params;
-    const auth = await validateAuth(["JOB_SEEKER"], false, true);
+    const auth = await validateAuth(["JOB_SEEKER"], false, false);
     if (auth.error) return auth.error;
 
     const supabase = await createSupabaseServerClient();
@@ -56,7 +56,7 @@ export async function POST(
     // Verify seeker profile is 100% complete
     const { data: seekerProfile } = await supabase
         .from("job_seekers")
-        .select("completion, is_subscribed, skills, experience, qualification")
+        .select("completion, is_subscribed, skills, experience, qualification, application_limit_bonus")
         .eq("id", auth.userId)
         .single();
 
@@ -84,9 +84,12 @@ export async function POST(
         .eq("user_id", auth.userId)
         .gte("created_at", startOfMonth);
 
-    if ((monthlyAppCount || 0) >= 10) {
+    const baseLimit = 10;
+    const totalLimit = baseLimit + (seekerProfile?.application_limit_bonus || 0);
+
+    if ((monthlyAppCount || 0) >= totalLimit) {
         return NextResponse.json(
-            { error: "You've reached the 10 applications/month limit. We're working on higher plans — want early access?" },
+            { error: `You've reached your ${totalLimit} applications/month limit. Want more? Share your referral link with a friend and earn 5 bonus applications when they sign up!` },
             { status: 403 }
         );
     }
@@ -163,7 +166,7 @@ export async function POST(
     if (employerUser?.email) {
         console.log(`[NOTIFICATION_DEBUG] INITIATING: Creating notification for employer ${job.employer_id} (${employerUser.email})`);
         try {
-            await Promise.all([
+            const [emailResult, notifResult] = await Promise.all([
                 sendNewApplicationEmail(employerUser.email, {
                     employerName: employer?.company_name || "Employer",
                     jobTitle: (job as any).title || "your role",
@@ -177,6 +180,13 @@ export async function POST(
                     link: `/dashboard/employer/candidates`
                 })
             ]);
+            
+            if (!emailResult.success) {
+                console.error(`[NOTIFICATION_DEBUG] Email failed but notification may have succeeded:`, emailResult.error);
+            }
+            if (!notifResult) {
+                console.error(`[NOTIFICATION_DEBUG] Notification failed`);
+            }
         } catch (notifyError) {
             console.error("Non-blocking notification error in Apply API:", notifyError);
             // We don't fail the request here, as the application was already saved

@@ -13,6 +13,35 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get("jobId");
 
+    // If filtering by a specific job, verify ownership first
+    if (jobId) {
+        const { data: ownedJob } = await supabase
+            .from("jobs")
+            .select("id")
+            .eq("id", jobId)
+            .eq("employer_id", employerId)
+            .single();
+
+        if (!ownedJob) {
+            return NextResponse.json({ error: "Job not found or unauthorized" }, { status: 403 });
+        }
+    }
+
+    // Fetch this employer's own job IDs to use as a DB-level filter
+    const { data: ownedJobs, error: jobsError } = await supabase
+        .from("jobs")
+        .select("id")
+        .eq("employer_id", employerId);
+
+    if (jobsError) {
+        return NextResponse.json({ error: "Failed to fetch jobs" }, { status: 500 });
+    }
+
+    const ownedJobIds = (ownedJobs || []).map((j) => j.id);
+    if (ownedJobIds.length === 0) {
+        return NextResponse.json([]);
+    }
+
     let query = supabase
         .from("applications")
         .select(`
@@ -24,13 +53,8 @@ export async function GET(request: Request) {
                 jobSeeker:job_seekers(*)
             )
         `)
+        .in("job_id", jobId ? [jobId] : ownedJobIds)
         .order("created_at", { ascending: false });
-
-    if (jobId) {
-        query = query.eq("job_id", jobId);
-    } else {
-        query = query.filter("job.employer_id", "eq", employerId);
-    }
 
     const { data, error } = await query;
 
@@ -59,6 +83,8 @@ export async function GET(request: Request) {
             )
             : null;
 
+        const isAnonymous = seeker?.profile_visibility === "ANONYMOUS";
+
         return {
             id: app.id,
             jobId: app.job_id,
@@ -84,14 +110,16 @@ export async function GET(request: Request) {
             user: app.user ? {
                 id: app.user.id,
                 email: app.user.email,
-                jobSeeker: (app.user as any).jobSeeker ? {
-                    full_name: (app.user as any).jobSeeker.full_name,
-                    skills: (app.user as any).jobSeeker.skills,
-                    location: (app.user as any).jobSeeker.location,
-                    bio: (app.user as any).jobSeeker.bio,
-                    experience: (app.user as any).jobSeeker.experience,
-                    education: (app.user as any).jobSeeker.education,
-                    qualification: (app.user as any).jobSeeker.qualification || null,
+                jobSeeker: seeker ? {
+                    full_name: isAnonymous ? "Anonymous Candidate" : seeker.full_name,
+                    skills: seeker.skills,
+                    location: isAnonymous ? null : seeker.location,
+                    bio: seeker.bio,
+                    experience: seeker.experience,
+                    education: seeker.education,
+                    qualification: seeker.qualification || null,
+                    avatar_url: isAnonymous ? null : seeker.avatar_url,
+                    profile_visibility: seeker.profile_visibility,
                 } : undefined
             } : undefined
         };

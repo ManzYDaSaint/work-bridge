@@ -52,6 +52,7 @@ export interface JobSeeker {
     completion?: number;
     isSubscribed?: boolean;
     avatarUrl?: string;
+    avatar_url?: string;
     resumeUrl?: string;
     resume_url?: string;
     employmentStatus?: string | null;
@@ -79,8 +80,6 @@ export interface Employer {
     profile_views: number;
     logo_url?: string;
     logoUrl?: string;
-    plan?: 'FREE' | 'PREMIUM';
-    planExpiresAt?: string;
     recruiterVerified?: boolean;
     _count?: {
         jobs: number;
@@ -126,6 +125,7 @@ export interface Job {
     isNew?: boolean;
     deadline?: string;
     createdAt?: string;
+    lastAlertSentAt?: string;
 }
 
 export interface Application {
@@ -138,6 +138,7 @@ export interface Application {
     screeningSummary?: string;
     screeningBreakdown?: ScreeningBreakdownItem[];
     screeningAnswers?: Record<string, ScreeningAnswer>;
+    interviewLink?: string;
     user?: User;
     job?: Job;
     createdAt?: string;
@@ -146,6 +147,7 @@ export interface Application {
 export interface AppNotification {
     id: string;
     userId: string;
+    title: string;
     message: string;
     isRead: boolean;
     createdAt: string;

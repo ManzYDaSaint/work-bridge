@@ -34,15 +34,19 @@ export default function CandidatesPage() {
         fetchApplications();
     }, [jobId]);
 
-    const handleStatusUpdate = async (id: string, status: "SHORTLISTED" | "REJECTED" | "INTERVIEWING" | "ACCEPTED") => {
+    const handleStatusUpdate = async (id: string, status: "SHORTLISTED" | "REJECTED" | "INTERVIEWING" | "ACCEPTED", interviewLink?: string) => {
         setUpdating(id);
         try {
+            const body: any = { status };
+            if (status === "INTERVIEWING" && interviewLink) {
+                body.interviewLink = interviewLink;
+            }
             const res = await apiFetch(`/api/employer/applications/${id}`, {
                 method: "PATCH",
-                body: JSON.stringify({ status }),
+                body: JSON.stringify(body),
             });
             if (res.ok) {
-                setApplications((prev) => prev.map((app) => (app.id === id ? { ...app, status } : app)));
+                setApplications((prev) => prev.map((app) => (app.id === id ? { ...app, status, interview_link: interviewLink } : app)));
                 if (selectedApp?.id === id) setSelectedApp((prev: any) => (prev ? { ...prev, status } : prev));
                 router.refresh();
             }
@@ -223,7 +227,7 @@ export default function CandidatesPage() {
                                 key={app.id}
                                 application={app}
                                 onViewProfile={() => setSelectedApp(app)}
-                                onStatusUpdate={(status) => handleStatusUpdate(app.id, status)}
+                                onStatusUpdate={(status, interviewLink) => handleStatusUpdate(app.id, status, interviewLink)}
                                 updating={updating === app.id}
                             />
                         ))}
@@ -243,7 +247,7 @@ export default function CandidatesPage() {
                                 key={app.id}
                                 application={app}
                                 onViewProfile={() => setSelectedApp(app)}
-                                onStatusUpdate={(status) => handleStatusUpdate(app.id, status)}
+                                onStatusUpdate={(status, interviewLink) => handleStatusUpdate(app.id, status, interviewLink)}
                                 updating={updating === app.id}
                             />
                         ))}
@@ -263,7 +267,7 @@ export default function CandidatesPage() {
                                 key={app.id}
                                 application={app}
                                 onViewProfile={() => setSelectedApp(app)}
-                                onStatusUpdate={(status) => handleStatusUpdate(app.id, status)}
+                                onStatusUpdate={(status, interviewLink) => handleStatusUpdate(app.id, status, interviewLink)}
                                 updating={updating === app.id}
                             />
                         ))}
@@ -283,7 +287,7 @@ export default function CandidatesPage() {
                                 key={app.id}
                                 application={app}
                                 onViewProfile={() => setSelectedApp(app)}
-                                onStatusUpdate={(status) => handleStatusUpdate(app.id, status)}
+                                onStatusUpdate={(status, interviewLink) => handleStatusUpdate(app.id, status, interviewLink)}
                                 updating={updating === app.id}
                             />
                         ))}
@@ -415,7 +419,7 @@ export default function CandidatesPage() {
                                             disabled={updating === selectedApp.id}
                                             className="flex-1 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
                                         >
-                                            {updating === selectedApp.id ? <Loader2 size={16} className="animate-spin mx-auto" /> : "Mark as Hired"}
+                                            {updating === selectedApp.id ? <Loader2 size={16} className="animate-spin mx-auto" /> : "Mark as Hired (+5 Credits)"}
                                         </button>
                                     )}
                                     {(selectedApp.status === "PENDING" || selectedApp.status === "SHORTLISTED" || selectedApp.status === "INTERVIEWING" || selectedApp.status === "ACCEPTED") && (

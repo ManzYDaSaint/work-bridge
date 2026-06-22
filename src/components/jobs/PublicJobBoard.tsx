@@ -8,9 +8,10 @@ import { apiFetch, apiFetchJson } from "@/lib/api";
 import { useUser } from "@/context/UserContext";
 import { useAuth } from "@/context/AuthContext";
 import { cn, formatJobType, formatWorkMode, timeAgo } from "@/lib/utils";
-import { ArrowUpRight, Bookmark, BookmarkCheck, Briefcase, MapPin, Search, SlidersHorizontal } from "lucide-react";
+import { ArrowUpRight, Bookmark, BookmarkCheck, Briefcase, MapPin, Search, SlidersHorizontal, Share2, MessageCircle, Link2, Check } from "lucide-react";
 import { Pagination, CompanyAvatar } from "@/components/dashboard/ui";
 import { toast } from "sonner";
+import ShareJobButton from "@/components/jobs/ShareJobButton";
 import type { Job, ScreeningAnswer } from "@/types";
 import { type PublicViewerMode } from "./JobDetailModal";
 
@@ -124,16 +125,24 @@ function JobListRow({
                 )}
             </button>
 
-            <div className="flex items-center justify-between gap-3 sm:justify-end">
+            <div className="flex items-center justify-between gap-2 sm:justify-end">
                 <span className="text-[11px] sm:text-xs text-slate-400">{timeAgo(job.createdAt) || "Recently"}</span>
-                <button
-                    type="button"
-                    onClick={onToggleSave}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white text-slate-500 transition-colors hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-white"
-                    aria-label={isSaved ? "Unsave job" : "Save job"}
-                >
-                    {isSaved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
-                </button>
+                <div className="flex items-center gap-1.5">
+                    <ShareJobButton
+                        jobId={job.id}
+                        jobTitle={job.title}
+                        companyName={job.employer?.companyName}
+                        location={job.location}
+                    />
+                    <button
+                        type="button"
+                        onClick={onToggleSave}
+                        className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white text-slate-500 transition-colors hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-white"
+                        aria-label={isSaved ? "Unsave job" : "Save job"}
+                    >
+                        {isSaved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
+                    </button>
+                </div>
             </div>
         </div>
     );

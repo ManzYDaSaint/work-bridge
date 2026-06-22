@@ -215,6 +215,9 @@ export default function NewJobPage() {
                             placeholder="e.g. React, TypeScript, Communication"
                             className={inputClass}
                         />
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                            💡 Adding skills allows our system to automatically score applicants and suggest top-matching candidates instantly.
+                        </p>
                         {errors.skillsInput && (
                             <p className="text-xs text-red-600 dark:text-red-400">{errors.skillsInput.message}</p>
                         )}
@@ -239,7 +242,7 @@ export default function NewJobPage() {
                                     placeholder="Defaults to the main skills list if left empty"
                                     className={inputClass}
                                 />
-                                <p className="text-xs text-slate-500">Comma-separated skills used as hard requirements in employer review.</p>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">Comma-separated skills used as hard requirements to filter applicants.</p>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Nice-to-have skills</label>
@@ -265,7 +268,9 @@ export default function NewJobPage() {
                                     placeholder={"One per line. Format: Question | YES | required\nExample: Available to work weekends? | YES | required"}
                                     className={cn(inputClass, "min-h-[120px] resize-y")}
                                 />
-                                <p className="text-xs text-slate-500">Use `YES` or `NO`, then `required` or `optional`. If omitted, questions default to `YES | required`.</p>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                    💡 Automatically filter candidates before you even see them. Use `YES` or `NO`, then `required` or `optional`.
+                                </p>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5">

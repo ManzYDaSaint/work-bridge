@@ -28,7 +28,7 @@ export type JobValues = z.infer<typeof jobSchema>;
 export function parseCommaSkills(input: string): string[] {
     return input
         .split(/[,，]/)
-        .map((s) => s.trim())
+        .map((s) => s.trim().toLowerCase())
         .filter(Boolean);
 }
 

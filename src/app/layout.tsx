@@ -5,6 +5,7 @@ import "./globals.css";
 
 import { Toaster } from "sonner";
 import PWARegister from "@/components/pwa/PWARegister";
+import InstallAppPrompt from "@/components/pwa/InstallAppPrompt";
 import FeedbackButton from "@/components/ui/FeedbackButton";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -99,6 +100,7 @@ export default function RootLayout({
       <body className={`${jakarta.className} antialiased min-h-screen flex flex-col`}>
         <Toaster position="top-right" richColors />
         <PWARegister />
+        <InstallAppPrompt />
         <AuthProvider>
           <main className="flex-grow">{children}</main>
         </AuthProvider>

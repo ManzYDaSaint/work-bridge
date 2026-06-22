@@ -3,6 +3,8 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { withAudit } from "@/lib/api-utils";
 import { NextResponse } from "next/server";
 
+const ALLOWED_JOB_STATUSES = new Set(["ACTIVE", "PENDING", "EXPIRED", "FILLED", "ARCHIVED"]);
+
 export const GET = withAudit(async () => {
     const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
@@ -60,6 +62,14 @@ export const PATCH = withAudit(async (request: Request) => {
     try {
         const { jobId, status } = await request.json();
         const { user } = auth;
+
+        if (typeof jobId !== "string" || !jobId) {
+            return NextResponse.json({ error: "Valid jobId is required" }, { status: 400 });
+        }
+
+        if (!ALLOWED_JOB_STATUSES.has(status)) {
+            return NextResponse.json({ error: "Invalid job status" }, { status: 400 });
+        }
 
         const { error } = await supabase
             .from("jobs")

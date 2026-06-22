@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 
 interface Notification {
     id: string;
-    title: string;
+    title?: string;
     message: string;
     type: string;
     link?: string;
@@ -190,7 +190,7 @@ export default function NotificationCenter() {
                                                         "text-sm", 
                                                         n.is_read ? "font-medium text-slate-600 dark:text-slate-400" : "font-bold text-slate-900 dark:text-white"
                                                     )}>
-                                                        {n.title}
+                                                        {n.title || n.message}
                                                     </p>
                                                     <span className="text-[10px] text-slate-400 whitespace-nowrap">
                                                         {timeAgo(n.created_at)}

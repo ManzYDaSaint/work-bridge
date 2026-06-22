@@ -44,6 +44,7 @@ export const POST = withAudit(async (request: Request) => {
         if (admins && admins.length > 0) {
             const notifications = admins.map((admin) => ({
                 user_id: admin.id,
+                title: "Closure request received",
                 message: `Account closure request from ${employer?.company_name ?? "an employer"}. Reasons: ${reasons.join(", ")}.`,
                 type: "WARNING",
                 is_read: false,

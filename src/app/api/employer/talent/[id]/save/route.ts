@@ -8,11 +8,8 @@ export async function POST(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const auth = await validateAuth();
+    const auth = await validateAuth(["EMPLOYER", "ADMIN"], false, true);
     if (auth.error) return auth.error;
-    if (auth.role !== "EMPLOYER" && auth.role !== "ADMIN") {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
 
     const { id } = await params;
     const supabase = await createSupabaseServerClient();
@@ -52,7 +49,7 @@ export async function DELETE(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const auth = await validateAuth();
+    const auth = await validateAuth(["EMPLOYER", "ADMIN"], false, true);
     if (auth.error) return auth.error;
 
     const { id } = await params;
@@ -77,7 +74,7 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     // Check if a specific candidate is saved
-    const auth = await validateAuth();
+    const auth = await validateAuth(["EMPLOYER", "ADMIN"], false, true);
     if (auth.error) return auth.error;
 
     const { id } = await params;

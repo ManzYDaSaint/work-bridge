@@ -6,6 +6,7 @@ import { Briefcase, Users, ArrowRight, CheckCircle, Loader2 } from "lucide-react
 import { PageHeader, StatCard, SectionCard, Badge } from "@/components/dashboard/ui";
 import { useUser } from "@/context/UserContext";
 import Link from "next/link";
+import OnboardingChecklist from "@/components/dashboard/OnboardingChecklist";
 
 export default function EmployerOverviewPage() {
     const { user } = useUser();
@@ -65,6 +66,8 @@ export default function EmployerOverviewPage() {
                 <StatCard label="Shortlisted" value={stats.shortlisted} icon={CheckCircle} iconBg="bg-amber-50 dark:bg-amber-950/30" iconColor="text-amber-600" />
                 <StatCard label="Interviews set" value={stats.interviewsSet} icon={ArrowRight} iconBg="bg-sky-50 dark:bg-sky-950/30" iconColor="text-sky-600" />
             </div>
+
+            <OnboardingChecklist user={user} />
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <SectionCard title="Hiring flow">

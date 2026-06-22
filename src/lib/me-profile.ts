@@ -67,7 +67,6 @@ export async function buildMeProfile(
                   logo_url: userData.employer.logo_url,
                   logoUrl: userData.employer.logo_url,
                   profile_views: userData.employer.profile_views ?? 0,
-                  plan: userData.employer.plan || "FREE",
                   recruiterVerified: userData.employer.recruiter_verified ?? false,
                   _count: {
                       jobs: userData.employer.jobs?.length || 0,

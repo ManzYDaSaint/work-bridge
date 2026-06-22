@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-    const auth = await validateAuth(["EMPLOYER", "ADMIN"]);
+    const auth = await validateAuth(["EMPLOYER", "ADMIN"], false, true);
     if (auth.error) return auth.error;
 
     const { searchParams } = new URL(request.url);
@@ -63,9 +63,14 @@ export async function GET(request: Request) {
     }
 
     if (skillsParam) {
-        const keywords = skillsParam.split(",").map((s) => s.trim()).filter(Boolean);
+        const keywords = skillsParam
+            .split(",")
+            .map((s) => s.trim().replace(/[^a-zA-Z0-9\s\-]/g, " "))
+            .filter(Boolean)
+            .slice(0, 5);
+
         if (keywords.length > 0) {
-            const orConditions = keywords.map(kw => 
+            const orConditions = keywords.map((kw) =>
                 `full_name.ilike.%${kw}%,bio.ilike.%${kw}%,skills.cs.{"${kw}"}`
             );
             query = query.or(orConditions.join(","));

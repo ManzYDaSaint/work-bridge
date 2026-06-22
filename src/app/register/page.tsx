@@ -64,6 +64,8 @@ function RegisterForm() {
             toast.message(employerGuidance);
         }
 
+        const referralCode = searchParams.get("ref") || undefined;
+
         const { data: signUpData, error } = await supabase.auth.signUp({
             email,
             password: formData.password,
@@ -71,6 +73,7 @@ function RegisterForm() {
                 emailRedirectTo: `${window.location.origin}/auth/callback`,
                 data: {
                     role,
+                    referral_code: referralCode,
                 },
             },
         });
@@ -115,10 +118,10 @@ function RegisterForm() {
                 <div className="mb-8 text-center">
                     <Link href="/" className="inline-flex items-center justify-center mb-5" aria-label="Go to home">
                         <div className="logo-black">
-                            <Image src="/logo-black.svg" alt="WorkBridge" width={48} height={48} priority />
+                            <Image src="/logo-black.svg" alt="WorkBridge" width={48} height={48} priority style={{ width: "auto", height: "auto" }} />
                         </div>
                         <div className="logo-white">
-                            <Image src="/logo.svg" alt="WorkBridge" width={48} height={48} priority />
+                            <Image src="/logo.svg" alt="WorkBridge" width={48} height={48} priority style={{ width: "auto", height: "auto" }} />
                         </div>
                     </Link>
                     <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Create your account</h1>

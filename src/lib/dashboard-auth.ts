@@ -26,5 +26,9 @@ export async function requireDashboardProfile(expectedRole: UserRole): Promise<{
         redirect("/dashboard");
     }
 
+    if (!profile.onboardingComplete) {
+        redirect("/onboarding");
+    }
+
     return { profile };
 }

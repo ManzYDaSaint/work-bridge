@@ -1,5 +1,6 @@
-import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { getSupabaseAdminClient } from "@/lib/supabase-admin";
+import { validateCronRequest } from "@/lib/cron-auth";
 
 /**
  * CRON JOB: Expire Jobs
@@ -7,15 +8,13 @@ import { NextResponse } from "next/server";
  * from ACTIVE to EXPIRED if their deadline has passed.
  */
 export async function GET(request: Request) {
-    // Basic verification: Check for a secret key in the headers
-    const authHeader = request.headers.get("Authorization");
-    const cronSecret = process.env.CRON_SECRET;
+    const cronValidation = validateCronRequest(request);
+    if (cronValidation) return cronValidation;
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) {
+        return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
     }
-
-    const supabase = await createSupabaseServerClient();
 
     try {
         const now = new Date().toISOString();

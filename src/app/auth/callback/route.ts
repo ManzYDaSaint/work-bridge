@@ -71,6 +71,27 @@ export async function GET(request: Request) {
                             if (canApplyRequestedRole) {
                                 await adminClient.from("employers").delete().eq("id", user.id);
                             }
+
+                            // Process referral if ref is present
+                            const referralCode = searchParams.get("ref");
+                            if (referralCode && isFreshOAuthUser(user.created_at)) {
+                                const { data: referrer } = await adminClient
+                                    .from("job_seekers")
+                                    .select("id")
+                                    .eq("public_slug", referralCode)
+                                    .single();
+                                
+                                if (referrer) {
+                                    const { error: insertErr } = await adminClient.from("referrals").insert({
+                                        referrer_id: referrer.id,
+                                        referred_id: user.id,
+                                        status: "PENDING"
+                                    });
+                                    if (insertErr && insertErr.code !== "23505") {
+                                        console.error("[auth/callback] referral insert error:", insertErr);
+                                    }
+                                }
+                            }
                         } else if (effectiveRole === "EMPLOYER") {
                             await adminClient.from("employers").upsert({
                                 id: user.id,

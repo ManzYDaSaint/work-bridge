@@ -25,8 +25,11 @@ function GoogleIcon() {
     );
 }
 
+import { useSearchParams } from "next/navigation";
+
 export default function GoogleAuthButtons({ mode, role }: GoogleAuthButtonsProps) {
     const supabase = createBrowserSupabaseClient();
+    const searchParams = useSearchParams();
     const label = mode === "login" ? "Sign in with Google" : "Continue with Google";
 
     const handleGoogleAuth = async () => {
@@ -35,6 +38,11 @@ export default function GoogleAuthButtons({ mode, role }: GoogleAuthButtonsProps
 
         if (role) {
             callbackUrl.searchParams.set("role", callbackRoles[role]);
+        }
+        
+        const ref = searchParams?.get("ref");
+        if (ref) {
+            callbackUrl.searchParams.set("ref", ref);
         }
 
         await supabase.auth.signInWithOAuth({

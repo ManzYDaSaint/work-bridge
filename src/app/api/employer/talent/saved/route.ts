@@ -5,11 +5,8 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-    const auth = await validateAuth();
+    const auth = await validateAuth(["EMPLOYER", "ADMIN"], false, true);
     if (auth.error) return auth.error;
-    if (auth.role !== "EMPLOYER" && auth.role !== "ADMIN") {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
 
     const supabase = await createSupabaseServerClient();
     

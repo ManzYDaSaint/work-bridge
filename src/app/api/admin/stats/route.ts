@@ -31,8 +31,8 @@ export async function GET() {
                 : Promise.resolve({ data: [], error: null }),
             // Pending account close requests
             supabase.from("account_close_requests").select("*", { count: "exact", head: true }).eq("status", "PENDING"),
-            // Premium employers
-            supabase.from("employers").select("*", { count: "exact", head: true }).eq("plan", "PREMIUM"),
+            // Badge holders (early adopters)
+            supabase.from("job_seekers").select("*", { count: "exact", head: true }).eq("has_badge", true),
             // Jobs pending moderation
             supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "PENDING"),
             // 30-day user signup trend (daily buckets)
@@ -46,7 +46,7 @@ export async function GET() {
         const [
             usersRes, seekersRes, employersRes, jobsRes, appsRes,
             eventsRes,
-            closeRequestsRes, premiumRes, pendingJobsRes,
+            closeRequestsRes, pendingJobsRes, badgeHoldersRes,
             signupTrendRes,
         ] = results;
 
@@ -104,7 +104,7 @@ export async function GET() {
                 totalApplications: stats[4],
                 // Moderation
                 pendingCloseRequests: (closeRequestsRes as any).count || 0,
-                premiumEmployers: (premiumRes as any).count || 0,
+                badgeHolders: (badgeHoldersRes as any).count || 0,
                 pendingJobs: (pendingJobsRes as any).count || 0,
                 // Funnel
                 funnel30d: {
