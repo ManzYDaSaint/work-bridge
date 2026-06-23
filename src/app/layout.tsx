@@ -8,6 +8,7 @@ import PWARegister from "@/components/pwa/PWARegister";
 import InstallAppPrompt from "@/components/pwa/InstallAppPrompt";
 import FeedbackButton from "@/components/ui/FeedbackButton";
 import { AuthProvider } from "@/context/AuthContext";
+import { getSiteUrlObject } from "@/lib/site-url";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -16,8 +17,32 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
+function getPlausibleDomain() {
+  const configuredDomain =
+    process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ||
+    process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_URL;
+
+  if (!configuredDomain) return null;
+
+  try {
+    const parsed = configuredDomain.includes("://")
+      ? new URL(configuredDomain)
+      : new URL(`https://${configuredDomain}`);
+
+    if (parsed.hostname === "localhost") return null;
+
+    return parsed.hostname;
+  } catch {
+    return configuredDomain.replace(/^https?:\/\//, "").split("/")[0] || null;
+  }
+}
+
+const plausibleDomain = getPlausibleDomain();
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://aganyu.co"),
+  metadataBase: getSiteUrlObject(),
   applicationName: "Aganyu",
   title: {
     default: "Aganyu | Malawi's modern job board",
@@ -54,11 +79,11 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: "/favicon.ico" },
+      { url: "/logo-black.svg", type: "image/svg+xml" },
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
-    shortcut: ["/favicon.ico"],
+    shortcut: ["/logo-black.svg"],
     apple: [
       { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
@@ -89,11 +114,12 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="anonymous" />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
-        {process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN && (
+        {plausibleDomain && (
           <Script
+            id="plausible-analytics"
             src="https://plausible.io/js/script.js"
-            strategy="afterInteractive"
-            data-domain={process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN}
+            strategy="beforeInteractive"
+            data-domain={plausibleDomain}
           />
         )}
       </head>

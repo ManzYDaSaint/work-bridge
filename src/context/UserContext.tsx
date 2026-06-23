@@ -81,3 +81,7 @@ export function useUser() {
     }
     return context;
 }
+
+export function useOptionalUser() {
+    return useContext(UserContext);
+}

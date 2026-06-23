@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getSiteUrl, getSiteUrlObject } from "@/lib/site-url";
 
 interface SEOProps {
     title?: string;
@@ -17,8 +18,9 @@ export function constructMetadata({
     noIndex = false,
     jobId,
 }: SEOProps = {}): Metadata {
+    const siteUrl = getSiteUrl("http://localhost:3000");
     const finalOgImage = jobId
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/og/job/${jobId}`
+        ? `${siteUrl}/api/og/job/${jobId}`
         : ogImage;
 
     return {
@@ -50,13 +52,12 @@ export function constructMetadata({
             index: !noIndex,
             follow: !noIndex,
         },
-        metadataBase: new URL(process.env.NEXT_PUBLIC_URL || "http://localhost:3000"),
+        metadataBase: getSiteUrlObject("http://localhost:3000"),
         icons: {
             icon: [
-                { url: "/favicon.ico" },
-                { url: "/logo.svg", type: "image/svg+xml" },
+                { url: "/logo-black.svg", type: "image/svg+xml" },
             ],
-            shortcut: ["/logo.png"],
+            shortcut: ["/logo-black.svg"],
             apple: [
                 { url: "/logo.png", sizes: "180x180", type: "image/png" },
             ],

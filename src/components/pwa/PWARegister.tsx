@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useUser } from "@/context/UserContext";
+import { useOptionalUser } from "@/context/UserContext";
 import { apiFetch } from "@/lib/api";
 
 /**
@@ -9,7 +9,8 @@ import { apiFetch } from "@/lib/api";
  * them to Web Push so the server can deliver real-time push notifications.
  */
 export default function PWARegister() {
-    const { user } = useUser();
+    const userContext = useOptionalUser();
+    const user = userContext?.user;
 
     // Step 1: Register service worker on mount
     useEffect(() => {
