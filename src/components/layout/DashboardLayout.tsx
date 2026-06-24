@@ -87,7 +87,7 @@ export default function DashboardLayout({
                         </div>
                         <span className="text-lg font-semibold text-slate-900 tracking-tight dark:text-white">
                             {brandName ? brandName : (
-                                <>Work<span className="text-[#a65a2e]">Bridge</span></>
+                                <>Aga<span className="text-[#a65a2e]">nyu</span></>
                             )}
                         </span>
                     </Link>
@@ -183,7 +183,7 @@ export default function DashboardLayout({
                         </div>
                         <span className="text-base font-semibold text-slate-900 dark:text-white">
                             {brandName ? brandName : (
-                                <>Work<span className="text-[#a65a2e]">Bridge</span></>
+                                <>Aga<span className="text-[#a65a2e]">nyu</span></>
                             )}
                         </span>
                     </Link>
