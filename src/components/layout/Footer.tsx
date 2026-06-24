@@ -17,10 +17,10 @@ export default function Footer() {
                     <div className="space-y-4 max-w-sm">
                         <div className="flex items-center gap-2.5">
                             <div className="logo-black">
-                                <Image src="/logo-black.svg" alt="" width={36} height={36} style={{ width: "auto", height: "auto" }} />
+                                <Image src="/logo-black.svg" alt="" width={50} height={50} style={{ width: "4.5rem", height: "auto" }} />
                             </div>
                             <div className="logo-white">
-                                <Image src="/logo.svg" alt="" width={36} height={36} style={{ width: "auto", height: "auto" }} />
+                                <Image src="/logo.svg" alt="" width={50} height={50} style={{ width: "4.5rem", height: "auto" }} />
                             </div>
                             <span className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Aganyu</span>
                         </div>

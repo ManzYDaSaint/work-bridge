@@ -18,7 +18,7 @@ export function constructMetadata({
     noIndex = false,
     jobId,
 }: SEOProps = {}): Metadata {
-    const siteUrl = getSiteUrl("http://localhost:3000");
+    const siteUrl = getSiteUrl("https://aganyu.com");
     const finalOgImage = jobId
         ? `${siteUrl}/api/og/job/${jobId}`
         : ogImage;
@@ -43,7 +43,7 @@ export function constructMetadata({
             title,
             description,
             images: [finalOgImage],
-            creator: "Emmanuel Nyangazie",
+            creator: "Emmanuel Nyangazi",
         },
         alternates: {
             canonical: canonical,
@@ -52,12 +52,12 @@ export function constructMetadata({
             index: !noIndex,
             follow: !noIndex,
         },
-        metadataBase: getSiteUrlObject("http://localhost:3000"),
+        metadataBase: getSiteUrlObject("https://aganyu.com"),
         icons: {
             icon: [
-                { url: "/logo-black.svg", type: "image/svg+xml" },
+                { url: "/logo.svg", type: "image/svg+xml" },
             ],
-            shortcut: ["/logo-black.svg"],
+            shortcut: ["/logo.svg"],
             apple: [
                 { url: "/logo.png", sizes: "180x180", type: "image/png" },
             ],

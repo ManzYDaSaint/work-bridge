@@ -1,11 +1,12 @@
 import { Resend } from "resend";
+import { HELLO_EMAIL, SUPPORT_EMAIL } from "./email-addresses";
 
 export const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key");
 
 const BRAND_NAME = "Aganyu";
 const BRAND_COLOR = "#16324f";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_URL || "https://aganyu.co";
-const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || `${BRAND_NAME} <onboarding@resend.dev>`;
+const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || `${BRAND_NAME} <${HELLO_EMAIL}>`;
 
 /**
  * Premium Email Layout Wrapper
@@ -197,7 +198,7 @@ export async function sendEmployerVerificationEmail(to: string, payload: {
         ? `<p>Your account is now <strong>fully activated</strong>. You can now deploy job roles and access the verified talent pool.</p>
            <a href="${APP_URL}/dashboard/employer" class="btn">Access Employer Dashboard</a>`
         : `<p>Unfortunately, your application did not meet our current verification standards. Please contact our support team if you believe this is an error.</p>
-           <a href="mailto:support@aganyu.io" class="btn">Contact Support</a>`
+           <a href="mailto:${SUPPORT_EMAIL}" class="btn">Contact Support</a>`
       }
       <p style="margin-top: 30px;">Best regards,<br/>The ${BRAND_NAME} Trust & Safety Team</p>
     `;

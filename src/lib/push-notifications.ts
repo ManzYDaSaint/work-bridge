@@ -1,9 +1,10 @@
 import webpush from "web-push";
 import { getSupabaseAdminClient } from "./supabase-admin";
+import { HELLO_EMAIL } from "./email-addresses";
 
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY!;
-const vapidSubject = process.env.VAPID_SUBJECT || "mailto:hello@aganyu.co";
+const vapidSubject = process.env.VAPID_SUBJECT || `mailto:${HELLO_EMAIL}`;
 
 if (vapidPublicKey && vapidPrivateKey) {
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);

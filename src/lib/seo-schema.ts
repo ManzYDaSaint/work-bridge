@@ -5,7 +5,7 @@ export function organizationSchema(siteUrl: string) {
         "@id": `${siteUrl}/#organization`,
         name: "Aganyu",
         url: siteUrl,
-        logo: `${siteUrl}/logo-black.svg`,
+        logo: `${siteUrl}/logo.svg`,
         sameAs: ["https://twitter.com/aganyu_mw"],
     };
 }

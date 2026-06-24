@@ -39,24 +39,26 @@ export default function Navbar() {
                                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                                 className="absolute -inset-2 bg-blue-500 rounded-2xl blur-lg -z-10"
                             />
-                            <div className="w-12 h-12 flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                            <div className="w-10 h-10 flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
                                 <div className="logo-white">
                                     <Image
                                         src="/logo.svg"
                                         alt="Aganyu"
-                                        width={48}
-                                        height={48}
+                                        width={20}
+                                        height={20}
                                         priority
-                                        style={{ width: "auto", height: "auto" }} />
+                                        style={{ width: "3rem", height: "auto" }}
+                                    />
                                 </div>
                                 <div className="logo-black">
                                     <Image
                                         src="/logo-black.svg"
                                         alt="Aganyu"
-                                        width={48}
-                                        height={48}
+                                        width={20}
+                                        height={20}
                                         priority
-                                        style={{ width: "auto", height: "auto" }} />
+                                        style={{ width: "3rem", height: "auto" }}
+                                    />
                                 </div>
                             </div>
                         </div>

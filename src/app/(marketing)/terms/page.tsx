@@ -84,10 +84,10 @@ export default function TermsPage() {
                             Questions? Reach our compliance team
                         </p>
                         <a
-                            href="mailto:legal@aganyu.mw"
+                            href="mailto:support@aganyu.com"
                             className="text-lg font-semibold text-[#16324f] dark:text-blue-400 hover:text-[#a65a2e] dark:hover:text-blue-300 transition-colors underline underline-offset-4"
                         >
-                            legal@aganyu.mw
+                            support@aganyu.com
                         </a>
                     </div>
                 </div>

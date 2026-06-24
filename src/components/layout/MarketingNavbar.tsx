@@ -73,7 +73,8 @@ export default function MarketingNavbar() {
                             height={36}
                             className="shrink-0"
                             priority
-                        style={{ width: "auto", height: "auto" }} />
+                            style={{ width: "3rem", height: "auto" }}
+                        />
                     </div>
                     <div className="logo-white">
                         <Image
@@ -83,7 +84,8 @@ export default function MarketingNavbar() {
                             height={36}
                             className="shrink-0"
                             priority
-                        style={{ width: "auto", height: "auto" }} />
+                            style={{ width: "3rem", height: "auto" }}
+                        />
                     </div>
                     <span className="text-base sm:text-lg font-semibold tracking-tight text-slate-900 dark:text-white truncate hidden sm:block">
                         Aganyu
@@ -148,25 +150,25 @@ export default function MarketingNavbar() {
                     >
                         <div className="rounded-[1.5rem] border border-stone-200/80 bg-[#fbf8f1]/95 px-5 py-6 shadow-xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/95 overflow-hidden">
                             <div className="flex flex-col gap-4">
-                                <Link 
-                                    href="/jobs" 
+                                <Link
+                                    href="/jobs"
                                     onClick={() => setIsMenuOpen(false)}
                                     className="flex items-center justify-between text-lg font-semibold text-slate-900 dark:text-white px-2 py-1"
                                 >
                                     Browse Jobs
                                     <ChevronRight size={18} className="text-slate-400" />
                                 </Link>
-                                <Link 
-                                    href={postJobHref} 
+                                <Link
+                                    href={postJobHref}
                                     onClick={() => setIsMenuOpen(false)}
                                     className="flex items-center justify-between text-lg font-semibold text-slate-900 dark:text-white px-2 py-1"
                                 >
                                     Post a Job
                                     <ChevronRight size={18} className="text-slate-400" />
                                 </Link>
-                                
+
                                 <div className="h-px bg-stone-200 dark:bg-slate-800 my-2" />
-                                
+
                                 {authUser ? (
                                     <Link
                                         href="/dashboard"

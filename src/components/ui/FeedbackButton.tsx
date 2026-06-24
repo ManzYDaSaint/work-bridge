@@ -3,6 +3,7 @@
 import { MessageSquarePlus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { SUPPORT_EMAIL } from "@/lib/email-addresses";
 
 export default function FeedbackButton() {
     const [mounted, setMounted] = useState(false);
@@ -25,7 +26,7 @@ export default function FeedbackButton() {
 
     return (
         <a
-            href="mailto:support@aganyu.mw?subject=Feedback%20or%20Bug%20Report"
+            href={`mailto:${SUPPORT_EMAIL}?subject=Feedback%20or%20Bug%20Report`}
             className={`fixed right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#16324f] text-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all hover:scale-105 active:scale-95 dark:bg-white dark:text-slate-900 sm:right-8 group ${
                 isDashboard
                     ? "bottom-[84px] md:bottom-8"
