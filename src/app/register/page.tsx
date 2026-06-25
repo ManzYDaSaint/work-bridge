@@ -17,6 +17,20 @@ import {
 
 type Role = "JOB_SEEKER" | "EMPLOYER";
 
+const getPasswordStrength = (password: string) => {
+    if (!password) return { score: 0, text: "", color: "bg-slate-200 dark:bg-slate-800" };
+    let score = 0;
+    if (password.length >= 8) score += 1;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
+    if (/\d/.test(password)) score += 1;
+    if (/[^a-zA-Z0-9]/.test(password)) score += 1;
+
+    if (score <= 1) return { score, text: "Weak", color: "bg-red-500", textCls: "text-red-500" };
+    if (score === 2) return { score, text: "Fair", color: "bg-amber-400", textCls: "text-amber-500" };
+    if (score === 3) return { score, text: "Good", color: "bg-blue-500", textCls: "text-blue-500" };
+    return { score, text: "Strong", color: "bg-emerald-500", textCls: "text-emerald-500" };
+};
+
 function RegisterForm() {
     const searchParams = useSearchParams();
     const [role, setRole] = useState<Role>("JOB_SEEKER");
@@ -55,6 +69,13 @@ function RegisterForm() {
         const emailValidation = canUseEmailForRegistration(email);
         if (!emailValidation.ok) {
             toast.error(emailValidation.reason || "Please use a valid email");
+            setIsLoading(false);
+            return;
+        }
+
+        const strength = getPasswordStrength(formData.password);
+        if (strength.score < 3) {
+            toast.error("Please use a stronger password (must include uppercase, lowercase, numbers, and be at least 8 characters long).");
             setIsLoading(false);
             return;
         }
@@ -106,6 +127,9 @@ function RegisterForm() {
             console.error("[register] post-signup hook error:", err);
             // Non-blocking — don't block navigation but do log
         }
+
+        // Force sign out to prevent auto-login if Supabase is configured to return a session on sign up
+        await supabase.auth.signOut();
 
         toast.success("Account created. Verify your email, then complete onboarding.");
         router.push("/login");
@@ -191,6 +215,24 @@ function RegisterForm() {
                                 onChange={handleInputChange}
                                 className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-500"
                             />
+                            {formData.password && (() => {
+                                const st = getPasswordStrength(formData.password);
+                                return (
+                                    <div className="mt-2">
+                                        <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                                            <div className={cn("h-full transition-all duration-300", st.color)} style={{ width: `${(st.score / 4) * 100}%` }} />
+                                        </div>
+                                        <div className="mt-1.5 flex items-center justify-between">
+                                            <span className={cn("text-[10px] font-medium uppercase tracking-wider", st.textCls)}>
+                                                {st.text}
+                                            </span>
+                                            <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                                                Use 8+ chars, mix of cases & numbers
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         <button

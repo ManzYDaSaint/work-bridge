@@ -28,13 +28,12 @@ export async function GET(request: Request) {
 
     if (code) {
         const supabase = await createSupabaseServerClient();
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        const { data: authData, error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (!error) {
             // After email confirmation or OAuth, ensure the user's public profile rows exist.
             try {
-                const auth = await getAuthOptional();
-                const user = auth.user;
+                const user = authData?.user;
 
                 if (user) {
                     const adminClient = getSupabaseAdminClient();

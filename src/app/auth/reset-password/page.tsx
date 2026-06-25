@@ -9,6 +9,21 @@ import { ArrowRight, Lock, Eye, EyeOff } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+const getPasswordStrength = (password: string) => {
+    if (!password) return { score: 0, text: "", color: "bg-slate-200 dark:bg-slate-800" };
+    let score = 0;
+    if (password.length >= 8) score += 1;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
+    if (/\d/.test(password)) score += 1;
+    if (/[^a-zA-Z0-9]/.test(password)) score += 1;
+
+    if (score <= 1) return { score, text: "Weak", color: "bg-red-500", textCls: "text-red-500" };
+    if (score === 2) return { score, text: "Fair", color: "bg-amber-400", textCls: "text-amber-500" };
+    if (score === 3) return { score, text: "Good", color: "bg-blue-500", textCls: "text-blue-500" };
+    return { score, text: "Strong", color: "bg-emerald-500", textCls: "text-emerald-500" };
+};
 
 export default function ResetPasswordPage() {
     const [password, setPassword] = useState("");
@@ -26,8 +41,9 @@ export default function ResetPasswordPage() {
             return;
         }
 
-        if (password.length < 6) {
-            toast.error("Password must be at least 6 characters");
+        const strength = getPasswordStrength(password);
+        if (strength.score < 3) {
+            toast.error("Please use a stronger password (must include uppercase, lowercase, numbers, and be at least 8 characters long).");
             return;
         }
 
@@ -101,6 +117,24 @@ export default function ResetPasswordPage() {
                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
                             </div>
+                            {password && (() => {
+                                const st = getPasswordStrength(password);
+                                return (
+                                    <div className="mt-2">
+                                        <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                                            <div className={cn("h-full transition-all duration-300", st.color)} style={{ width: `${(st.score / 4) * 100}%` }} />
+                                        </div>
+                                        <div className="mt-1.5 flex items-center justify-between px-1">
+                                            <span className={cn("text-[10px] font-black uppercase tracking-wider", st.textCls)}>
+                                                {st.text}
+                                            </span>
+                                            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold">
+                                                8+ chars, mix cases & numbers
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         <div className="space-y-1.5">

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -105,8 +106,22 @@ const STEPS = [
 
 function StepIndicator({ current }: { current: number }) {
     return (
-        <div className="mb-8">
-            <div className="flex items-center justify-between">
+        <div className="mb-6 sm:mb-8">
+            {/* Mobile Progress Bar */}
+            <div className="flex sm:hidden gap-1.5 mb-6">
+                {STEPS.map((step) => (
+                    <div
+                        key={step.id}
+                        className={cn(
+                            "h-1.5 flex-1 rounded-full transition-colors duration-300",
+                            current >= step.id ? "bg-slate-900 dark:bg-slate-100" : "bg-slate-200 dark:bg-slate-800"
+                        )}
+                    />
+                ))}
+            </div>
+
+            {/* Desktop Step Icons */}
+            <div className="hidden sm:flex items-center justify-between">
                 {STEPS.map((step, idx) => {
                     const Icon = step.icon;
                     const isCompleted = current > step.id;
@@ -717,7 +732,7 @@ function Step5({
                     className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 />
             </div>
-            
+
             <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
                     What are you looking for right now?
@@ -733,7 +748,7 @@ function Step5({
                     <option value="NOT_LOOKING">Not looking</option>
                 </select>
             </div>
-            
+
             <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
                     Profile Visibility
@@ -823,11 +838,23 @@ export function JobSeekerOnboarding({ me }: { me: NonNullable<MeData> }) {
             }
             if (step === 2) {
                 if (education.length === 0) return toast.error("Please add at least one education.");
+                for (const edu of education) {
+                    if (edu.startDate && edu.endDate && new Date(edu.startDate) > new Date(edu.endDate)) {
+                        return toast.error("Education ending year must be greater than or equal to starting year.");
+                    }
+                }
             }
             if (step === 3) {
                 if (skills.length === 0) return toast.error("Please add at least one skill.");
                 if (!seniorityLevel) return toast.error("Please select your seniority level.");
                 if (!employmentType) return toast.error("Please select an employment type.");
+            }
+            if (step === 4) {
+                for (const exp of experience) {
+                    if (exp.startDate && exp.endDate && new Date(exp.startDate) > new Date(exp.endDate)) {
+                        return toast.error("Experience ending year must be greater than or equal to starting year.");
+                    }
+                }
             }
         }
 
@@ -882,57 +909,71 @@ export function JobSeekerOnboarding({ me }: { me: NonNullable<MeData> }) {
     const isOptionalStep = step === 4 || step === 5;
 
     return (
-        <div className="mx-auto max-w-xl px-4 py-10">
-            <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 sm:p-8">
-                <StepIndicator current={step} />
+        <div className="mx-auto max-w-xl sm:px-4 sm:py-10">
+            <div className="flex min-h-[100dvh] flex-col bg-white dark:bg-slate-950 sm:min-h-0 sm:rounded-3xl sm:border sm:border-slate-200/80 sm:bg-white/90 sm:p-8 sm:shadow-sm sm:dark:border-slate-800 sm:dark:bg-slate-900/80">
+                <div className="flex-1 px-5 py-6 sm:p-0">
+                    <StepIndicator current={step} />
 
-                {step === 1 && (
-                    <Step1
-                        full_name={full_name}
-                        location={location}
-                        bio={bio}
-                        qualification={qualification}
-                        setFullName={setFullName}
-                        setLocation={setLocation}
-                        setBio={setBio}
-                        setQualification={setQualification}
-                    />
-                )}
-                {step === 2 && (
-                    <Step2
-                        education={education}
-                        setEducation={setEducation}
-                    />
-                )}
-                {step === 3 && (
-                    <Step3
-                        skills={skills}
-                        seniorityLevel={seniorityLevel}
-                        employmentType={employmentType}
-                        setSkills={setSkills}
-                        setSeniorityLevel={setSeniorityLevel}
-                        setEmploymentType={setEmploymentType}
-                    />
-                )}
-                {step === 4 && (
-                    <Step4
-                        experience={experience}
-                        setExperience={setExperience}
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={step}
+                            initial={{ x: 20, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: -20, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            className="w-full"
+                        >
+                            {step === 1 && (
+                                <Step1
+                                    full_name={full_name}
+                                    location={location}
+                                    bio={bio}
+                                    qualification={qualification}
+                                    setFullName={setFullName}
+                                    setLocation={setLocation}
+                                    setBio={setBio}
+                                    setQualification={setQualification}
+                                />
+                            )}
+                            {step === 2 && (
+                                <Step2
+                                    education={education}
+                                    setEducation={setEducation}
+                                />
+                            )}
+                            {step === 3 && (
+                                <Step3
+                                    skills={skills}
+                                    seniorityLevel={seniorityLevel}
+                                    employmentType={employmentType}
+                                    setSkills={setSkills}
+                                    setSeniorityLevel={setSeniorityLevel}
+                                    setEmploymentType={setEmploymentType}
+                                />
+                            )}
+                            {step === 4 && (
+                                <Step4
+                                    experience={experience}
+                                    setExperience={setExperience}
 
-                    />
-                )}
-                {step === 5 && (
-                    <Step5
-                        salaryExpectation={salaryExpectation}
-                        searchIntent={searchIntent}
-                        profileVisibility={profileVisibility}
-                        setSalaryExpectation={setSalaryExpectation}
-                        setSearchIntent={setSearchIntent}
-                        setProfileVisibility={setProfileVisibility}
-                    />
-                )}
+                                />
+                            )}
+                            {step === 5 && (
+                                <Step5
+                                    salaryExpectation={salaryExpectation}
+                                    searchIntent={searchIntent}
+                                    profileVisibility={profileVisibility}
+                                    setSalaryExpectation={setSalaryExpectation}
+                                    setSearchIntent={setSearchIntent}
+                                    setProfileVisibility={setProfileVisibility}
+                                />
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
 
-                <div className="mt-8 flex items-center justify-between gap-3">
+                <div className="sticky bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/90 px-5 py-4 pb-safe backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90 sm:static sm:mt-8 sm:border-t sm:border-slate-100 sm:bg-transparent sm:p-0 sm:pt-6 sm:dark:border-slate-800 sm:dark:bg-transparent">
+                    <div className="flex items-center justify-between gap-3">
                     {step > 1 ? (
                         <button
                             type="button"
@@ -979,13 +1020,13 @@ export function JobSeekerOnboarding({ me }: { me: NonNullable<MeData> }) {
                             )}
                         </button>
                     </div>
+                    </div>
+                    {isOptionalStep && (
+                        <p className="mt-3 text-center text-[10px] text-slate-400 sm:mt-4 sm:text-xs">
+                            This step is optional — you can complete it later.
+                        </p>
+                    )}
                 </div>
-
-                {isOptionalStep && (
-                    <p className="mt-4 text-center text-xs text-slate-400">
-                        This step is optional — you can complete it later in your profile settings.
-                    </p>
-                )}
             </div>
         </div>
     );
@@ -1024,8 +1065,9 @@ export function EmployerOnboarding({ me }: { me: NonNullable<MeData> }) {
     };
 
     return (
-        <div className="mx-auto max-w-xl px-4 py-10">
-            <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+        <div className="mx-auto max-w-xl sm:px-4 sm:py-10">
+            <div className="flex min-h-[100dvh] flex-col bg-white dark:bg-slate-950 sm:min-h-0 sm:rounded-3xl sm:border sm:border-slate-200/80 sm:bg-white/90 sm:p-6 sm:shadow-sm sm:dark:border-slate-800 sm:dark:bg-slate-900/80">
+                <div className="flex-1 px-5 py-8 sm:p-0">
                 <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Set up your company</h1>
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                     This helps us personalise your employer dashboard.
@@ -1061,11 +1103,12 @@ export function EmployerOnboarding({ me }: { me: NonNullable<MeData> }) {
                     <button
                         type="submit"
                         disabled={saving}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-black disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3.5 text-sm font-medium text-white transition hover:bg-black disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 sm:py-2.5"
                     >
                         {saving ? <Loader2 size={15} className="animate-spin" /> : "Continue to dashboard"}
                     </button>
                 </form>
+                </div>
             </div>
         </div>
     );
