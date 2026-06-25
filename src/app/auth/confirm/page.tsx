@@ -1,24 +1,27 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import { toast } from "sonner";
+import { Suspense } from "react";
 
 /**
  * /auth/confirm
  *
- * This page handles the hash-fragment token that Supabase embeds in
- * password-reset (and email-change) emails:
+ * Handles two auth token delivery modes from Supabase emails:
  *
- *   https://www.aganyu.com/auth/confirm#access_token=...&type=recovery
+ * 1. PKCE flow (default with @supabase/ssr):
+ *    URL contains ?code=xxx  → exchange via exchangeCodeForSession()
  *
- * Hash fragments are never sent to the server, so they MUST be consumed
- * client-side.  Once the session is established we redirect the user to
- * the appropriate page.
+ * 2. Implicit / legacy flow:
+ *    URL contains #access_token=xxx → exchange via setSession()
+ *
+ * After establishing the session, redirects to the appropriate page.
  */
-export default function AuthConfirmPage() {
+function AuthConfirmInner() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const supabase = createBrowserSupabaseClient();
     const handled = useRef(false);
 
@@ -26,38 +29,49 @@ export default function AuthConfirmPage() {
         if (handled.current) return;
         handled.current = true;
 
-        const hash = window.location.hash.substring(1); // strip leading #
-        const params = new URLSearchParams(hash);
+        const code = searchParams.get("code");
+        const next = searchParams.get("next") ?? "/dashboard";
+        const type = searchParams.get("type");
 
-        const accessToken = params.get("access_token");
-        const refreshToken = params.get("refresh_token");
-        const type = params.get("type"); // "recovery" | "signup" | "magiclink" | etc.
-        const next = params.get("next") ?? "/dashboard";
-
-        if (!accessToken || !refreshToken) {
-            toast.error("Invalid or expired link. Please request a new one.");
-            router.replace("/auth/forgot-password");
-            return;
-        }
-
-        supabase.auth
-            .setSession({ access_token: accessToken, refresh_token: refreshToken })
-            .then(({ error }) => {
+        if (code) {
+            // PKCE flow: exchange code for session server-side style (client)
+            supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
                 if (error) {
-                    toast.error("Link has expired. Please request a new reset link.");
+                    toast.error("Link has expired. Please request a new one.");
                     router.replace("/auth/forgot-password");
                     return;
                 }
-
-                if (type === "recovery") {
-                    // Send the user to the reset-password form — session is now live
-                    router.replace("/auth/reset-password");
-                } else {
-                    // email confirmation, magic link, etc.
-                    router.replace(next);
-                }
+                const destination = type === "recovery" ? "/auth/reset-password" : next;
+                router.replace(destination);
             });
-    }, [router, supabase]);
+            return;
+        }
+
+        // Implicit/legacy flow: read hash fragment
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
+        const hashType = params.get("type");
+
+        if (accessToken && refreshToken) {
+            supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+                .then(({ error }) => {
+                    if (error) {
+                        toast.error("Link has expired. Please request a new one.");
+                        router.replace("/auth/forgot-password");
+                        return;
+                    }
+                    const destination = hashType === "recovery" ? "/auth/reset-password" : next;
+                    router.replace(destination);
+                });
+            return;
+        }
+
+        // No token found in either location
+        toast.error("Invalid or expired link. Please request a new one.");
+        router.replace("/auth/forgot-password");
+    }, [router, searchParams, supabase]);
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
@@ -68,5 +82,13 @@ export default function AuthConfirmPage() {
                 </p>
             </div>
         </div>
+    );
+}
+
+export default function AuthConfirmPage() {
+    return (
+        <Suspense>
+            <AuthConfirmInner />
+        </Suspense>
     );
 }
