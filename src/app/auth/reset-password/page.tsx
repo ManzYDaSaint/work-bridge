@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -30,8 +30,21 @@ export default function ResetPasswordPage() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [sessionReady, setSessionReady] = useState(false);
     const router = useRouter();
     const supabase = createBrowserSupabaseClient();
+
+    // Guard: ensure a valid recovery session exists before rendering the form
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session) {
+                toast.error("Reset link has expired or is invalid. Please request a new one.");
+                router.replace("/auth/forgot-password");
+            } else {
+                setSessionReady(true);
+            }
+        });
+    }, [router, supabase]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -63,6 +76,19 @@ export default function ResetPasswordPage() {
         }
         setIsLoading(false);
     };
+
+    if (!sessionReady) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">
+                        Verifying session…
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <AuthLayout>
