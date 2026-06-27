@@ -62,19 +62,30 @@ export default function ResetPasswordPage() {
 
         setIsLoading(true);
 
-        const { error } = await supabase.auth.updateUser({
-            password: password,
-        });
+        try {
+            const { error } = await supabase.auth.updateUser({
+                password: password,
+            });
 
-        if (error) {
-            toast.error(error.message);
-        } else {
+            if (error) {
+                toast.error(error.message);
+                setIsLoading(false);
+                return;
+            }
+
             toast.success("Password updated successfully!");
+            
+            // Supabase automatically logs the user in after a password reset,
+            // so we can send them straight to the dashboard instead of login.
             setTimeout(() => {
-                router.push("/login");
-            }, 2000);
+                window.location.href = "/dashboard";
+            }, 1500);
+
+        } catch (err: any) {
+            console.error("Password update error:", err);
+            toast.error(err.message || "An unexpected error occurred while updating the password.");
+            setIsLoading(false);
         }
-        setIsLoading(false);
     };
 
     if (!sessionReady) {
