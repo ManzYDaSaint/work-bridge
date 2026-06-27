@@ -2,7 +2,8 @@ import { MetadataRoute } from 'next';
 import { getSupabaseAdminClient } from '@/lib/supabase-admin';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://aganyu.co';
+    const rawUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://aganyu.com';
+    const baseUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
     
     // Core static routes
     const routes: MetadataRoute.Sitemap = [
