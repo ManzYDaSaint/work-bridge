@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -32,11 +32,15 @@ export default function ResetPasswordPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [sessionReady, setSessionReady] = useState(false);
     const router = useRouter();
-    const supabase = createBrowserSupabaseClient();
+    
+    // Memoize the supabase client so it doesn't get recreated on every render
+    const supabase = useMemo(() => createBrowserSupabaseClient(), []);
 
     // Guard: ensure a valid recovery session exists before rendering the form
     useEffect(() => {
+        let mounted = true;
         supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!mounted) return;
             if (!session) {
                 toast.error("Reset link has expired or is invalid. Please request a new one.");
                 router.replace("/auth/forgot-password");
@@ -44,7 +48,8 @@ export default function ResetPasswordPage() {
                 setSessionReady(true);
             }
         });
-    }, [router, supabase]);
+        return () => { mounted = false; };
+    }, [router, supabase]); // Safe to include supabase now that it is memoized
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -63,12 +68,17 @@ export default function ResetPasswordPage() {
         setIsLoading(true);
 
         try {
-            const { error } = await supabase.auth.updateUser({
-                password: password,
-            });
+            let result = await supabase.auth.updateUser({ password });
 
-            if (error) {
-                toast.error(error.message);
+            // Supabase occasionally throws a concurrency lock error if multiple auth requests happen too fast.
+            // If we hit this specific lock error, we wait half a second and retry once.
+            if (result.error?.message?.includes("stole it") || result.error?.message?.includes("Lock")) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                result = await supabase.auth.updateUser({ password });
+            }
+
+            if (result.error) {
+                toast.error(result.error.message);
                 setIsLoading(false);
                 return;
             }
