@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Clock } from "lucide-react";
 import { showErrorToast } from "@/lib/toasts";
+import { toast } from "sonner";
 import GoogleAuthButtons from "@/components/auth/GoogleAuthButtons";
 
 export default function LoginForm() {
@@ -16,6 +17,8 @@ export default function LoginForm() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [needsVerification, setNeedsVerification] = useState(false);
+    const [isResending, setIsResending] = useState(false);
     const supabase = createBrowserSupabaseClient();
 
     useEffect(() => {
@@ -32,6 +35,11 @@ export default function LoginForm() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
 
         if (error) {
+            if (error.message.toLowerCase().includes("email not confirmed")) {
+                setNeedsVerification(true);
+            } else {
+                setNeedsVerification(false);
+            }
             showErrorToast(error);
             setIsLoading(false);
             return;
@@ -40,6 +48,25 @@ export default function LoginForm() {
         // Full navigation so @supabase/ssr cookie session is present before RSC/middleware run
         // (client router transitions can race ahead of persisted auth cookies).
         window.location.assign("/dashboard");
+    };
+
+    const handleResendEmail = async () => {
+        setIsResending(true);
+        const { error } = await supabase.auth.resend({
+            type: "signup",
+            email: email,
+            options: {
+                emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback`,
+            }
+        });
+
+        if (error) {
+            toast.error(error.message);
+        } else {
+            toast.success("Verification email sent! Please check your inbox.");
+            setNeedsVerification(false);
+        }
+        setIsResending(false);
     };
 
     return (
@@ -72,6 +99,19 @@ export default function LoginForm() {
                         <Clock size={16} className="mt-0.5 shrink-0" />
                         <p className="text-sm">Your account profile wasn&apos;t set up correctly. Please sign in again — it will be fixed automatically.</p>
                     </div>
+                </div>
+            )}
+
+            {needsVerification && (
+                <div className="mb-5 rounded-2xl border border-blue-200 bg-blue-50/80 px-4 py-4 text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/50 dark:text-blue-200">
+                    <p className="text-sm font-medium mb-3 text-center">Your email address needs to be verified.</p>
+                    <button
+                        onClick={handleResendEmail}
+                        disabled={isResending}
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-500 dark:hover:bg-blue-600"
+                    >
+                        {isResending ? "Sending..." : "Resend Verification Email"}
+                    </button>
                 </div>
             )}
 

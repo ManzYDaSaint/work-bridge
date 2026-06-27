@@ -10,6 +10,7 @@ import { PageHeader, SectionCard, Badge } from "@/components/dashboard/ui";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { EmailPreferences } from "@/components/dashboard/EmailPreferences";
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
     return (
@@ -236,22 +237,7 @@ export default function EmployerSettingsPage() {
 
 
                     {/* Preferences */}
-                    <SectionCard title="Preferences">
-                        <div className="space-y-4 p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Application alerts</p>
-                                    <p className="text-xs text-slate-400">Email notifications when a new applicant submits to one of your roles</p>
-                                </div>
-                                <Toggle checked={watch("applicationAlerts") ?? true} onChange={(val) => setValue("applicationAlerts", val, { shouldDirty: true })} />
-                            </div>
-                            {isDirty && (
-                                <p className="text-xs text-amber-600 dark:text-amber-400">
-                                    Save changes in the company profile form above to apply preference updates.
-                                </p>
-                            )}
-                        </div>
-                    </SectionCard>
+                    <EmailPreferences />
 
                     {/* Danger zone */}
                     <SectionCard title="Danger zone">

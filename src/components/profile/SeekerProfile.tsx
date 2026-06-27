@@ -11,6 +11,7 @@ import { useFieldArray } from "react-hook-form";
 import { Badge, PageHeader, SectionCard } from "@/components/dashboard/ui";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { EmailPreferences } from "@/components/dashboard/EmailPreferences";
 
 interface SeekerProfileData extends JobSeeker {
     completion: number;
@@ -588,6 +589,8 @@ export default function SeekerProfile() {
                             </div>
                         </div>
                     </SectionCard>
+                    
+                    <EmailPreferences />
                 </div>
             </div>
         </div>

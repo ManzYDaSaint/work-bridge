@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isFreeEmailDomain } from "@/lib/email-safety";
 import { getAuthOptional } from "@/lib/auth-guard";
+import { sendWelcomeEmail } from "@/lib/resend";
 
 type AuthRole = "JOB_SEEKER" | "EMPLOYER";
 
@@ -104,6 +105,14 @@ export async function GET(request: Request) {
                             if (canApplyRequestedRole) {
                                 await adminClient.from("job_seekers").delete().eq("id", user.id);
                             }
+                        }
+
+                        // Send welcome email only on their very first successful login/verification
+                        if (!existing && email) {
+                            // Execute without blocking the redirect response
+                            sendWelcomeEmail(email, displayName).catch(err => 
+                                console.error("[auth/callback] welcome email failed:", err)
+                            );
                         }
                     }
                 }

@@ -95,6 +95,12 @@ export interface User {
     createdAt?: string;
     onboardingComplete?: boolean;
     onboardingCompletedAt?: string | null;
+    email_preferences?: {
+        marketing: boolean;
+        job_alerts: boolean;
+        application_updates: boolean;
+        weekly_digest: boolean;
+    };
 }
 
 export interface Job {

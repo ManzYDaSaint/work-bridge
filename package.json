@@ -14,6 +14,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@napi-rs/canvas": "^0.1.97",
+    "@react-email/components": "^1.0.12",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.97.0",
     "braces": "^3.0.3",
@@ -23,6 +24,7 @@
     "next": "^16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-email": "^6.6.5",
     "react-hook-form": "^7.71.2",
     "react-markdown": "^10.1.0",
     "recharts": "^3.8.1",

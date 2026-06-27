@@ -175,8 +175,8 @@ export default function PrivacyPage() {
                         <h4 className="text-2xl font-semibold text-white">Your Consent</h4>
                         <p className="text-blue-100/80 font-medium max-w-2xl mx-auto leading-relaxed italic">
                             By interacting with the Aganyu platform, authenticating via Supabase or Google Sign-In, and uploading academic credentials, you consent to this privacy policy. For questions, contact{' '}
-                            <a href="mailto:privacy@aganyu.com" className="underline text-blue-200 hover:text-white">
-                                privacy@aganyu.com
+                            <a href="mailto:sensei@aganyu.com" className="underline text-blue-200 hover:text-white">
+                                sensei@aganyu.com
                             </a>.
                         </p>
                     </div>

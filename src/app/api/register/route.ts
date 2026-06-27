@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { sendWelcomeEmail } from "@/lib/resend";
 import { canUseEmailForRegistration, isFreeEmailDomain } from "@/lib/email-safety";
 import { notifyAdmin } from "@/lib/notifications";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -128,8 +127,6 @@ export async function POST(request: Request) {
             }
         }
 
-        // 3. Send Welcome Email
-        await sendWelcomeEmail(registrationEmail || authUser.email!, full_name || companyName || "");
 
         // 4. Notify Administrators (Real-Time System Event)
         if (effectiveRole === "EMPLOYER") {
