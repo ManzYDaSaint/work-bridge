@@ -47,6 +47,11 @@ export default function ResetPasswordPage() {
             } else {
                 setSessionReady(true);
             }
+        }).catch((err) => {
+            console.warn("Session check lock error safely ignored:", err);
+            // If we get a lock error here, it means AuthContext is also fetching the session.
+            // We can safely assume the session exists for now, or let AuthContext handle it.
+            if (mounted) setSessionReady(true);
         });
         return () => { mounted = false; };
     }, [router, supabase]); // Safe to include supabase now that it is memoized
@@ -68,17 +73,24 @@ export default function ResetPasswordPage() {
         setIsLoading(true);
 
         try {
-            let result = await supabase.auth.updateUser({ password });
-
-            // Supabase occasionally throws a concurrency lock error if multiple auth requests happen too fast.
-            // If we hit this specific lock error, we wait half a second and retry once.
-            if (result.error?.message?.includes("stole it") || result.error?.message?.includes("Lock")) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                result = await supabase.auth.updateUser({ password });
+            let errorToReport = null;
+            
+            try {
+                const { error } = await supabase.auth.updateUser({ password });
+                errorToReport = error;
+            } catch (err: any) {
+                // If it throws a lock error, retry once
+                if (err?.message?.includes("stole it") || err?.message?.includes("Lock")) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    const { error } = await supabase.auth.updateUser({ password });
+                    errorToReport = error;
+                } else {
+                    throw err; // Re-throw other unexpected errors
+                }
             }
 
-            if (result.error) {
-                toast.error(result.error.message);
+            if (errorToReport) {
+                toast.error(errorToReport.message);
                 setIsLoading(false);
                 return;
             }

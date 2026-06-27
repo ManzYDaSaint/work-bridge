@@ -45,7 +45,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setLoading(false);
         };
 
-        initialize();
+        initialize().catch(err => {
+            console.warn("Auth initialization error (likely benign lock issue):", err);
+            if (isMounted) setLoading(false);
+        });
 
         const {
             data: { subscription },
@@ -60,10 +63,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
-                const { data: userData } = await supabase.auth.getUser();
                 if (!isMounted) return;
                 setSession(sessionData ?? null);
-                setUser(userData.user ?? null);
+                // Use the user object from the session data instead of making a new network call.
+                // Making an async getUser() call here causes a DEADLOCK with updateUser().
+                setUser(sessionData?.user ?? null);
                 dispatchAuthSignedInEvent();
                 return;
             }

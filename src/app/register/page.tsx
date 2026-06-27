@@ -91,7 +91,7 @@ function RegisterForm() {
             email,
             password: formData.password,
             options: {
-                emailRedirectTo: `${window.location.origin}/auth/callback`,
+                emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback`,
                 data: {
                     role,
                     referral_code: referralCode,
@@ -105,31 +105,43 @@ function RegisterForm() {
             return;
         }
 
-        try {
-            const regRes = await fetch("/api/register", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ email, password: formData.password, role, userId: signUpData.user?.id }),
-            });
-            if (!regRes.ok) {
-                const regBody = await regRes.json().catch(() => ({}));
-                console.error("[register] profile creation failed:", regBody);
-                toast.warning("Account created but profile setup had an issue. Please contact support if login fails.");
+        // If email confirmation is enabled, Supabase doesn't log the user in immediately.
+        // We skip the profile API call here because auth/callback/route.ts handles profile
+        // creation automatically when they click the confirmation link.
+        if (signUpData.session) {
+            try {
+                const regRes = await fetch("/api/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ email, password: formData.password, role, userId: signUpData.user?.id }),
+                });
+                if (!regRes.ok) {
+                    const regBody = await regRes.json().catch(() => ({}));
+                    console.error("[register] profile creation failed:", regBody);
+                }
+                await fetch("/api/metrics/track", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ eventName: "register_completed", stage: "register", role }),
+                });
+            } catch (err) {
+                console.error("[register] post-signup hook error:", err);
             }
-            await fetch("/api/metrics/track", {
+        } else {
+            // Track completion for email confirmation flow
+            fetch("/api/metrics/track", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ eventName: "register_completed", stage: "register", role }),
-            });
-        } catch (err) {
-            console.error("[register] post-signup hook error:", err);
-            // Non-blocking — don't block navigation but do log
+                body: JSON.stringify({ eventName: "register_completed_pending_email", stage: "register", role }),
+            }).catch(() => {});
         }
 
         // Force sign out to prevent auto-login if Supabase is configured to return a session on sign up
-        await supabase.auth.signOut();
+        if (signUpData.session) {
+            await supabase.auth.signOut();
+        }
 
         toast.success("Account created. Verify your email, then complete onboarding.");
         router.push("/login");
