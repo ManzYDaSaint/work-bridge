@@ -32,12 +32,11 @@ export async function GET(
         return NextResponse.json({ error: "Candidate profile is not visible" }, { status: 404 });
     }
 
-    // Increment seeker's profile_views counter in the background
-    supabase
+    // Increment seeker's profile_views counter (awaited so serverless doesn't kill the request)
+    await supabase
         .from("job_seekers")
         .update({ profile_views: (seeker.profile_views || 0) + 1 })
-        .eq("id", seeker.id)
-        .then();
+        .eq("id", seeker.id);
 
     // Fetch their certificates
     const { data: certificates } = await supabase
@@ -51,42 +50,61 @@ export async function GET(
     let canSeeContact = false;
     let contactLimitReached = false;
 
-    if (!isAnonymous && auth.role === "EMPLOYER") {
-        const startOfMonth = new Date(
-            new Date().getFullYear(),
-            new Date().getMonth(),
-            1
-        ).toISOString();
-
+    if (auth.role === "EMPLOYER") {
         const { data: employerData } = await supabase
             .from("employers")
-            .select("contact_limit_bonus")
+            .select("company_name, contact_limit_bonus")
             .eq("id", auth.userId)
             .single();
 
-        const bonus = employerData?.contact_limit_bonus || 0;
+        if (employerData?.company_name) {
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            const { data: recentNotif } = await supabase
+                .from("notifications")
+                .select("id")
+                .eq("user_id", seeker.id)
+                .eq("type", "PROFILE_VIEW")
+                .like("message", `${employerData.company_name}%`)
+                .gte("created_at", twentyFourHoursAgo)
+                .limit(1)
+                .maybeSingle();
 
-        const { data: contactDecision, error: contactError } = await supabase.rpc(
-            "try_record_employer_contact_view",
-            {
-                p_employer_id: auth.userId,
-                p_seeker_id: seeker.id,
-                p_month_limit: 30 + bonus
+            if (!recentNotif) {
+                const { createNotification } = await import("@/lib/notifications");
+                await createNotification({
+                    userId: seeker.id,
+                    title: "New Profile View",
+                    message: `${employerData.company_name} just viewed your profile!`,
+                    type: "PROFILE_VIEW",
+                    link: "/dashboard/seeker/profile"
+                });
             }
-        );
-
-        if (contactError) {
-            console.error("Contact view RPC failed:", contactError);
-            return NextResponse.json({ error: "Failed to determine contact visibility" }, { status: 500 });
         }
 
-        const allowed = Array.isArray(contactDecision) ? contactDecision[0]?.can_see : contactDecision?.can_see;
-        const viewCount = Array.isArray(contactDecision) ? contactDecision[0]?.view_count : contactDecision?.view_count;
+        if (!isAnonymous) {
+            const bonus = employerData?.contact_limit_bonus || 0;
 
-        if (allowed) {
-            canSeeContact = true;
-        } else {
-            contactLimitReached = true;
+            const { data: contactDecision, error: contactError } = await supabase.rpc(
+                "try_record_employer_contact_view",
+                {
+                    p_employer_id: auth.userId,
+                    p_seeker_id: seeker.id,
+                    p_month_limit: 30 + bonus
+                }
+            );
+
+            if (contactError) {
+                console.error("Contact view RPC failed:", contactError);
+                return NextResponse.json({ error: "Failed to determine contact visibility" }, { status: 500 });
+            }
+
+            const allowed = Array.isArray(contactDecision) ? contactDecision[0]?.can_see : contactDecision?.can_see;
+
+            if (allowed) {
+                canSeeContact = true;
+            } else {
+                contactLimitReached = true;
+            }
         }
     }
 

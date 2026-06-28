@@ -11,12 +11,16 @@ import JobAlertsManager from "@/components/dashboard/seeker/JobAlertsManager";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import OnboardingChecklist from "@/components/dashboard/OnboardingChecklist";
+import JobDetailModal, { ExtendedJob } from "@/components/jobs/JobDetailModal";
+import { ScreeningAnswer } from "@/types";
 
 export default function SeekerDashboardPage() {
     const { user } = useUser();
     const [applications, setApplications] = useState<Application[]>([]);
     const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedJob, setSelectedJob] = useState<ExtendedJob | null>(null);
+    const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
     const searchParams = useSearchParams();
 
     useEffect(() => {
@@ -33,7 +37,11 @@ export default function SeekerDashboardPage() {
                     apiFetch("/api/applications"),
                     apiFetch("/api/seeker/saved-jobs"),
                 ]);
-                if (appRes.ok) setApplications(await appRes.json());
+                if (appRes.ok) {
+                    const apps = await appRes.json();
+                    setApplications(apps);
+                    setAppliedJobIds(new Set(apps.map((a: any) => a.jobId || (a.job && a.job.id))));
+                }
                 if (savedRes.ok) setSavedJobs(await savedRes.json());
             } finally {
                 setLoading(false);
@@ -41,6 +49,25 @@ export default function SeekerDashboardPage() {
         };
         fetchData();
     }, []);
+
+    const handleApply = async (jobId: string, screeningAnswers?: Record<string, ScreeningAnswer>) => {
+        try {
+            const res = await apiFetch(`/api/jobs/${jobId}/apply`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ screeningAnswers: screeningAnswers || {} }),
+            });
+            if (res.ok) {
+                setAppliedJobIds((prev) => new Set([...prev, jobId]));
+                toast.success("Application sent.");
+            } else {
+                const err = await res.json();
+                toast.error(err.error || "Failed to apply");
+            }
+        } catch {
+            toast.error("Failed to apply");
+        }
+    };
 
     if (loading) {
         return (
@@ -96,18 +123,21 @@ export default function SeekerDashboardPage() {
                             <div className="divide-y divide-stone-200/70 dark:divide-slate-800">
                                 {applications.slice(0, 5).map((app) => (
                                     <div key={app.id} className="flex items-center justify-between gap-4 px-6 py-4">
-                                        <div className="min-w-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => app.job && setSelectedJob(app.job as unknown as ExtendedJob)}
+                                            className="min-w-0 text-left hover:opacity-75 transition-opacity"
+                                            disabled={!app.job}
+                                        >
                                             <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{app.job?.title || "Unknown role"}</p>
-                                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{app.job?.employer?.companyName || app.job?.employer?.company_name || "Company"}</p>
-                                        </div>
+                                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{(app.job?.employer as any)?.companyName || (app.job?.employer as any)?.company_name || "Company"}</p>
+                                        </button>
                                         <Badge label={app.status} variant={app.status === "ACCEPTED" ? "green" : app.status === "REJECTED" ? "red" : "yellow"} />
                                     </div>
                                 ))}
                             </div>
                         )}
                     </SectionCard>
-
-
                 </div>
 
                 <div className="space-y-6">
@@ -145,8 +175,28 @@ export default function SeekerDashboardPage() {
                             ) : (
                                 savedJobs.slice(0, 4).map((saved) => (
                                     <div key={saved.id} className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-                                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{saved.job?.title || "Job"}</p>
-                                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{saved.job?.employer?.companyName || saved.job?.employer?.company_name || "Company"}</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => saved.job && setSelectedJob(saved.job as unknown as ExtendedJob)}
+                                            className="w-full text-left hover:opacity-75 transition-opacity"
+                                            disabled={!saved.job}
+                                        >
+                                            <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{saved.job?.title || "Job"}</p>
+                                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{(saved.job?.employer as any)?.companyName || (saved.job?.employer as any)?.company_name || "Company"}</p>
+                                        </button>
+                                        <div className="mt-2 flex justify-end">
+                                            {appliedJobIds.has(saved.job?.id || "") ? (
+                                                <Badge label="Applied" variant="green" />
+                                            ) : saved.job ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedJob(saved.job as unknown as ExtendedJob)}
+                                                    className="text-xs font-semibold text-[#16324f] hover:underline dark:text-slate-200"
+                                                >
+                                                    Apply now →
+                                                </button>
+                                            ) : null}
+                                        </div>
                                     </div>
                                 ))
                             )}
@@ -154,6 +204,17 @@ export default function SeekerDashboardPage() {
                     </SectionCard>
                 </div>
             </div>
+
+            {selectedJob && (
+                <JobDetailModal
+                    job={selectedJob}
+                    isSaved={savedJobs.some((s) => s.job?.id === selectedJob.id)}
+                    isApplied={appliedJobIds.has(selectedJob.id)}
+                    onClose={() => setSelectedJob(null)}
+                    onSave={() => toast.info("Manage your saved jobs in the Saved tab.")}
+                    onApply={(answers) => handleApply(selectedJob.id, answers)}
+                />
+            )}
         </div>
     );
 }

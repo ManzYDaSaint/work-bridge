@@ -8,18 +8,8 @@ import { apiFetch, apiFetchJson } from "@/lib/api";
 import { Camera, Loader2, Check, Shield, AlertCircle, X } from "lucide-react";
 import { PageHeader, SectionCard, Badge } from "@/components/dashboard/ui";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { toast } from "sonner";
 import { EmailPreferences } from "@/components/dashboard/EmailPreferences";
-
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
-    return (
-        <label className="relative inline-flex cursor-pointer items-center">
-            <input type="checkbox" className="peer sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-            <div className="h-6 w-11 rounded-full bg-slate-200 transition-colors after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-[#16324f] peer-checked:after:translate-x-full dark:bg-slate-700" />
-        </label>
-    );
-}
 
 function LogoUpload({ url, onChange }: { url?: string; onChange: (url: string) => void }) {
     const [uploading, setUploading] = useState(false);
@@ -54,7 +44,6 @@ function LogoUpload({ url, onChange }: { url?: string; onChange: (url: string) =
 
 export default function EmployerSettingsPage() {
     const [loading, setLoading] = useState(true);
-    const [plan, setPlan] = useState<"FREE" | "PREMIUM">("FREE");
     const [saving, setSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [recruiterVerified, setRecruiterVerified] = useState(false);

@@ -49,7 +49,7 @@ export const PATCH = withAudit(async (request: Request) => {
         if (error) throw error;
 
         return NextResponse.json({ success: true });
-    } catch (error: any) {
+    } catch {
         return NextResponse.json({ error: "Failed to update request." }, { status: 500 });
     }
 }, "ADMIN_ACTION_CLOSE_REQUEST");

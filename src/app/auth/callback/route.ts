@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isFreeEmailDomain } from "@/lib/email-safety";
-import { getAuthOptional } from "@/lib/auth-guard";
 import { sendWelcomeEmail } from "@/lib/resend";
 
 type AuthRole = "JOB_SEEKER" | "EMPLOYER";
@@ -72,8 +71,14 @@ export async function GET(request: Request) {
                                 await adminClient.from("employers").delete().eq("id", user.id);
                             }
 
-                            // Process referral if ref is present
-                            const referralCode = searchParams.get("ref");
+                            // Process referral if ref is present.
+                            // For OAuth signups the ref param is forwarded explicitly to the callback URL.
+                            // For email/password signups Supabase strips query params from the confirmation
+                            // redirect, so we fall back to the value stored in user metadata at signup time.
+                            const referralCode =
+                                searchParams.get("ref") ||
+                                (user.user_metadata?.referral_code as string | undefined) ||
+                                null;
                             if (referralCode && isFreshOAuthUser(user.created_at)) {
                                 const { data: referrer } = await adminClient
                                     .from("job_seekers")

@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
-import { useRouter } from "next/navigation";
 import { AdminMetrics, AuditLog, AuditLogResponse, Employer, User } from "@/types";
-import { CheckCircle, XCircle, Users, Briefcase, UserIcon, ShieldCheck, ArrowRight } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { CheckCircle, XCircle, Users, Briefcase, UserIcon } from "lucide-react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { signOutAndRedirect } from "@/lib/auth-utils";
 
@@ -40,9 +39,8 @@ export default function AdminDashboardClient() {
     const [auditMeta, setAuditMeta] = useState({ total: 0, limit: 50, offset: 0 });
     const [auditFilters, setAuditFilters] = useState({ userId: "", action: "", method: "", path: "", minStatus: "", maxStatus: "" });
     const [fetchLoading, setFetchLoading] = useState(true);
-    const router = useRouter();
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
 
             const searchParams = new URLSearchParams({ limit: String(auditMeta.limit), offset: String(auditMeta.offset) });
@@ -72,7 +70,7 @@ export default function AdminDashboardClient() {
         } finally {
             setFetchLoading(false);
         }
-    };
+    }, [auditMeta.limit, auditMeta.offset, auditFilters]);
 
     useEffect(() => {
         fetchData();
@@ -85,7 +83,7 @@ export default function AdminDashboardClient() {
         }, 30000);
 
         return () => clearInterval(interval);
-    }, [auditMeta.offset, JSON.stringify(auditFilters), activeTab]);
+    }, [fetchData, activeTab]);
 
     const updateEmployerStatus = async (id: string, status: string) => {
         const res = await apiFetch(`/admin/employers`, {

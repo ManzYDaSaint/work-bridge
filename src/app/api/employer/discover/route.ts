@@ -15,6 +15,7 @@ export async function GET(request: Request) {
     const locationParam = searchParams.get("location");
     const qualificationParam = searchParams.get("qualification");
     const hasResumeParam = searchParams.get("hasResume");
+    const statusParam = searchParams.get("status");
 
     const supabase = await createSupabaseServerClient();
 
@@ -60,6 +61,10 @@ export async function GET(request: Request) {
 
     if (hasResumeParam === "true") {
         query = query.not("resume_url", "is", null);
+    }
+
+    if (statusParam && statusParam !== "ALL") {
+        query = query.eq("employment_status", statusParam);
     }
 
     if (skillsParam) {

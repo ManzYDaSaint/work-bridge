@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
-import { Loader2, Search, Filter, MapPin, Briefcase, GraduationCap, Bookmark } from "lucide-react";
+import { Loader2, Search, Filter, MapPin, Briefcase, GraduationCap, Bookmark, CheckCircle } from "lucide-react";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
 import CandidateDetailDrawer, { ApplicantProfile } from "@/components/dashboard/employer/CandidateDetailDrawer";
 import { toast } from "sonner";
@@ -26,16 +26,6 @@ interface SeekerCard {
     is_saved?: boolean;
 }
 
-interface TalentProfile extends SeekerCard {
-    contact: {
-        email?: string;
-        phone?: string;
-        whatsapp?: boolean;
-    } | null;
-    isContactGated?: boolean;
-    contactLimitReached?: boolean;
-}
-
 export default function DiscoverTalentPage() {
     const [seekers, setSeekers] = useState<SeekerCard[]>([]);
     const [loading, setLoading] = useState(true);
@@ -51,6 +41,7 @@ export default function DiscoverTalentPage() {
     const [qualificationFilter, setQualificationFilter] = useState("ALL");
     const [hasResumeFilter, setHasResumeFilter] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [appliedSeekerIds, setAppliedSeekerIds] = useState<Set<string>>(new Set());
 
     const handleToggleSave = async (e: React.MouseEvent, seekerId: string, isCurrentlySaved: boolean) => {
         e.preventDefault();
@@ -111,12 +102,23 @@ export default function DiscoverTalentPage() {
         };
     }, [selectedSeekerId]);
 
+    useEffect(() => {
+        // Fetch seeker IDs who applied to this employer's jobs for cross-referencing
+        apiFetch("/api/employer/applications")
+            .then((r) => r.ok ? r.json() : [])
+            .then((apps: any[]) => {
+                setAppliedSeekerIds(new Set(apps.map((a: any) => a.userId || a.user?.id).filter(Boolean)));
+            })
+            .catch(() => {});
+    }, []);
+
     const fetchSeekers = useCallback(async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
             if (intentFilter !== "ALL") params.append("intent", intentFilter);
             if (seniorityFilter !== "ALL") params.append("seniority", seniorityFilter);
+            if (statusFilter !== "ALL") params.append("status", statusFilter);
             if (locationQuery.trim()) params.append("location", locationQuery.trim());
             if (qualificationFilter !== "ALL") params.append("qualification", qualificationFilter);
             if (hasResumeFilter) params.append("hasResume", "true");
@@ -125,12 +127,7 @@ export default function DiscoverTalentPage() {
             const res = await apiFetch(`/api/employer/discover?${params.toString()}`);
             if (res.ok) {
                 const data = await res.json();
-                let seekers = data.seekers || [];
-                // Client-side filter for employment status
-                if (statusFilter !== "ALL") {
-                    seekers = seekers.filter((s: SeekerCard) => s.employment_status === statusFilter);
-                }
-                setSeekers(seekers);
+                setSeekers(data.seekers || []);
             }
         } finally {
             setLoading(false);
@@ -338,7 +335,7 @@ export default function DiscoverTalentPage() {
                                                 >
                                                     <Bookmark size={15} className={seeker.is_saved ? "fill-[#16324f] text-[#16324f]" : "text-slate-400"} />
                                                 </button>
-                                                <div className="flex flex-col items-end gap-1.5">
+                                            <div className="flex flex-col items-end gap-1.5">
                                                     <Badge 
                                                         label={formatIntent(seeker.search_intent)} 
                                                         variant={seeker.search_intent === "SEEKING_INTERNSHIP" ? "yellow" : "blue"} 
@@ -347,6 +344,11 @@ export default function DiscoverTalentPage() {
                                                         const s = formatEmploymentStatus(seeker.employment_status);
                                                         return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${s.color}`}>{s.label}</span>;
                                                     })()}
+                                                    {appliedSeekerIds.has(seeker.id) && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-400">
+                                                            <CheckCircle size={10} /> Applied
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

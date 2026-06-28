@@ -63,8 +63,8 @@ export const POST = withAuth(async (request, auth) => {
         }
         
         return NextResponse.json({ success: true, alert: newAlert });
-    } catch (error: any) {
-        console.error("Job Alert POST error:", error);
+    } catch {
+        console.error("Job Alert POST error");
         return NextResponse.json({ error: "Failed to create alert" }, { status: 500 });
     }
 }, ["JOB_SEEKER"]);
@@ -89,7 +89,7 @@ export const DELETE = withAuth(async (request, auth) => {
         if (error) throw error;
         
         return NextResponse.json({ success: true });
-    } catch (error: any) {
+    } catch {
         return NextResponse.json({ error: "Failed to delete alert" }, { status: 500 });
     }
 }, ["JOB_SEEKER"]);

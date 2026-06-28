@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { Building2, CheckCircle, XCircle, Search, Loader2, ExternalLink, AlertTriangle } from "lucide-react";
+import { Building2, CheckCircle, XCircle, Search, Loader2, ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { PageHeader, Badge, Tabs } from "@/components/dashboard/ui";
 import { toast } from "sonner";

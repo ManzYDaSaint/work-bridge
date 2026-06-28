@@ -5,19 +5,39 @@ import { NextResponse } from "next/server";
 
 const ALLOWED_JOB_STATUSES = new Set(["ACTIVE", "PENDING", "EXPIRED", "FILLED", "ARCHIVED"]);
 
-export const GET = withAudit(async () => {
+export const GET = withAudit(async (request: Request) => {
     const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
     const supabase = await createSupabaseServerClient();
     try {
-        const { data: jobs, error } = await supabase
+        const { searchParams } = new URL(request.url);
+        const page = parseInt(searchParams.get("page") || "1");
+        const limit = parseInt(searchParams.get("limit") || "50");
+        const search = searchParams.get("search") || "";
+        const status = searchParams.get("status") || "ALL";
+
+        let query = supabase
             .from("jobs")
             .select(`
                 *,
                 employer:employers(id, company_name, location, status, logo_url, industry, website, description, recruiter_verified)
-            `)
-            .order('created_at', { ascending: false });
+            `, { count: "exact" });
+
+        if (status !== "ALL") {
+            query = query.eq("status", status);
+        }
+
+        if (search) {
+            query = query.ilike("title", `%${search}%`);
+        }
+
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
+
+        const { data: jobs, error, count } = await query
+            .order('created_at', { ascending: false })
+            .range(from, to);
 
         if (error) throw error;
 
@@ -25,8 +45,6 @@ export const GET = withAudit(async () => {
         const formattedJobs = jobs.map(j => {
             const employer = Array.isArray(j.employer) ? j.employer[0] : j.employer;
             const employerStatus = employer?.status;
-
-            const jobStatus = j.status;
 
             return {
                 ...j,
@@ -46,7 +64,12 @@ export const GET = withAudit(async () => {
             };
         });
 
-        return NextResponse.json(formattedJobs);
+        return NextResponse.json({
+            jobs: formattedJobs,
+            total: count || 0,
+            page,
+            limit
+        });
     } catch (error) {
         console.error("Admin jobs fetch error:", error);
         return NextResponse.json({ error: "Failed to fetch jobs" }, { status: 500 });
@@ -61,7 +84,6 @@ export const PATCH = withAudit(async (request: Request) => {
 
     try {
         const { jobId, status } = await request.json();
-        const { user } = auth;
 
         if (typeof jobId !== "string" || !jobId) {
             return NextResponse.json({ error: "Valid jobId is required" }, { status: 400 });

@@ -3,7 +3,7 @@ export type EmployerStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type JobStatus = 'ACTIVE' | 'EXPIRED' | 'FILLED' | 'ARCHIVED' | 'PENDING' | 'REJECTED';
 export type JobType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP';
 export type JobWorkMode = 'REMOTE' | 'HYBRID' | 'ON_SITE';
-export type ApplicationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SHORTLISTED' | 'INTERVIEWING' | 'INVITED';
+export type ApplicationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SHORTLISTED' | 'INTERVIEWING' | 'INVITED' | 'WITHDRAWN';
 export type ScreeningAnswer = 'YES' | 'NO';
 
 export interface ScreeningQuestion {
@@ -81,6 +81,8 @@ export interface Employer {
     logo_url?: string;
     logoUrl?: string;
     recruiterVerified?: boolean;
+    default_scheduling_link?: string;
+    defaultSchedulingLink?: string;
     _count?: {
         jobs: number;
     };
@@ -93,6 +95,7 @@ export interface User {
     jobSeeker?: JobSeeker;
     employer?: Employer;
     createdAt?: string;
+    viewedAt?: string;
     onboardingComplete?: boolean;
     onboardingCompletedAt?: string | null;
     email_preferences?: {
@@ -131,6 +134,7 @@ export interface Job {
     isNew?: boolean;
     deadline?: string;
     createdAt?: string;
+    viewedAt?: string;
     lastAlertSentAt?: string;
 }
 
@@ -148,6 +152,7 @@ export interface Application {
     user?: User;
     job?: Job;
     createdAt?: string;
+    viewedAt?: string;
 }
 
 export interface AppNotification {

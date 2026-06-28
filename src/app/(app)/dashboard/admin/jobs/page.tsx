@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
 import { Briefcase, CheckCircle, XCircle, Trash2, Search, Loader2, Eye } from "lucide-react";
@@ -12,24 +12,64 @@ export default function AdminJobsPage() {
     const [jobs, setJobs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [total, setTotal] = useState(0);
+    const [page, setPage] = useState(1);
+    const [statusFilter, setStatusFilter] = useState("ALL");
     const [actioning, setActioning] = useState<string | null>(null);
     const [selectedJob, setSelectedJob] = useState<any | null>(null);
+    const limit = 20;
     const router = useRouter();
 
-    const fetchJobs = async () => {
+    const fetchJobs = useCallback(async () => {
+        setLoading(true);
         try {
-            const res = await apiFetch("/api/admin/jobs");
-            if (res.ok) setJobs(await res.json());
+            const res = await apiFetch(`/api/admin/jobs?page=${page}&limit=${limit}&search=${encodeURIComponent(searchTerm)}&status=${statusFilter}`);
+            if (res.ok) {
+                const data = await res.json();
+                setJobs(data.jobs || []);
+                setTotal(data.total || 0);
+            }
         } catch {
             toast.error("Could not load jobs.");
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, limit, searchTerm, statusFilter]);
 
     useEffect(() => {
-        fetchJobs();
-    }, []);
+        const timer = setTimeout(() => fetchJobs(), 300);
+        return () => clearTimeout(timer);
+    }, [fetchJobs]);
+
+    const handleDownloadCSV = async () => {
+        toast.loading("Exporting jobs...");
+        try {
+            const res = await apiFetch(`/api/admin/jobs?page=1&limit=100000&search=${encodeURIComponent(searchTerm)}&status=${statusFilter}`);
+            if (res.ok) {
+                const data = await res.json();
+                const headers = ["ID", "Title", "Company", "Status", "Created At"];
+                const csvData = data.jobs.map((j: any) => [
+                    j.id,
+                    j.title ? `"${j.title.replace(/"/g, '""')}"` : "",
+                    j.companyName ? `"${j.companyName.replace(/"/g, '""')}"` : "",
+                    j.status,
+                    j.createdAt
+                ].join(","));
+                const csvStr = [headers.join(","), ...csvData].join("\n");
+                const blob = new Blob([csvStr], { type: "text/csv" });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `jobs_export_${new Date().toISOString().split("T")[0]}.csv`;
+                a.click();
+                toast.dismiss();
+                toast.success("Export complete");
+            }
+        } catch {
+            toast.dismiss();
+            toast.error("Export failed");
+        }
+    };
 
     const handleStatusUpdate = async (jobId: string, status: string) => {
         setActioning(jobId);
@@ -67,10 +107,7 @@ export default function AdminJobsPage() {
         }
     };
 
-    const filteredJobs = jobs.filter((job) =>
-        job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        job.companyName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredJobs = jobs; // Filtered on server
 
     if (loading) {
         return (
@@ -87,15 +124,35 @@ export default function AdminJobsPage() {
                 subtitle="Moderate the marketplace with a clean, searchable listing view."
             />
 
-            <div className="relative max-w-xl">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                    type="text"
-                    placeholder="Search role or company"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full rounded-2xl border border-stone-200 bg-white px-12 py-3 text-sm outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900"
-                />
+            <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Search role or company"
+                        value={searchTerm}
+                        onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+                        className="w-full rounded-2xl border border-stone-200 bg-white px-12 py-3 text-sm outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900"
+                    />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    {["ALL", "ACTIVE", "PENDING", "REJECTED"].map((status) => (
+                        <button
+                            key={status}
+                            onClick={() => { setStatusFilter(status); setPage(1); }}
+                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                                statusFilter === status
+                                    ? "border-[#16324f] bg-[#16324f] text-white"
+                                    : "border-stone-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                            }`}
+                        >
+                            {status}
+                        </button>
+                    ))}
+                    <button onClick={handleDownloadCSV} className="rounded-full border border-stone-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
+                        Export CSV
+                    </button>
+                </div>
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
@@ -133,6 +190,16 @@ export default function AdminJobsPage() {
                                 >
                                     <Eye size={16} />
                                 </button>
+                                {job.status === "PENDING" && (
+                                    <button
+                                        onClick={() => handleStatusUpdate(job.id, "ACTIVE")}
+                                        disabled={actioning === job.id}
+                                        className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-emerald-600 dark:border-slate-700 dark:text-slate-300"
+                                        title="Approve"
+                                    >
+                                        <CheckCircle size={16} />
+                                    </button>
+                                )}
                                 {job.status !== "REJECTED" && (
                                     <button
                                         onClick={() => handleStatusUpdate(job.id, "REJECTED")}
@@ -156,6 +223,30 @@ export default function AdminJobsPage() {
                     ))
                 )}
             </div>
+            
+            {total > limit && (
+                <div className="flex items-center justify-between mt-6 px-4">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total}
+                    </p>
+                    <div className="flex gap-2">
+                        <button
+                            disabled={page === 1}
+                            onClick={() => setPage(page - 1)}
+                            className="rounded-xl border border-stone-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300"
+                        >
+                            Previous
+                        </button>
+                        <button
+                            disabled={page * limit >= total}
+                            onClick={() => setPage(page + 1)}
+                            className="rounded-xl border border-stone-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {selectedJob && (
                 <JobDetailModal

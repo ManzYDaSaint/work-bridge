@@ -1,4 +1,3 @@
-import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -11,7 +10,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: true, message: "Empty payload ignored" });
         }
         const body = JSON.parse(text);
-        const supabase = await createSupabaseServerClient();
         const cookieStore = await cookies();
         const variant = cookieStore.get("wb_exp_onboarding")?.value || null;
 

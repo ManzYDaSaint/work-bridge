@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
 import { AuditLog, AuditLogResponse } from "@/types";
 import { History, Search, Download, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
-import { PageHeader, SectionCard } from "@/components/dashboard/ui";
+import { PageHeader } from "@/components/dashboard/ui";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function AdminAuditPage() {
@@ -17,7 +17,7 @@ export default function AdminAuditPage() {
         path: ""
     });
 
-    const fetchAuditLogs = async () => {
+    const fetchAuditLogs = useCallback(async () => {
         setLoading(true);
         try {
             const searchParams = new URLSearchParams({
@@ -37,11 +37,11 @@ export default function AdminAuditPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [meta.limit, meta.offset, filters]);
 
     useEffect(() => {
         fetchAuditLogs();
-    }, [meta.offset, JSON.stringify(filters)]);
+    }, [fetchAuditLogs]);
 
     const handleExport = async () => {
         try {

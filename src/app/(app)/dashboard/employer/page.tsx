@@ -22,7 +22,6 @@ export default function EmployerOverviewPage() {
         const fetchEmployerData = async () => {
             try {
                 const res = await apiFetch("/api/employer/stats");
-
                 if (res.ok) {
                     const data = await res.json();
                     setStats(data);
@@ -60,11 +59,20 @@ export default function EmployerOverviewPage() {
                 </div>
             )}
 
+            {/* Stat cards — each links to the relevant filtered view */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <StatCard label="Live roles" value={stats.activeJobs} icon={Briefcase} iconBg="bg-stone-100 dark:bg-slate-800" iconColor="text-[#16324f]" />
-                <StatCard label="Applicants" value={stats.totalApplicants} icon={Users} iconBg="bg-emerald-50 dark:bg-emerald-950/30" iconColor="text-emerald-600" />
-                <StatCard label="Shortlisted" value={stats.shortlisted} icon={CheckCircle} iconBg="bg-amber-50 dark:bg-amber-950/30" iconColor="text-amber-600" />
-                <StatCard label="Interviews set" value={stats.interviewsSet} icon={ArrowRight} iconBg="bg-sky-50 dark:bg-sky-950/30" iconColor="text-sky-600" />
+                <Link href="/dashboard/employer/jobs?status=ACTIVE" className="block transition-transform hover:-translate-y-0.5">
+                    <StatCard label="Live roles" value={stats.activeJobs} icon={Briefcase} iconBg="bg-stone-100 dark:bg-slate-800" iconColor="text-[#16324f]" />
+                </Link>
+                <Link href="/dashboard/employer/candidates" className="block transition-transform hover:-translate-y-0.5">
+                    <StatCard label="Applicants" value={stats.totalApplicants} icon={Users} iconBg="bg-emerald-50 dark:bg-emerald-950/30" iconColor="text-emerald-600" />
+                </Link>
+                <Link href="/dashboard/employer/candidates?status=SHORTLISTED" className="block transition-transform hover:-translate-y-0.5">
+                    <StatCard label="Shortlisted" value={stats.shortlisted} icon={CheckCircle} iconBg="bg-amber-50 dark:bg-amber-950/30" iconColor="text-amber-600" />
+                </Link>
+                <Link href="/dashboard/employer/candidates?status=INTERVIEWING" className="block transition-transform hover:-translate-y-0.5">
+                    <StatCard label="Interviews set" value={stats.interviewsSet} icon={ArrowRight} iconBg="bg-sky-50 dark:bg-sky-950/30" iconColor="text-sky-600" />
+                </Link>
             </div>
 
             <OnboardingChecklist user={user} />

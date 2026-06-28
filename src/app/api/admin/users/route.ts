@@ -3,15 +3,20 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { recordAuditLog } from "@/lib/audit";
 
-export async function GET() {
+export async function GET(request: Request) {
     const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
     const supabase = await createSupabaseServerClient();
 
     try {
-        // Fetch users with their corresponding seeker or employer profile if exists
-        const { data: users, error } = await supabase
+        const { searchParams } = new URL(request.url);
+        const page = parseInt(searchParams.get("page") || "1");
+        const limit = parseInt(searchParams.get("limit") || "50");
+        const search = searchParams.get("search") || "";
+        const role = searchParams.get("role") || "ALL";
+
+        let query = supabase
             .from("users")
             .select(`
                 id,
@@ -20,8 +25,22 @@ export async function GET() {
                 created_at,
                 job_seekers:job_seekers (full_name, location),
                 employers:employers (company_name, location)
-            `)
-            .order('created_at', { ascending: false });
+            `, { count: "exact" });
+
+        if (role !== "ALL") {
+            query = query.eq("role", role);
+        }
+
+        if (search) {
+            query = query.ilike("email", `%${search}%`);
+        }
+
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
+
+        const { data: users, error, count } = await query
+            .order('created_at', { ascending: false })
+            .range(from, to);
 
         if (error) throw error;
 
@@ -44,7 +63,12 @@ export async function GET() {
             };
         });
 
-        return NextResponse.json(formattedUsers);
+        return NextResponse.json({
+            users: formattedUsers,
+            total: count || 0,
+            page,
+            limit
+        });
     } catch (error) {
         console.error("Admin user fetch error:", error);
         return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });

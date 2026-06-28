@@ -1,5 +1,4 @@
 import { validateAuth } from "@/lib/auth-guard";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
 
@@ -15,7 +14,6 @@ export async function GET() {
     const auth = await validateAuth(["ADMIN"]);
     if (auth.error) return auth.error;
 
-    const supabase = await createSupabaseServerClient();
     const adminClient = getSupabaseAdminClient();
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 

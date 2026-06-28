@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Users, Loader2, X, Mail, MapPin, ExternalLink } from "lucide-react";
+import { Users, Loader2, X, Mail, MapPin } from "lucide-react";
 import { PageHeader, EmptyState, Badge, CompanyAvatar } from "@/components/dashboard/ui";
 import CandidateCard from "@/components/dashboard/employer/CandidateCard";
 import { AnimatePresence, motion } from "framer-motion";
@@ -33,6 +33,16 @@ export default function CandidatesPage() {
         };
         fetchApplications();
     }, [jobId]);
+
+    const handleViewApplication = (app: any) => {
+        setSelectedApp(app);
+        if (!app.viewed_at) {
+            apiFetch("/api/employer/applications/viewed", {
+                method: "POST",
+                body: JSON.stringify({ applicationId: app.id }),
+            }).catch(() => {});
+        }
+    };
 
     const handleStatusUpdate = async (id: string, status: "SHORTLISTED" | "REJECTED" | "INTERVIEWING" | "ACCEPTED", interviewLink?: string) => {
         setUpdating(id);
@@ -107,23 +117,6 @@ export default function CandidatesPage() {
                 }),
             });
             if (!res.ok) throw new Error();
-        } catch {
-            // non-blocking UX
-        }
-    };
-
-    const handleBlockCandidate = async (app: any) => {
-        try {
-            await apiFetch("/api/trust/block", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ blockedUserId: app?.user?.id }),
-            });
-            setApplications((prev) => prev.filter((item) => item.user?.id !== app?.user?.id));
-            if (selectedApp?.user?.id === app?.user?.id) {
-                setSelectedApp(null);
-            }
-            router.refresh();
         } catch {
             // non-blocking UX
         }
@@ -226,7 +219,7 @@ export default function CandidatesPage() {
                             <CandidateCard
                                 key={app.id}
                                 application={app}
-                                onViewProfile={() => setSelectedApp(app)}
+                                onViewProfile={() => handleViewApplication(app)}
                                 onStatusUpdate={(status, interviewLink) => handleStatusUpdate(app.id, status, interviewLink)}
                                 updating={updating === app.id}
                             />
@@ -246,7 +239,7 @@ export default function CandidatesPage() {
                             <CandidateCard
                                 key={app.id}
                                 application={app}
-                                onViewProfile={() => setSelectedApp(app)}
+                                onViewProfile={() => handleViewApplication(app)}
                                 onStatusUpdate={(status, interviewLink) => handleStatusUpdate(app.id, status, interviewLink)}
                                 updating={updating === app.id}
                             />
@@ -266,7 +259,7 @@ export default function CandidatesPage() {
                             <CandidateCard
                                 key={app.id}
                                 application={app}
-                                onViewProfile={() => setSelectedApp(app)}
+                                onViewProfile={() => handleViewApplication(app)}
                                 onStatusUpdate={(status, interviewLink) => handleStatusUpdate(app.id, status, interviewLink)}
                                 updating={updating === app.id}
                             />
@@ -286,7 +279,7 @@ export default function CandidatesPage() {
                             <CandidateCard
                                 key={app.id}
                                 application={app}
-                                onViewProfile={() => setSelectedApp(app)}
+                                onViewProfile={() => handleViewApplication(app)}
                                 onStatusUpdate={(status, interviewLink) => handleStatusUpdate(app.id, status, interviewLink)}
                                 updating={updating === app.id}
                             />

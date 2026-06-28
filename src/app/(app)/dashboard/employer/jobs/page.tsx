@@ -3,10 +3,71 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { User, Job, Employer } from "@/types";
-import { Briefcase, PlusCircle, Loader2, Pencil, Trash2, RefreshCw, ArrowRightLeft, Lock, CheckCircle, Link as LinkIcon, BarChart2 } from "lucide-react";
+import { Briefcase, PlusCircle, Loader2, Pencil, Trash2, RefreshCw, ArrowRightLeft, Lock, CheckCircle, Link as LinkIcon, BarChart2, X, Calendar } from "lucide-react";
 import { PageHeader, EmptyState, Badge, Tabs, Pagination } from "@/components/dashboard/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
+// ─── Repost Modal ─────────────────────────────────────────────────
+function RepostModal({
+    onConfirm,
+    onClose,
+    loading,
+}: {
+    onConfirm: (deadline: string) => void;
+    onClose: () => void;
+    loading: boolean;
+}) {
+    const [deadline, setDeadline] = useState(() => {
+        return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    });
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative w-full max-w-sm rounded-[2rem] border border-stone-200 bg-[#fbf8f1] p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+                <button
+                    onClick={onClose}
+                    className="absolute right-4 top-4 rounded-xl p-2 text-slate-400 hover:bg-stone-100 dark:hover:bg-slate-900"
+                >
+                    <X size={18} />
+                </button>
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-stone-100 dark:bg-slate-800">
+                        <Calendar size={18} className="text-[#16324f]" />
+                    </div>
+                    <div>
+                        <h2 className="text-base font-semibold text-slate-900 dark:text-white">Repost this role</h2>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Set a new application deadline</p>
+                    </div>
+                </div>
+                <input
+                    type="date"
+                    value={deadline}
+                    min={new Date().toISOString().split("T")[0]}
+                    onChange={(e) => setDeadline(e.target.value)}
+                    className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-stone-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                />
+                <div className="mt-4 flex items-center gap-3">
+                    <button
+                        onClick={() => onConfirm(deadline)}
+                        disabled={loading || !deadline}
+                        className="flex-1 rounded-xl bg-[#16324f] py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                    >
+                        {loading ? <Loader2 size={16} className="animate-spin mx-auto" /> : "Repost Role"}
+                    </button>
+                    <button
+                        onClick={onClose}
+                        className="flex-1 rounded-xl border border-stone-200 py-3 text-sm font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:text-slate-200"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function EmployerJobsPage() {
     const [jobs, setJobs] = useState<Job[]>([]);
@@ -18,6 +79,7 @@ export default function EmployerJobsPage() {
     const [activeTab, setActiveTab] = useState("all");
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [repostJobId, setRepostJobId] = useState<string | null>(null);
     const router = useRouter();
 
     const fetchJobs = async (tab: string, page: number) => {
@@ -73,22 +135,21 @@ export default function EmployerJobsPage() {
         }
     };
 
-    const handleRepost = async (jobId: string) => {
-        const newDeadline = prompt(
-            "Enter a new deadline (YYYY-MM-DD):",
-            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
-        );
-        if (!newDeadline) return;
-
-        setReposting(jobId);
+    const handleRepost = async (deadline: string) => {
+        if (!repostJobId) return;
+        setReposting(repostJobId);
         try {
-            const res = await apiFetch(`/api/jobs/${jobId}`, {
+            const res = await apiFetch(`/api/jobs/${repostJobId}`, {
                 method: "POST",
-                body: JSON.stringify({ deadline: newDeadline }),
+                body: JSON.stringify({ deadline }),
             });
             if (res.ok) {
+                setRepostJobId(null);
                 fetchJobs(activeTab, currentPage);
                 router.refresh();
+                toast.success("Role reposted successfully.");
+            } else {
+                toast.error("Failed to repost role.");
             }
         } finally {
             setReposting(null);
@@ -114,9 +175,11 @@ export default function EmployerJobsPage() {
 
     const handleCopyLink = (jobId: string) => {
         const url = `${window.location.origin}/jobs/${jobId}`;
-        navigator.clipboard.writeText(url);
-        // Optional: you could add a tiny toast here if you have sonner/toast imported
-        // toast.success("Link copied!");
+        navigator.clipboard.writeText(url).then(() => {
+            toast.success("Job link copied to clipboard!");
+        }).catch(() => {
+            toast.error("Failed to copy link.");
+        });
     };
 
     const isApproved = employerProfile?.status === "APPROVED";
@@ -195,7 +258,7 @@ export default function EmployerJobsPage() {
                             <div className="flex items-center gap-2 sm:justify-end">
                                 {job.status === "EXPIRED" && (
                                     <button
-                                        onClick={() => handleRepost(job.id)}
+                                        onClick={() => setRepostJobId(job.id)}
                                         disabled={reposting === job.id}
                                         className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300"
                                         title="Repost"
@@ -203,7 +266,7 @@ export default function EmployerJobsPage() {
                                         {reposting === job.id ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                                     </button>
                                 )}
-                                
+
                                 {job.status === "ACTIVE" && (
                                     <button
                                         onClick={() => handleCopyLink(job.id)}
@@ -257,6 +320,14 @@ export default function EmployerJobsPage() {
             )}
 
             <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+
+            {repostJobId && (
+                <RepostModal
+                    onConfirm={handleRepost}
+                    onClose={() => setRepostJobId(null)}
+                    loading={reposting === repostJobId}
+                />
+            )}
         </div>
     );
 }

@@ -13,7 +13,7 @@ export async function GET() {
     // Step 1: Fetch applications for this seeker
     const { data: appsData, error: appsError } = await supabase
         .from("applications")
-        .select("id, job_id, user_id, status, created_at")
+        .select("id, job_id, user_id, status, created_at, viewed_at")
         .eq("user_id", auth.userId)
         .order("created_at", { ascending: false });
 
@@ -86,6 +86,7 @@ export async function GET() {
         userId: app.user_id,
         status: app.status,
         createdAt: app.created_at,
+        viewed_at: app.viewed_at,
         job: jobMap[app.job_id] ?? null,
     }));
 

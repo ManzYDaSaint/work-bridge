@@ -10,7 +10,7 @@ CREATE TYPE public.user_role AS ENUM ('ADMIN', 'EMPLOYER', 'JOB_SEEKER');
 -- Status Enums for Workflows
 CREATE TYPE public.employer_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 CREATE TYPE public.job_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'ACTIVE', 'EXPIRED', 'FILLED');
-CREATE TYPE public.application_status AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'SHORTLISTED', 'INTERVIEWING', 'INVITED', 'HIRED');
+CREATE TYPE public.application_status AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'SHORTLISTED', 'INTERVIEWING', 'INVITED', 'HIRED', 'WITHDRAWN');
 
 -- ==========================================
 -- 1. CORE TABLES
@@ -73,6 +73,7 @@ CREATE TABLE public.employers (
   hiring_velocity BOOLEAN DEFAULT TRUE,
   candidate_privacy BOOLEAN DEFAULT FALSE,
   contact_limit_bonus INTEGER DEFAULT 0,
+  default_scheduling_link TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -109,6 +110,7 @@ CREATE TABLE public.applications (
   screening_summary TEXT,
   screening_breakdown JSONB DEFAULT '[]'::jsonb,
   meets_required_criteria BOOLEAN DEFAULT FALSE,
+  viewed_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   UNIQUE(job_id, user_id)
 );

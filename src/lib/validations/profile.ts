@@ -20,6 +20,7 @@ export const seekerProfileSchema = z.object({
         startDate: z.string().min(1, "Start date is required"),
         endDate: z.string().optional(),
     })).optional(),
+    qualification: z.string().optional(),
     salaryExpectation: z.string().optional(),
     seniorityLevel: z.string().optional(),
     employmentType: z.string().optional(),

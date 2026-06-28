@@ -1,4 +1,3 @@
-import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/auth/LoginForm";
 import AuthLayout from "@/components/auth/AuthLayout";

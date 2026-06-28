@@ -65,6 +65,7 @@ export default function SeekerProfile() {
             skills: profile.skills ?? [],
             experience: (profile as any).experience ?? [],
             education: (profile as any).education ?? [],
+            qualification: (profile as any).qualification ?? "",
             salaryExpectation: profile.salaryExpectation ?? "",
             seniorityLevel: profile.seniorityLevel ?? "",
             employmentType: profile.employmentType ?? "",
@@ -289,6 +290,21 @@ export default function SeekerProfile() {
                                 </div>
                                 <div>
                                     <input {...register("salaryExpectation")} placeholder="Salary expectation" className={inputClass} />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <select {...register("qualification")} className={inputClass}>
+                                        <option value="" disabled>Select qualification</option>
+                                        {profile && (profile as any).qualification && !["High School", "Diploma", "Bachelor's Degree", "Master's Degree", "PhD / Doctorate", "Professional Certification", "Other"].includes((profile as any).qualification) && (
+                                            <option value={(profile as any).qualification}>{(profile as any).qualification}</option>
+                                        )}
+                                        <option value="High School">High School</option>
+                                        <option value="Diploma">Diploma</option>
+                                        <option value="Bachelor's Degree">Bachelor's Degree</option>
+                                        <option value="Master's Degree">Master's Degree</option>
+                                        <option value="PhD / Doctorate">PhD / Doctorate</option>
+                                        <option value="Professional Certification">Professional Certification</option>
+                                        <option value="Other">Other</option>
+                                    </select>
                                 </div>
                                 <div className="md:col-span-2">
                                     <select {...register("seniorityLevel")} className={inputClass}>

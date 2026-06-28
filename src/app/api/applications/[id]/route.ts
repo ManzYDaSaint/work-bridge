@@ -2,7 +2,7 @@ import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
-export async function DELETE(
+export async function PATCH(
     _request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
@@ -29,13 +29,13 @@ export async function DELETE(
         return NextResponse.json({ error: "Application not found" }, { status: 404 });
     }
 
-    const { error: deleteError } = await supabase
+    const { error: updateError } = await supabase
         .from("applications")
-        .delete()
+        .update({ status: "WITHDRAWN" })
         .eq("id", id);
 
-    if (deleteError) {
-        console.error("Application DELETE error:", deleteError);
+    if (updateError) {
+        console.error("Application PATCH error:", updateError);
         return NextResponse.json({ error: "Failed to withdraw application" }, { status: 500 });
     }
 

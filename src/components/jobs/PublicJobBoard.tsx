@@ -8,7 +8,7 @@ import { apiFetch, apiFetchJson } from "@/lib/api";
 import { useUser } from "@/context/UserContext";
 import { useAuth } from "@/context/AuthContext";
 import { cn, formatJobType, formatWorkMode, timeAgo } from "@/lib/utils";
-import { ArrowUpRight, Bookmark, BookmarkCheck, Briefcase, MapPin, Search, SlidersHorizontal, Share2, MessageCircle, Link2, Check } from "lucide-react";
+import { ArrowUpRight, Bookmark, BookmarkCheck, Briefcase, MapPin, Search, SlidersHorizontal } from "lucide-react";
 import { Pagination, CompanyAvatar } from "@/components/dashboard/ui";
 import { toast } from "sonner";
 import ShareJobButton from "@/components/jobs/ShareJobButton";
@@ -30,20 +30,6 @@ type ExtendedJob = Omit<Job, "employer"> & {
         location?: string | null;
         recruiterVerified?: boolean;
     } | null;
-};
-
-type MeProfile = {
-    role: string;
-    jobSeeker?: {
-        completion?: number;
-        isSubscribed?: boolean;
-        applicationsThisMonth?: number;
-        skills?: string[];
-        preferredWorkModes?: string[];
-        preferredJobTypes?: string[];
-        preferredLocations?: string[];
-        preferredSkills?: string[];
-    };
 };
 
 const WORK_MODES = ["REMOTE", "HYBRID", "ON_SITE"] as const;
@@ -198,13 +184,11 @@ export default function PublicJobBoard() {
         pageRef.current = currentPage;
     }, [currentPage]);
 
-    const fetchData = async (page: number, q?: string, workMode?: string, type?: string) => {
+    const fetchData = useCallback(async (page: number, q?: string, workMode?: string, type?: string) => {
         setLoading(true);
         setIsSlowNetwork(false);
         const slowTimer = setTimeout(() => setIsSlowNetwork(true), 1200);
         try {
-            // We NO LONGER fetch /api/me here as it is handled by UserContext
-
             const qs = new URLSearchParams({
                 page: String(page),
                 limit: "20",
@@ -220,7 +204,6 @@ export default function PublicJobBoard() {
                 setTotalPages(data.totalPages || 1);
             }
 
-            // Fetch saved jobs and applications if user is a seeker
             if (user?.role === "JOB_SEEKER") {
                 const [savedRes, appsRes] = await Promise.all([
                     apiFetch("/api/seeker/saved-jobs"),
@@ -245,7 +228,7 @@ export default function PublicJobBoard() {
             setLoading(false);
             setIsSlowNetwork(false);
         }
-    };
+    }, [user?.role]);
 
     useEffect(() => {
         const q = searchParams.get("query") || "";
@@ -257,9 +240,8 @@ export default function PublicJobBoard() {
         setSearch(q);
         setSelectedWorkMode(workMode);
         setSelectedType(type);
-        // On initial mount or search param change, we fetch everything including profile
         fetchData(currentPage, q || undefined, workMode, type);
-    }, [currentPage, searchParams]);
+    }, [currentPage, searchParams, fetchData]);
 
     const { user: authUser } = useAuth();
     const authUserIdRef = useRef<string | null>(authUser?.id ?? null);
@@ -271,7 +253,7 @@ export default function PublicJobBoard() {
         refreshUser();
         const q = searchParams.get("query") || "";
         fetchData(pageRef.current, q || undefined, selectedWorkMode, selectedType);
-    }, [authUser?.id, refreshUser, selectedWorkMode, selectedType, searchParams]);
+    }, [authUser?.id, refreshUser, selectedWorkMode, selectedType, searchParams, fetchData]);
 
     const pushFilters = (next: { query?: string; workMode?: string; type?: string }) => {
         const qs = new URLSearchParams();

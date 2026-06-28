@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
 import { Users, Search, Loader2, UserX } from "lucide-react";
@@ -11,25 +11,64 @@ export default function UserManagementPage() {
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [total, setTotal] = useState(0);
+    const [page, setPage] = useState(1);
     const [roleFilter, setRoleFilter] = useState("ALL");
     const [actioning, setActioning] = useState<string | null>(null);
+    const limit = 50;
     const router = useRouter();
 
-    useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                const res = await apiFetch("/api/admin/users");
-                if (res.ok) {
-                    setUsers(await res.json());
-                }
-            } catch {
-                toast.error("Could not load users.");
-            } finally {
-                setLoading(false);
+    const fetchUsers = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await apiFetch(`/api/admin/users?page=${page}&limit=${limit}&search=${encodeURIComponent(searchTerm)}&role=${roleFilter}`);
+            if (res.ok) {
+                const data = await res.json();
+                setUsers(data.users || []);
+                setTotal(data.total || 0);
             }
-        };
-        fetchUsers();
-    }, []);
+        } catch {
+            toast.error("Could not load users.");
+        } finally {
+            setLoading(false);
+        }
+    }, [page, limit, searchTerm, roleFilter]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => fetchUsers(), 300);
+        return () => clearTimeout(timer);
+    }, [fetchUsers]);
+
+    const handleDownloadCSV = async () => {
+        toast.loading("Exporting users...");
+        try {
+            const res = await apiFetch(`/api/admin/users?page=1&limit=100000&search=${encodeURIComponent(searchTerm)}&role=${roleFilter}`);
+            if (res.ok) {
+                const data = await res.json();
+                const headers = ["ID", "Email", "Name", "Role", "Location", "Created At"];
+                const csvData = data.users.map((u: any) => [
+                    u.id,
+                    u.email,
+                    u.name ? `"${u.name.replace(/"/g, '""')}"` : "",
+                    u.role,
+                    u.location ? `"${u.location.replace(/"/g, '""')}"` : "",
+                    u.createdAt
+                ].join(","));
+                const csvStr = [headers.join(","), ...csvData].join("\n");
+                const blob = new Blob([csvStr], { type: "text/csv" });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `users_export_${new Date().toISOString().split("T")[0]}.csv`;
+                a.click();
+                toast.dismiss();
+                toast.success("Export complete");
+            }
+        } catch {
+            toast.dismiss();
+            toast.error("Export failed");
+        }
+    };
 
     const handleDelete = async (userId: string, email: string) => {
         if (!confirm(`Delete ${email}? This also removes related platform data.`)) return;
@@ -47,13 +86,7 @@ export default function UserManagementPage() {
         }
     };
 
-    const filteredUsers = users.filter((user) => {
-        const matchesSearch =
-            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase()));
-        const matchesRole = roleFilter === "ALL" || user.role === roleFilter;
-        return matchesSearch && matchesRole;
-    });
+    const filteredUsers = users; // Filtered on server
 
     if (loading) {
         return (
@@ -77,7 +110,7 @@ export default function UserManagementPage() {
                         type="text"
                         placeholder="Search by name or email"
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
                         className="w-full rounded-2xl border border-stone-200 bg-white px-12 py-3 text-sm outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900"
                     />
                 </div>
@@ -85,7 +118,7 @@ export default function UserManagementPage() {
                     {["ALL", "JOB_SEEKER", "EMPLOYER", "ADMIN"].map((role) => (
                         <button
                             key={role}
-                            onClick={() => setRoleFilter(role)}
+                            onClick={() => { setRoleFilter(role); setPage(1); }}
                             className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
                                 roleFilter === role
                                     ? "border-[#16324f] bg-[#16324f] text-white"
@@ -95,6 +128,9 @@ export default function UserManagementPage() {
                             {role.replace("_", " ")}
                         </button>
                     ))}
+                    <button onClick={handleDownloadCSV} className="rounded-full border border-stone-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
+                        Export CSV
+                    </button>
                 </div>
             </div>
 
@@ -136,6 +172,30 @@ export default function UserManagementPage() {
                     ))
                 )}
             </div>
+            
+            {total > limit && (
+                <div className="flex items-center justify-between mt-6 px-4">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total}
+                    </p>
+                    <div className="flex gap-2">
+                        <button
+                            disabled={page === 1}
+                            onClick={() => setPage(page - 1)}
+                            className="rounded-xl border border-stone-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300"
+                        >
+                            Previous
+                        </button>
+                        <button
+                            disabled={page * limit >= total}
+                            onClick={() => setPage(page + 1)}
+                            className="rounded-xl border border-stone-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

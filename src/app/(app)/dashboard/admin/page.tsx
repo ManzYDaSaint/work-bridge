@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
 import {
     Users, Briefcase, ShieldCheck, BarChart3, UserCheck,
@@ -133,14 +133,14 @@ export default function AdminOverviewPage() {
         }
     };
 
-    const fetchActivity = async () => {
+    const fetchActivity = useCallback(async () => {
         const { data } = await supabase
             .from("audit_logs")
             .select("*, user:users(id, email, role)")
             .order("created_at", { ascending: false })
             .limit(6);
         if (data) setRecentActivity(data);
-    };
+    }, [supabase]);
 
     const fetchCloseRequests = async () => {
         const res = await apiFetch("/api/admin/close-requests");
@@ -186,7 +186,7 @@ export default function AdminOverviewPage() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [fetchActivity, supabase]);
 
     if (loading) {
         return (

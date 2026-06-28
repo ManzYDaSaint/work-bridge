@@ -5,7 +5,6 @@ import { Bell, Check, ExternalLink, Inbox } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "@/lib/api";
 import { cn, timeAgo } from "@/lib/utils";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 interface Notification {

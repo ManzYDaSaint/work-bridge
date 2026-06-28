@@ -8,7 +8,8 @@ export type NotificationType =
   | "VERIFICATION_UPDATE" 
   | "PAYMENT_SUCCESS"
   | "REFERRAL_BONUS"
-  | "WARNING";
+  | "WARNING"
+  | "PROFILE_VIEW";
 
 export async function createNotification({
   userId,

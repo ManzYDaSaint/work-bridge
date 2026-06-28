@@ -15,7 +15,7 @@ function getPublicRole(value: unknown): "JOB_SEEKER" | "EMPLOYER" | null {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { email, role, full_name, companyName, industry, location, userId } = body;
+        const { email, role, full_name, companyName, industry, location } = body;
         const registrationEmail = String(email || "").trim().toLowerCase();
         const requestedRole = getPublicRole(role);
         if (!requestedRole) {
