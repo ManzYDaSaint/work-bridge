@@ -2,6 +2,19 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { cache } from "react";
 
+async function safeQuery<T>(
+    operation: () => T | Promise<T>,
+    fallback: T,
+    label: string
+): Promise<T> {
+    try {
+        return await Promise.resolve(operation());
+    } catch (error) {
+        console.warn(`[adminService] ${label} failed, using fallback values`, error);
+        return fallback;
+    }
+}
+
 export interface AdminStats {
     totalUsers: number;
     totalSeekers: number;
@@ -33,25 +46,65 @@ export const adminService = {
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
         const results = await Promise.all([
-            supabase.from("users").select("*", { count: "exact", head: true }),
-            supabase.from("job_seekers").select("*", { count: "exact", head: true }),
-            supabase.from("employers").select("*", { count: "exact", head: true }),
-            supabase.from("jobs").select("*", { count: "exact", head: true }),
-            supabase.from("applications").select("*", { count: "exact", head: true }),
-            adminClient
-                ? adminClient
-                    .from("product_events")
-                    .select("role, stage, user_id, session_id")
+            safeQuery(
+                () => supabase.from("users").select("*", { count: "exact", head: true }),
+                { count: 0, error: null } as any,
+                "users count"
+            ),
+            safeQuery(
+                () => supabase.from("job_seekers").select("*", { count: "exact", head: true }),
+                { count: 0, error: null } as any,
+                "job_seekers count"
+            ),
+            safeQuery(
+                () => supabase.from("employers").select("*", { count: "exact", head: true }),
+                { count: 0, error: null } as any,
+                "employers count"
+            ),
+            safeQuery(
+                () => supabase.from("jobs").select("*", { count: "exact", head: true }),
+                { count: 0, error: null } as any,
+                "jobs count"
+            ),
+            safeQuery(
+                () => supabase.from("applications").select("*", { count: "exact", head: true }),
+                { count: 0, error: null } as any,
+                "applications count"
+            ),
+            safeQuery(
+                () => adminClient
+                    ? adminClient
+                        .from("product_events")
+                        .select("role, stage, user_id, session_id")
+                        .gte("created_at", thirtyDaysAgo)
+                    : Promise.resolve({ data: [], error: null }),
+                { data: [], error: null } as any,
+                "product_events analytics"
+            ),
+            safeQuery(
+                () => supabase.from("account_close_requests").select("*", { count: "exact", head: true }).eq("status", "PENDING"),
+                { count: 0, error: null } as any,
+                "account_close_requests count"
+            ),
+            safeQuery(
+                () => supabase.from("job_seekers").select("*", { count: "exact", head: true }).eq("has_badge", true),
+                { count: 0, error: null } as any,
+                "badge holders count"
+            ),
+            safeQuery(
+                () => supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "PENDING"),
+                { count: 0, error: null } as any,
+                "pending jobs count"
+            ),
+            safeQuery(
+                () => supabase
+                    .from("users")
+                    .select("created_at")
                     .gte("created_at", thirtyDaysAgo)
-                : Promise.resolve({ data: [], error: null }),
-            supabase.from("account_close_requests").select("*", { count: "exact", head: true }).eq("status", "PENDING"),
-            supabase.from("job_seekers").select("*", { count: "exact", head: true }).eq("has_badge", true),
-            supabase.from("jobs").select("*", { count: "exact", head: true }).eq("status", "PENDING"),
-            supabase
-                .from("users")
-                .select("created_at")
-                .gte("created_at", thirtyDaysAgo)
-                .order("created_at", { ascending: true }),
+                    .order("created_at", { ascending: true }),
+                { data: [], error: null } as any,
+                "signup trend"
+            ),
         ]);
 
         const [

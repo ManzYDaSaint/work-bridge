@@ -21,13 +21,29 @@ export async function GET() {
         return NextResponse.json({ error: "Admin client not available" }, { status: 503 });
     }
 
-    const { data, error } = await adminClient
-        .from("product_events")
-        .select("role, stage, variant, user_id, session_id")
-        .gte("created_at", since);
+    type FunnelEventRow = {
+        role?: string | null;
+        stage?: string | null;
+        variant?: string | null;
+        user_id?: string | null;
+        session_id?: string | null;
+    };
 
-    if (error) {
-        return NextResponse.json({ error: "Could not load funnel data" }, { status: 500 });
+    let data: FunnelEventRow[] = [];
+
+    try {
+        const { data: productEvents, error } = await adminClient
+            .from("product_events")
+            .select("role, stage, variant, user_id, session_id")
+            .gte("created_at", since);
+
+        if (error) {
+            console.warn("[metrics/funnel] product_events query failed, using empty funnel data", error);
+        } else {
+            data = productEvents || [];
+        }
+    } catch (error) {
+        console.warn("[metrics/funnel] product_events query failed, using empty funnel data", error);
     }
 
     const uniqueByStageRole = new Map<string, Set<string>>();
@@ -39,11 +55,11 @@ export async function GET() {
 
         const role = row.role || "UNKNOWN";
         const key = `${role}:${row.stage}`;
-        if (!uniqueByStageRole.has(key)) uniqueByStageRole.set(key, new Set());
+        if (!uniqueByStageRole.has(key)) uniqueByStageRole.set(key, new Set<string>());
         uniqueByStageRole.get(key)!.add(identity);
 
         const variantKey = row.variant || "none";
-        if (!variantMap.has(variantKey)) variantMap.set(variantKey, new Set());
+        if (!variantMap.has(variantKey)) variantMap.set(variantKey, new Set<string>());
         variantMap.get(variantKey)!.add(identity);
     }
 
