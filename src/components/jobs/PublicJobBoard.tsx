@@ -2,7 +2,7 @@
 
 import { AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { apiFetch, apiFetchJson } from "@/lib/api";
 import { useUser } from "@/context/UserContext";
@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { cn, formatJobType, formatWorkMode, timeAgo } from "@/lib/utils";
 import { ArrowUpRight, Bookmark, BookmarkCheck, Briefcase, MapPin, Search, SlidersHorizontal } from "lucide-react";
 import { Pagination, CompanyAvatar } from "@/components/dashboard/ui";
+import VerifiedBadge from "@/components/dashboard/ui/VerifiedBadge";
 import { toast } from "sonner";
 import ShareJobButton from "@/components/jobs/ShareJobButton";
 import type { Job, ScreeningAnswer } from "@/types";
@@ -89,7 +90,10 @@ function JobListRow({
                             )}
                         </div>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                            <span className="font-medium text-slate-700 dark:text-slate-300">{company}</span>
+                            <div className="inline-flex items-center gap-1.5">
+                                <span className="font-medium text-slate-700 dark:text-slate-300">{company}</span>
+                                <VerifiedBadge isVerified={job.employer?.recruiterVerified} />
+                            </div>
                             <span className="mx-2 text-stone-300 dark:text-slate-700">/</span>
                             {job.location}
                         </p>
@@ -134,32 +138,46 @@ function JobListRow({
     );
 }
 
-export default function PublicJobBoard() {
-    const [jobs, setJobs] = useState<ExtendedJob[]>([]);
-    const [loading, setLoading] = useState(true);
+export default function PublicJobBoard({
+    initialJobs = [],
+    initialTotalPages = 1,
+    initialSavedJobIds = new Set<string>(),
+    initialAppliedJobIds = new Set<string>(),
+    currentPage = 1,
+    currentQuery = "",
+    currentWorkMode = "ALL",
+    currentType = "ALL",
+}: {
+    initialJobs?: ExtendedJob[];
+    initialTotalPages?: number;
+    initialSavedJobIds?: Set<string>;
+    initialAppliedJobIds?: Set<string>;
+    currentPage?: number;
+    currentQuery?: string;
+    currentWorkMode?: string;
+    currentType?: string;
+}) {
+    const [jobs, setJobs] = useState<ExtendedJob[]>(initialJobs);
+    const [loading, setLoading] = useState(false);
     const [selectedJob, setSelectedJob] = useState<ExtendedJob | null>(null);
-    const [search, setSearch] = useState("");
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [selectedWorkMode, setSelectedWorkMode] = useState<string>("ALL");
-    const [selectedType, setSelectedType] = useState<string>("ALL");
+    const [search, setSearch] = useState(currentQuery);
+    const [page, setPage] = useState(currentPage);
+    const [totalPages, setTotalPages] = useState(initialTotalPages);
+    const [selectedWorkMode, setSelectedWorkMode] = useState<string>(currentWorkMode);
+    const [selectedType, setSelectedType] = useState<string>(currentType);
     const [filtersOpen, setFiltersOpen] = useState(false);
+
 
     const { user, refreshUser } = useUser();
     const [isSavingPrefs, setIsSavingPrefs] = useState(false);
     const [isSlowNetwork, setIsSlowNetwork] = useState(false);
-    const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
-    const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
+    const [savedJobIds, setSavedJobIds] = useState<Set<string>>(initialSavedJobIds);
+    const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(initialAppliedJobIds);
 
     // Sync context user data to local state for filters/matching reasons
     const profileCompletion = user?.jobSeeker?.completion ?? 0;
-    const isSubscribed = user?.jobSeeker?.isSubscribed ?? false;
-    const applicationsThisMonth = user?.jobSeeker?.applicationsThisMonth ?? 0;
+    // subscription and application counters intentionally not used in this component
     const seekerSkills = user?.jobSeeker?.skills || [];
-    const preferredWorkModesContext = user?.jobSeeker?.preferredWorkModes || [];
-    const preferredJobTypesContext = user?.jobSeeker?.preferredJobTypes || [];
-    const preferredLocationsContext = user?.jobSeeker?.preferredLocations || [];
-    const preferredSkillsContext = user?.jobSeeker?.preferredSkills || [];
 
     const [preferredWorkModes, setPreferredWorkModes] = useState<string[]>([]);
     const [preferredJobTypes, setPreferredJobTypes] = useState<string[]>([]);
@@ -168,12 +186,17 @@ export default function PublicJobBoard() {
 
     useEffect(() => {
         if (user?.jobSeeker) {
+            const preferredWorkModesContext = user?.jobSeeker?.preferredWorkModes || [];
+            const preferredJobTypesContext = user?.jobSeeker?.preferredJobTypes || [];
+            const preferredLocationsContext = user?.jobSeeker?.preferredLocations || [];
+            const preferredSkillsContext = user?.jobSeeker?.preferredSkills || [];
+
             setPreferredWorkModes(preferredWorkModesContext);
             setPreferredJobTypes(preferredJobTypesContext);
             setPreferredLocationsInput(preferredLocationsContext.join(", "));
             setPreferredSkillsInput(preferredSkillsContext.join(", "));
         }
-    }, [user?.id]);
+    }, [user?.jobSeeker]);
 
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -260,7 +283,7 @@ export default function PublicJobBoard() {
         if (next.query) qs.set("query", next.query);
         if (next.workMode && next.workMode !== "ALL") qs.set("workMode", next.workMode);
         if (next.type && next.type !== "ALL") qs.set("type", next.type);
-        setCurrentPage(1);
+        setPage(1);
         router.push(qs.toString() ? `/jobs?${qs.toString()}` : "/jobs");
     };
 
@@ -658,7 +681,7 @@ export default function PublicJobBoard() {
 
             {!loading && totalPages > 1 && (
                 <div className="mt-6">
-                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                    <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
                 </div>
             )}
 

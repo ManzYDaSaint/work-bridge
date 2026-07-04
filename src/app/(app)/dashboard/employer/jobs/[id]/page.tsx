@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import {
     Loader2, ChevronLeft, MapPin, Briefcase, Users,
-    Calendar, ExternalLink, Clock
+    Calendar, ExternalLink, Clock, Sparkles
 } from "lucide-react";
 import { Badge, SectionCard } from "@/components/dashboard/ui";
 import Link from "next/link";
@@ -114,9 +114,15 @@ export default function JobDetailPage() {
                         </Link>
                         <Link
                             href={`/dashboard/employer/candidates?jobId=${job.id}`}
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#16324f] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                            className="inline-flex items-center gap-2 rounded-xl bg-stone-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-stone-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                         >
                             <Users size={14} /> View Pipeline
+                        </Link>
+                        <Link
+                            href={`/dashboard/employer/jobs/${job.id}/discover`}
+                            className="inline-flex items-center gap-2 rounded-xl bg-[#16324f] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                        >
+                            <Sparkles size={14} /> AI Match Candidates
                         </Link>
                     </div>
                 </div>

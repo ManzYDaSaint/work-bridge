@@ -1,6 +1,6 @@
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { buildMeProfile } from "@/lib/me-profile";
+import { UserService } from "@/services/user.service";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export async function GET() {
     if (auth.error) return auth.error;
 
     const supabase = await createSupabaseServerClient();
-    const { profile, error } = await buildMeProfile(supabase, auth.userId);
+    const { profile, error } = await UserService.buildMeProfile(supabase, auth.userId);
 
     if (error === "not_found" || !profile) {
         return NextResponse.json({ error: "User profile not found" }, { status: 404 });

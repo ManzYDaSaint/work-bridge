@@ -1,124 +1,74 @@
 # Aganyu — Talent Marketplace Platform
 
-> **Malawi's premier talent marketplace** connecting job seekers, students, and interns with employers through proactive discovery, skill-based matching, and a structured hiring pipeline.
+> **Malawi's premier AI-powered talent marketplace** connecting job seekers, students, and interns with employers through semantic discovery, verified trust, and a structured hiring pipeline.
 
 ---
 
 ## What is Aganyu?
 
-Aganyu has evolved from a traditional job board into a **proactive talent marketplace**. Instead of waiting for candidates to apply, employers can now discover, save, and directly invite talent — while job seekers build a rich, verifiable online presence that works for them 24/7.
+Aganyu has evolved from a traditional job board into an **intelligent talent ecosystem**. By leveraging cutting-edge AI and vector embeddings, Aganyu moves beyond simple keyword matching to understand the *meaning* and *context* of professional experience. 
+
+The platform enables "Zero-Noise" discovery, where employers find the perfect fit based on professional DNA, and job seekers are guided by gamified profile optimization to maximize their visibility.
 
 The platform serves three audiences:
 
-- **Job Seekers & Graduates** — build a full professional profile with skills, experience, education, certifications, and portfolio links to get discovered by employers.
+- **Job Seekers & Graduates** — build a rich, AI-optimized profile with verified certifications to get discovered by the right employers.
 - **Students** — configure your profile for internship or attachment search and appear in relevant employer discovery pools.
-- **Employers** — post structured job listings, discover pre-screened talent, manage a hiring pipeline, and invite promising candidates directly.
+- **Employers** — post structured job listings, leverage semantic matchmaking to find top talent, and manage a transparent hiring pipeline.
 
 ---
 
 ## Core Features
 
+### 🧠 AI & Intelligent Matchmaking
+
+Aganyu utilizes a **Hybrid Matchmaking Engine** to eliminate the "semantic gap" in hiring:
+- **Semantic Discovery (pgvector + HuggingFace)**: Instead of exact keyword matches, the platform uses vector embeddings (`all-MiniLM-L6-v2`) to understand that a "Frontend Developer" is conceptually similar to a "React Engineer."
+- **Professional DNA**: Seeker profiles (bio, skills, experience) are converted into high-dimensional vectors, allowing for intuitive "meaning-based" discovery.
+- **Hybrid Scoring**: Match scores are calculated by blending **Hard Constraints** (must-have skills, minimum experience) with **Semantic Affinity** (how well the candidate's overall background fits the role's intent).
+- **Real-time Sync**: Embeddings are automatically updated whenever a seeker modifies their profile or an employer updates a job listing.
+
+### 🛡️ Trust & Security Layer
+
+To ensure a safe and professional marketplace, Aganyu implements a multi-tier trust system:
+- **Verified Employer Badges**: Admins vet companies to grant a "Verified" badge, signaling legitimacy to candidates and reducing scams.
+- **Certificate Verification Pipeline**: An admin-led workflow to review and verify professional credentials, moving beyond self-declared skills to "Proven Expertise."
+- **Privacy-First Design**: Three visibility levels (`PUBLIC`, `ANONYMOUS`, `HIDDEN`) ensure seekers can explore opportunities without risking their current employment.
+
 ### 🎯 Talent Marketplace (Discovery Engine)
 
-- **Seeker Profiles with Online Presence**
-  - Full bio, skills, experience, education, certifications, and portfolio links
-  - Avatar upload and profile completion tracking
-  - Profile view analytics — see how many employers have viewed your profile
-
-- **Privacy Controls** — seekers choose one of three visibility levels:
-  - `PUBLIC` — full profile visible to employers including contact details
-  - `ANONYMOUS` — skills and experience visible, name/photo/contacts hidden
-  - `HIDDEN` — does not appear in any employer discovery pool
-
-- **Search Intent** — seekers declare what they are looking for:
-  - Actively looking for jobs
-  - Open to offers
-  - Seeking internship or attachment
-  - Not looking
+- **Gamified Profile Readiness**
+  - Interactive "Profile Strength" meter with actionable suggestions to help seekers optimize their visibility.
+  - Full bio, skills, experience, education, certifications, and portfolio links.
+  - Profile view analytics — see how many employers have viewed your profile.
 
 - **Employer Discover Page** (`/dashboard/employer/discover`)
-  - Filter by skills, search intent, and seniority level
-  - Skill-based search with debounced input
-  - Candidate cards linked to full public profile pages
+  - AI-powered semantic search and traditional filters.
+  - Candidate cards linked to full public profile pages.
 
-### 👤 Candidate Profile View (`/dashboard/employer/talent/[id]`)
-
-When an employer clicks a candidate, they see:
-- Full profile: bio, experience, education, certifications, portfolio links
-- Contact information (only for `PUBLIC` profiles)
-- WhatsApp direct message button (if candidate enabled it)
-- **Save Candidate** button — bookmark candidates to a personal talent pool
-- **Invite to Apply** button — opens a modal to select a role and send a direct in-platform message
-
-### ⭐ Saved Talent Pool (`/dashboard/employer/talent/saved`)
-
-- Employers bookmark candidates they want to revisit
-- Dedicated "Saved Talent" page with card grid and one-click unsave
-- Accessible from the employer sidebar
-
-### ✉️ Invite to Apply (Direct Messaging)
-
-- Employers select a role and optionally write a custom message
-- Platform sends an in-app message and a notification to the candidate
-- Message is stored in the existing conversations/messages system
-
-### ✨ Automated Matchmaking
-
-**For Employers — Suggested Candidates on Job Detail Page** (`/dashboard/employer/jobs/[id]`):
-- Each job detail page has a "✨ Suggested Candidates" tab
-- Queries all visible candidates whose skills overlap with job requirements
-- Shows matched skills per candidate highlighted in green
-- One-click "Invite" button per candidate card
-
-**For Seekers — Recommended Jobs on Dashboard**:
-- Seeker dashboard shows a "Recommended for You" widget
-- Matches active job listings whose skill requirements overlap with the seeker's skills
-- Updates automatically as the seeker adds skills to their profile
-
----
+- **Employer Talent Pool**
+  - **Save Candidate**: Bookmark talent for future roles.
+  - **Invite to Apply**: Direct, structured invitations to promising candidates.
 
 ### 📋 Structured Hiring Pipeline
 
-- Employers post jobs with structured requirements:
-  - `skills`, `must_have_skills`, `nice_to_have_skills`
-  - `minimum_years_experience`, `screening_questions`, `salary_range`, `deadline`
-  - Work mode: `REMOTE`, `HYBRID`, `ON_SITE`
-
-- When a seeker applies, the server computes a **transparent screening score**:
-  - Required skill match check
-  - Optional skill match
-  - Experience vs. minimum requirement
-  - Screening question answers
-  - Stores: `screening_score`, `screening_summary`, `screening_breakdown`, `meets_required_criteria`
-
-- Employer pipeline stages: `PENDING` → `SHORTLISTED` → `INTERVIEWING` → `HIRED` / `REJECTED`
-
-- Employers can view the candidate pipeline per job from the Jobs list or Job Detail page
+- **Structured Listings**: Jobs include `must_have_skills`, `nice_to_have_skills`, and "Knockout" screening questions.
+- **Closed-Loop Feedback**: Seekers receive instant notifications whenever an employer updates their application status (`SHORTLISTED`, `INTERVIEWING`, etc.), eliminating the "application black hole."
+- **Transparent Screening**: Automated computation of screening scores and breakdowns for every applicant.
 
 ---
 
-### 🎓 Onboarding Flow
+### 🎓 Onboarding & Notifications
 
-New users (both students and graduates) complete a multi-step onboarding that captures:
-- Personal details and professional background
-- Skills, experience, and education
-- Search intent (job, internship, open to offers, etc.)
-- Profile visibility preference (set before entering the discovery pool)
-
----
-
-### 🔔 Notifications
-
-- In-platform notifications for invite events, application updates, and messages
-- Seekers receive a notification when an employer invites them to apply
+- **Guided Onboarding**: Multi-step flow capturing professional background, search intent, and visibility preferences.
+- **Smart Notifications**: In-platform alerts for invites, status updates, and AI-suggested job matches.
 
 ---
 
 ### 👩‍💼 Admin Dashboard
 
-- Manage users, employer accounts, job listings, and applications
-- Approve or reject employer accounts
-- Audit log for all platform actions
+- **Verification Center**: Dedicated tools to verify employers and candidate certificates.
+- **System Management**: Full control over users, jobs, and a comprehensive audit log for all systemic mutations.
 
 ---
 
@@ -138,7 +88,8 @@ New users (both students and graduates) complete a multi-step onboarding that ca
 | UI | React 19, Vanilla CSS / Tailwind CSS v4 |
 | Icons | lucide-react |
 | Forms | React Hook Form + Zod |
-| Database | Supabase (PostgreSQL + Row Level Security) |
+| Database | Supabase (PostgreSQL + pgvector) |
+| AI/Embeddings | HuggingFace Inference API (`all-MiniLM-L6-v2`) |
 | Auth | Supabase Auth |
 | Storage | Supabase Storage (avatars, resumes) |
 | Realtime | Supabase Realtime (messages, notifications) |
@@ -154,30 +105,24 @@ src/
 ├── app/
 │   ├── (marketing)/          # Public pages: landing, jobs, pricing, terms
 │   ├── (app)/dashboard/
-│   │   ├── seeker/           # Seeker dashboard, profile, applications, saved jobs
-│   │   ├── employer/         # Employer dashboard, jobs, candidates, discover, saved talent
-│   │   └── admin/            # Admin user, employer, job, and audit management
+│   │   ├── seeker/           # Seeker dashboard (Gamified), profile, applications
+│   │   ├── employer/         # Employer dashboard, semantic discover, job management
+│   │   └── admin/            # Admin verification center, user/job management
 │   ├── api/
-│   │   ├── profile/          # Seeker profile GET/PUT, certificates CRUD, avatar upload
-│   │   ├── employer/
-│   │   │   ├── discover/     # Talent search + candidate public profile
-│   │   │   ├── jobs/[id]/matches/  # Skill-based matchmaking for a job
-│   │   │   ├── messages/invite/    # Invite to Apply messaging
-│   │   │   └── talent/       # Save/unsave candidates, saved list
-│   │   ├── seeker/jobs/recommended/ # Seeker-side job recommendations
-│   │   ├── jobs/             # Public job listing + application endpoints
-│   │   ├── applications/     # Application submission and management
-│   │   └── notifications/    # In-platform notification management
-│   └── onboarding/           # Multi-step onboarding for new users
+│   │   ├── profile/          # Profile updates + Embedding sync
+│   │   ├── jobs/             # Job CRUD + Embedding sync
+│   │   └── ...               # Other API endpoints
+│   └── onboarding/           # Multi-step onboarding
 ├── components/
-│   ├── profile/              # SeekerProfile form with certs, portfolio, marketplace prefs
-│   ├── dashboard/            # Shared UI: SectionCard, Badge, Tabs, StatCard, PageHeader
+│   ├── profile/              # SeekerProfile form
+│   ├── dashboard/            # Shared UI (VerifiedBadge, SectionCard, etc.)
 │   └── layout/               # DashboardLayout, sidebar navigation
 ├── lib/
-│   ├── validations/          # Zod schemas for profile, jobs, applications
+│   ├── embedding-service.ts  # HuggingFace vector generation
+│   ├── sync-embeddings.ts    # Database vector synchronization
+│   ├── candidate-match.ts    # Hybrid AI scoring logic
 │   ├── auth-guard.ts         # Server-side auth helper
-│   ├── supabase-server.ts    # Server Supabase client
-│   └── api.ts                # Client-side fetch helpers
+│   └── ...                   # Other utilities
 supabase/
 └── schema.sql                # Full canonical schema (source of truth)
 ```
@@ -188,27 +133,24 @@ supabase/
 
 ### `job_seekers` table (key fields)
 ```sql
-search_intent    TEXT  -- ACTIVELY_LOOKING | OPEN_TO_OFFERS | SEEKING_INTERNSHIP | NOT_LOOKING
+embedding        vector(384) -- AI Professional DNA for semantic search
+search_intent    TEXT  -- ACTIVELY_LOOKING | OPEN_TO_OFFERS | ...
 profile_visibility TEXT -- PUBLIC | ANONYMOUS | HIDDEN
-portfolio_links  TEXT[] -- Array of URL strings
-profile_views    INTEGER -- Incremented every time an employer views the profile
+portfolio_links  TEXT[]
 ```
 
-### `employer_saved_candidates` table
+### `jobs` table (key fields)
 ```sql
-employer_id  UUID  -- references employers
-seeker_id    UUID  -- references job_seekers
-notes        TEXT  -- optional employer notes
-created_at   TIMESTAMP
+embedding        vector(384) -- AI Job Requirement DNA
+must_have_skills TEXT[]
+nice_to_have_skills TEXT[]
+status           TEXT -- ACTIVE | FILLED | ARCHIVED
 ```
 
 ### `certificates` table
 ```sql
-seeker_id      UUID
-title          TEXT
-issuer         TEXT
-issue_date     DATE
-credential_url TEXT
+is_verified      BOOLEAN -- Admin-verified status
+verification_tier INTEGER -- Level of vetting (0: None, 1: Link, 2: Manual)
 ```
 
 ---
@@ -219,9 +161,8 @@ credential_url TEXT
 
 - Node.js 20+
 - npm
-- A [Supabase](https://supabase.com) project
-- PayChangu credentials (for payment features)
-- Resend credentials (for email notifications)
+- A [Supabase](https://supabase.com) project with `pgvector` enabled
+- HuggingFace API Token (Optional but recommended)
 
 ### 1. Install dependencies
 
@@ -237,8 +178,7 @@ Copy `.env.example` to `.env.local` and fill in:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-NEXT_PUBLIC_APP_URL=
-PAYCHANGU_SECRET_KEY=
+HUGGINGFACE_TOKEN=
 RESEND_API_KEY=
 ```
 
@@ -249,38 +189,6 @@ RESEND_API_KEY=
 psql -h <host> -U postgres -d postgres -f supabase/schema.sql
 ```
 
-For an existing database, back it up first, then reconcile it with `supabase/schema.sql`.
-
-### 4. Run locally
-
-```bash
-npm run dev
-```
-
-### 5. Type check
-
-```bash
-npm run type-check
-```
-
----
-
-## Deployment
-
-**For a fresh environment:**
-
-1. Provision Supabase project
-2. Apply `supabase/schema.sql`
-3. Configure all environment variables in your deployment platform (Vercel, etc.)
-4. Deploy — `npm run build && npm start`
-
-**For an existing environment:**
-
-1. Back up the database
-2. Reconcile the database with `supabase/schema.sql`
-3. Verify the required columns and tables are present
-4. Deploy the updated app
-
 ---
 
 ## Current Platform Status
@@ -289,38 +197,29 @@ npm run type-check
 
 | Feature | Status |
 |---|---|
-| Public job board (`/jobs`) | ✅ |
-| Structured job posting with screening | ✅ |
-| Transparent screening score on apply | ✅ |
-| Employer hiring pipeline (Shortlist → Interview → Hire) | ✅ |
-| Full seeker profile (bio, skills, experience, education) | ✅ |
-| Certifications management | ✅ |
-| Portfolio links | ✅ |
+| AI Semantic Matchmaking (HuggingFace + pgvector) | ✅ |
+| Verified Employer Badges | ✅ |
+| Admin Certificate Verification Pipeline | ✅ |
+| Profile Strength Gamification (Actionable suggestions) | ✅ |
+| Closed-loop Application Feedback (Instant notifications) | ✅ |
+| Public job board & Structured job posting | ✅ |
+| Transparent screening scores & pipeline management | ✅ |
+| Full seeker profile & certifications management | ✅ |
 | Profile visibility & search intent controls | ✅ |
-| Profile view analytics for seekers | ✅ |
-| Marketplace preferences in onboarding | ✅ |
-| Employer Discover page with filters | ✅ |
-| Candidate public profile page | ✅ |
-| Save Candidate / Talent Pool | ✅ |
-| Invite to Apply (direct messaging) | ✅ |
-| Skill-based matchmaking (employer side) | ✅ |
-| Suggested Candidates on Job Detail page | ✅ |
-| Recommended Jobs widget on seeker dashboard | ✅ |
-| In-platform notifications | ✅ |
+| Employer Discover page with semantic filters | ✅ |
 | Payments & subscriptions (PayChangu) | ✅ |
-| Admin dashboard | ✅ |
+| Admin dashboard & Audit logging | ✅ |
 | Mobile responsive UI | ✅ |
 
 ---
 
 ## Privacy Design
 
-Aganyu takes candidate privacy seriously. The platform enforces the following rules at every level:
+Aganyu enforces strict privacy rules at the database level (RLS):
 
-- **`HIDDEN` profiles** never appear in employer discovery or matchmaking results
-- **`ANONYMOUS` profiles** show skills, experience, and bio — but name, avatar, location, and contact details are masked in all views (Discover page, Candidate Profile page, Suggested Candidates tab, Saved Talent page)
-- **Contact details** (email, phone, WhatsApp) are only exposed for `PUBLIC` profiles
-- **Row Level Security (RLS)** is enforced at the database level for all tables
+- **`HIDDEN` profiles** never appear in discovery or AI matchmaking.
+- **`ANONYMOUS` profiles** show skills/experience but mask identifying details.
+- **Contact details** are strictly reserved for `PUBLIC` profiles.
 
 ---
 

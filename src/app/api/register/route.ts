@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { canUseEmailForRegistration, isFreeEmailDomain } from "@/lib/email-safety";
-import { notifyAdmin } from "@/lib/notifications";
+import { NotificationService } from "@/services/notification.service";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
@@ -130,7 +130,7 @@ export async function POST(request: Request) {
 
         // 4. Notify Administrators (Real-Time System Event)
         if (effectiveRole === "EMPLOYER") {
-            await notifyAdmin({
+            await NotificationService.notifyAdmin({
                 title: "New employer verification required",
                 message: `${companyName || "A new company"} has requested access to the platform.`,
                 type: "VERIFICATION_UPDATE",

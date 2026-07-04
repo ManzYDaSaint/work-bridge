@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import { MapPin, Briefcase, Clock } from "lucide-react";
+import { MapPin, Clock } from "lucide-react";
 import { getLiveMetrics } from "@/app/actions/metrics";
 
 const formatTimeAgo = (dateString: string) => {

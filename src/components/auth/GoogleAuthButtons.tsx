@@ -64,3 +64,4 @@ export default function GoogleAuthButtons({ mode, role }: GoogleAuthButtonsProps
         </button>
     );
 }
+

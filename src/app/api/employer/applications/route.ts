@@ -42,6 +42,10 @@ export async function GET(request: Request) {
         return NextResponse.json([]);
     }
 
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const offset = (page - 1) * limit;
+
     let query = supabase
         .from("applications")
         .select(`
@@ -52,11 +56,12 @@ export async function GET(request: Request) {
                 email,
                 jobSeeker:job_seekers(*)
             )
-        `)
+        `, { count: "exact" })
         .in("job_id", jobId ? [jobId] : ownedJobIds)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
 
-    const { data, error } = await query;
+    const { data, count, error } = await query;
 
     if (error) {
         console.error("Employer Applications GET error:", error);
@@ -125,5 +130,11 @@ export async function GET(request: Request) {
         };
     }));
 
-    return NextResponse.json(formattedData);
+    return NextResponse.json({
+        data: formattedData,
+        total: count || 0,
+        page,
+        limit,
+        totalPages: Math.ceil((count || 0) / limit),
+    });
 }

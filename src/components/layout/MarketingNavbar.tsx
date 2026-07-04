@@ -49,7 +49,7 @@ export default function MarketingNavbar() {
         };
 
         loadRole();
-    }, [authUser?.id, mounted]);
+    }, [authUser, mounted]);
 
     const postJobHref = usePostJobHref(authUser ? { id: authUser.id } : null, role);
 

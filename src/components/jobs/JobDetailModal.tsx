@@ -42,16 +42,6 @@ export interface ExtendedJob extends Omit<Job, "employer"> {
     _count?: { applications: number };
 }
 
-interface SeekerProfileData {
-    role: string;
-    jobSeeker?: {
-        completion: number;
-        isSubscribed: boolean;
-        applicationsThisMonth: number;
-        skills?: string[];
-    };
-}
-
 export type PublicViewerMode = "guest" | "employer" | "admin";
 
 export default function JobDetailModal({

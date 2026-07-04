@@ -29,7 +29,8 @@ export async function validateAuth(
     const supabase = await createSupabaseServerClient();
 
     // Use getUser() for secure authentication (validates with Auth server).
-    let { data: { user }, error: userError } = await supabase.auth.getUser();
+    const getUserRes = await supabase.auth.getUser();
+    let user = getUserRes.data.user;
 
     if (!user) {
         // If cookies are missing on this request (rare dev cross-origin cases),

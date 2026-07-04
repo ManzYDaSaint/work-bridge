@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "@/lib/api";
 import { cn, timeAgo } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 
 interface Notification {
     id: string;
@@ -41,11 +42,31 @@ export default function NotificationCenter() {
     };
 
     useEffect(() => {
+        const supabase = createBrowserSupabaseClient();
+
         fetchNotifications();
         
-        // Polling for new notifications every 2 minutes
-        const interval = setInterval(fetchNotifications, 120000);
-        return () => clearInterval(interval);
+        // Subscribe to real-time updates on the notifications table
+        const channel = supabase
+            .channel('realtime-notifications')
+            .on(
+                'postgres_changes',
+                { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'notifications' 
+                },
+                (payload) => {
+                    console.log('[NOTIFICATION_REALTIME] Payload received:', payload);
+                    // Refresh notifications on any change to keep state synced
+                    fetchNotifications();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     useEffect(() => {

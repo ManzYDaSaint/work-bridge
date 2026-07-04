@@ -1,10 +1,10 @@
 "use client";
 
 import { Badge, CompanyAvatar } from "@/components/dashboard/ui";
-import { CheckCircle, Loader2, Mail, MapPin, XCircle, Calendar } from "lucide-react";
+import { CheckCircle, Loader2, Mail, MapPin, XCircle, Calendar, Sparkles } from "lucide-react";
 
 interface JobSeekerProfile {
-    id: string;
+    id?: string;
     full_name: string;
     location?: string;
     phone?: string;
@@ -14,7 +14,7 @@ interface JobSeekerProfile {
 }
 
 interface JobDetails {
-    id: string;
+    id?: string;
     title: string;
 }
 
@@ -22,6 +22,7 @@ interface ApplicationData {
     id: string;
     status: "PENDING" | "ACCEPTED" | "REJECTED" | "SHORTLISTED" | "INTERVIEWING";
     screeningScore?: number;
+    similarity?: number;
     meetsRequiredCriteria?: boolean;
     screeningSummary?: string;
     matchedSkills?: string[];
@@ -66,9 +67,30 @@ export default function CandidateCard({ application, onViewProfile, onStatusUpda
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
                 <Badge label={app.job?.title || "Role"} variant="outline" />
-                {app.screeningScore !== undefined && <Badge label={`${app.screeningScore}% fit`} variant="blue" />}
+                {app.similarity !== undefined ? (
+                    <Badge
+                        variant={
+                            app.similarity >= 0.7 ? "green" : 
+                            app.similarity >= 0.4 ? "blue" : "yellow"
+                        }
+                    >
+                        <Sparkles size={10} className="mr-1 inline" />
+                        {Math.round(app.similarity * 100)}% DNA Match
+                    </Badge>
+                ) : app.screeningScore !== undefined && (
+                    <Badge 
+                        label={`${app.screeningScore}% Match`} 
+                        variant={
+                            app.screeningScore >= 80 ? "green" : 
+                            app.screeningScore >= 50 ? "blue" : "yellow"
+                        } 
+                    />
+                )}
                 {app.meetsRequiredCriteria !== undefined && (
-                    <Badge label={app.meetsRequiredCriteria ? "Meets requirements" : "Missing requirements"} variant={app.meetsRequiredCriteria ? "green" : "yellow"} />
+                    <Badge 
+                        label={app.meetsRequiredCriteria ? "Meets Requirements" : "Criteria Gap"} 
+                        variant={app.meetsRequiredCriteria ? "green" : "yellow"} 
+                    />
                 )}
                 {seeker?.skills?.slice(0, 3).map((skill) => (
                     <Badge key={skill} label={skill} variant="secondary" />
@@ -76,7 +98,13 @@ export default function CandidateCard({ application, onViewProfile, onStatusUpda
             </div>
 
             {seeker?.bio && <p className="mt-4 line-clamp-3 text-sm text-slate-600 dark:text-slate-400">{seeker.bio}</p>}
-            {app.screeningSummary && <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">{app.screeningSummary}</p>}
+
+            {app.screeningSummary && (
+                <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Match Justification</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 italic">"{app.screeningSummary}"</p>
+                </div>
+            )}
 
             <div className="mt-5 flex items-center justify-between border-t border-stone-200/70 pt-4 dark:border-slate-800">
                 <button type="button" onClick={onViewProfile} className="text-sm font-semibold text-[#16324f] hover:underline dark:text-slate-200">

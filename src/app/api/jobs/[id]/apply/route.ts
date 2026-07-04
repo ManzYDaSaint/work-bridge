@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { ScreeningAnswer } from "@/types";
 import { sendNewApplicationEmail } from "@/lib/resend";
-import { createNotification } from "@/lib/notifications";
+import { NotificationService } from "@/services/notification.service";
 
 export async function POST(
     request: Request,
@@ -106,6 +106,30 @@ export async function POST(
         body.screeningAnswers || {}
     );
 
+    // --- Calculate AI Match Score ---
+    const { data: seekerEmbeddingData } = await supabase
+        .from("job_seekers")
+        .select("embedding")
+        .eq("id", auth.userId)
+        .single();
+
+    const { data: jobEmbeddingData } = await supabase
+        .from("jobs")
+        .select("embedding")
+        .eq("id", jobId)
+        .single();
+
+    let matchScore = null;
+    if (seekerEmbeddingData?.embedding && jobEmbeddingData?.embedding) {
+        const sVec = seekerEmbeddingData.embedding;
+        const jVec = jobEmbeddingData.embedding;
+        
+        // Cosine Similarity = (A . B) / (||A|| ||B||)
+        // Since HF all-MiniLM embeddings are normalized, this is just the dot product
+        const dotProduct = sVec.reduce((sum: number, val: number, i: number) => sum + val * (jVec[i] as number), 0);
+        matchScore = dotProduct;
+    }
+
     // Check for existing application
     const { data: existing } = await supabase
         .from("applications")
@@ -130,6 +154,7 @@ export async function POST(
             screening_summary: screeningResult.summary,
             screening_breakdown: screeningResult.breakdown,
             meets_required_criteria: screeningResult.meetsRequiredCriteria,
+            match_score: matchScore,
         });
 
     if (insertError) {
@@ -172,7 +197,7 @@ export async function POST(
                     jobTitle: (job as any).title || "your role",
                     candidateName: (seekerUser as any)?.job_seekers?.full_name || "A candidate",
                 }),
-                createNotification({
+                await NotificationService.createNotification({
                     userId: (job as any).employer_id,
                     title: "New Job Application",
                     message: `${(seekerUser as any)?.job_seekers?.full_name || "A candidate"} applied for ${(job as any).title}`,

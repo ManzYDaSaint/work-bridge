@@ -1,35 +1,24 @@
 import { validateAuth } from "@/lib/auth-guard";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { adminService } from "@/services/adminService";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
     const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
-    const supabase = await createSupabaseServerClient();
-
     try {
         const { searchParams } = new URL(request.url);
         const limit = parseInt(searchParams.get("limit") || "50");
         const offset = parseInt(searchParams.get("offset") || "0");
-        const userId = searchParams.get("userId");
-        const action = searchParams.get("action");
+        const userId = searchParams.get("userId") ?? undefined;
+        const action = searchParams.get("action") ?? undefined;
 
-        let query = supabase
-            .from("audit_logs")
-            .select(`
-                *,
-                user:users(email, role)
-            `, { count: "exact" })
-            .order('created_at', { ascending: false })
-            .range(offset, offset + limit - 1);
-
-        if (userId) query = query.eq("user_id", userId);
-        if (action) query = query.ilike("action", `%${action}%`);
-
-        const { data: items, count, error } = await query;
-
-        if (error) throw error;
+        const { items, total } = await adminService.getAuditLogs({
+            offset,
+            limit,
+            userId,
+            action
+        });
 
         return NextResponse.json({
             items: items.map((item: any) => ({
@@ -42,7 +31,7 @@ export async function GET(request: Request) {
                 userId: item.user_id,
                 user: item.user
             })),
-            total: count || 0,
+            total,
             limit,
             offset
         });

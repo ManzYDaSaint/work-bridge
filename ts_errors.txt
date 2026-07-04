@@ -1,0 +1,45 @@
+src/app/(app)/dashboard/seeker/jobs/page.tsx(99,17): error TS2322: Type '{ initialJobs: any[]; initialTotalPages: number; initialSavedJobIds: Set<any>; initialAppliedJobIds: Set<any>; initialProfile: any; currentPage: number; currentQuery: string; currentWorkMode: string; currentType: string; }' is not assignable to type 'IntrinsicAttributes & { initialJobs?: ExtendedJob[] | undefined; initialTotalPages?: number | undefined; initialSavedJobIds?: Set<string> | undefined; ... 4 more ...; currentType?: string | undefined; }'.
+  Property 'initialProfile' does not exist on type 'IntrinsicAttributes & { initialJobs?: ExtendedJob[] | undefined; initialTotalPages?: number | undefined; initialSavedJobIds?: Set<string> | undefined; ... 4 more ...; currentType?: string | undefined; }'.
+src/components/dashboard/employer/CandidatePipeline.tsx(180,29): error TS2322: Type 'ApplicationWithDetails' is not assignable to type 'ApplicationData'.
+  Types of property 'job' are incompatible.
+    Property 'id' is missing in type '{ title: string; }' but required in type 'JobDetails'.
+src/components/dashboard/employer/CandidatePipeline.tsx(200,29): error TS2322: Type 'ApplicationWithDetails' is not assignable to type 'ApplicationData'.
+  Types of property 'job' are incompatible.
+    Property 'id' is missing in type '{ title: string; }' but required in type 'JobDetails'.
+src/components/dashboard/employer/CandidatePipeline.tsx(220,29): error TS2322: Type 'ApplicationWithDetails' is not assignable to type 'ApplicationData'.
+  Types of property 'job' are incompatible.
+    Property 'id' is missing in type '{ title: string; }' but required in type 'JobDetails'.
+src/components/dashboard/employer/CandidatePipeline.tsx(240,29): error TS2322: Type 'ApplicationWithDetails' is not assignable to type 'ApplicationData'.
+  Types of property 'job' are incompatible.
+    Property 'id' is missing in type '{ title: string; }' but required in type 'JobDetails'.
+src/components/dashboard/employer/CandidatePipeline.tsx(306,34): error TS18048: 'selectedApp.screeningBreakdown.length' is possibly 'undefined'.
+src/components/dashboard/employer/CandidatePipeline.tsx(310,46): error TS18048: 'selectedApp.screeningBreakdown' is possibly 'undefined'.
+src/components/dashboard/employer/CandidatePipeline.tsx(330,34): error TS18048: 'selectedApp.user.jobSeeker.skills.length' is possibly 'undefined'.
+src/components/dashboard/employer/CandidatePipeline.tsx(334,46): error TS18048: 'selectedApp.user.jobSeeker.skills' is possibly 'undefined'.
+src/components/dashboard/employer/CandidatePipeline.tsx(339,34): error TS18048: 'selectedApp.user.jobSeeker.experience.length' is possibly 'undefined'.
+src/components/dashboard/employer/CandidatePipeline.tsx(343,46): error TS18048: 'selectedApp.user.jobSeeker.experience' is possibly 'undefined'.
+src/lib/employer-jobs.ts(88,9): error TS2322: Type '{ id: any; title: any; description: any; location: any; type: any; work_mode: any; status: any; deadline: any; skills: any; isNew: any; createdAt: any; employer: { id: any; companyName: any; description: any; } | undefined; _count: { ...; }; }[]' is not assignable to type 'Job[]'.
+  Type '{ id: any; title: any; description: any; location: any; type: any; work_mode: any; status: any; deadline: any; skills: any; isNew: any; createdAt: any; employer: { id: any; companyName: any; description: any; } | undefined; _count: { ...; }; }' is not assignable to type 'Job'.
+    Types of property 'employer' are incompatible.
+      Type '{ id: any; companyName: any; description: any; } | undefined' is not assignable to type '{ company_name: string; companyName: string; id?: string | undefined; logoUrl?: string | null | undefined; }'.
+        Type 'undefined' is not assignable to type '{ company_name: string; companyName: string; id?: string | undefined; logoUrl?: string | null | undefined; }'.
+src/lib/match-notification-service.ts(53,27): error TS2339: Property 'skills' does not exist on type 'any[]'.
+src/lib/match-notification-service.ts(54,31): error TS2339: Property 'experience' does not exist on type 'any[]'.
+src/lib/match-notification-service.ts(55,34): error TS2339: Property 'qualification' does not exist on type 'any[]'.
+src/services/job.service.ts(79,13): error TS2322: Type '{ id: any; title: any; description: any; location: any; type: any; work_mode: any; status: any; deadline: any; skills: any; isNew: any; createdAt: any; employer: { id: any; companyName: any; description: any; } | undefined; _count: { ...; }; }[]' is not assignable to type 'Job[]'.
+  Type '{ id: any; title: any; description: any; location: any; type: any; work_mode: any; status: any; deadline: any; skills: any; isNew: any; createdAt: any; employer: { id: any; companyName: any; description: any; } | undefined; _count: { ...; }; }' is not assignable to type 'Job'.
+    Types of property 'employer' are incompatible.
+      Type '{ id: any; companyName: any; description: any; } | undefined' is not assignable to type '{ company_name: string; companyName: string; id?: string | undefined; logoUrl?: string | null | undefined; }'.
+        Type 'undefined' is not assignable to type '{ company_name: string; companyName: string; id?: string | undefined; logoUrl?: string | null | undefined; }'.
+src/services/jobService.ts(297,9): error TS2554: Expected 2 arguments, but got 1.
+src/services/jobService.ts(298,9): error TS2554: Expected 2 arguments, but got 1.
+src/services/jobService.ts(299,9): error TS2554: Expected 2 arguments, but got 1.
+src/services/jobService.ts(319,9): error TS2554: Expected 2 arguments, but got 1.
+src/services/jobService.ts(321,13): error TS2554: Expected 2 arguments, but got 1.
+src/services/jobService.ts(322,13): error TS2554: Expected 2 arguments, but got 1.
+src/services/jobService.ts(341,9): error TS2554: Expected 2 arguments, but got 1.
+src/services/jobService.ts(343,13): error TS2554: Expected 2 arguments, but got 1.
+src/services/jobService.ts(344,13): error TS2554: Expected 2 arguments, but got 1.
+src/services/notification.service.ts(225,41): error TS2339: Property 'skills' does not exist on type 'any[]'.
+src/services/notification.service.ts(226,45): error TS2339: Property 'experience' does not exist on type 'any[]'.
+src/services/notification.service.ts(227,48): error TS2339: Property 'qualification' does not exist on type 'any[]'.

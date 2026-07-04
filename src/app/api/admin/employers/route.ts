@@ -2,7 +2,7 @@ import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { recordAuditLog } from "@/lib/audit";
 import { sendEmployerVerificationEmail } from "@/lib/resend";
-import { createNotification } from "@/lib/notifications";
+import { NotificationService } from "@/services/notification.service";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
@@ -84,7 +84,7 @@ export async function PATCH(request: Request) {
             });
 
             // Trigger Real-time notification for the employer
-            await createNotification({
+            await NotificationService.createNotification({
                 userId: employerId,
                 title: status === 'APPROVED' ? "Employer Verified" : "Verification Declined",
                 message: status === 'APPROVED'

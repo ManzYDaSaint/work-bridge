@@ -118,7 +118,7 @@ export default function RootLayout({
           <Script
             id="plausible-analytics"
             src="https://plausible.io/js/script.js"
-            strategy="beforeInteractive"
+            strategy="afterInteractive"
             data-domain={plausibleDomain}
           />
         )}

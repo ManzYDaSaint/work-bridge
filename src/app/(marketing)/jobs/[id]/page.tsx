@@ -5,7 +5,8 @@ import { ArrowLeft, Briefcase, Building2, CalendarDays, CheckCircle2, DollarSign
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { formatJobType, formatWorkMode } from "@/lib/utils";
 
-export const dynamic = "force-dynamic";
+// Revalidate every 10 minutes — much better than force-dynamic for crawlers
+export const revalidate = 600;
 
 type PublicJob = {
     id: string;
@@ -119,11 +120,49 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
     const company = employer?.company_name || "Aganyu employer";
     const skills = uniqueList([...(job.must_have_skills || []), ...(job.skills || []), ...(job.nice_to_have_skills || [])]);
     const applyHref = `/jobs?job=${job.id}`;
-    const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
+    const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://aganyu.com").replace(/\/$/, "");
     const sharePath = `${siteUrl}/jobs/${job.public_slug || job.id}`;
 
+    // JSON-LD JobPosting schema for Google rich results
+    const jobPostingSchema = {
+        "@context": "https://schema.org",
+        "@type": "JobPosting",
+        title: job.title,
+        description: job.description || `${company} is hiring a ${job.title}.`,
+        datePosted: job.created_at,
+        validThrough: job.deadline || undefined,
+        employmentType: job.type === "FULL_TIME" ? "FULL_TIME" : job.type === "PART_TIME" ? "PART_TIME" : job.type === "CONTRACT" ? "CONTRACTOR" : "INTERN",
+        hiringOrganization: {
+            "@type": "Organization",
+            name: company,
+            sameAs: employer?.website || undefined,
+            logo: employer?.logo_url || undefined,
+        },
+        jobLocation: {
+            "@type": "Place",
+            address: {
+                "@type": "PostalAddress",
+                addressLocality: job.location,
+                addressCountry: "MW",
+            },
+        },
+        jobLocationType:
+            job.work_mode === "REMOTE" ? "TELECOMMUTE" : undefined,
+        baseSalary: job.salary_range
+            ? { "@type": "MonetaryAmount", description: job.salary_range }
+            : undefined,
+        skills: skills.join(", ") || undefined,
+        url: sharePath,
+        directApply: true,
+    };
+
     return (
-        <div className="min-h-screen bg-[#f7f3ea] text-slate-900 dark:bg-slate-950 dark:text-white">
+        <>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jobPostingSchema) }}
+            />
+            <div className="min-h-screen bg-[#f7f3ea] text-slate-900 dark:bg-slate-950 dark:text-white">
             <section className="border-b border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-950/80">
                 <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
                     <Link href="/jobs" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white">
@@ -218,5 +257,6 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
                 </aside>
             </section>
         </div>
+        </>
     );
 }

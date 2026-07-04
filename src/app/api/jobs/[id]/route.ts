@@ -3,6 +3,7 @@ import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { buildPublicJobSlug } from "@/lib/public-slugs";
+import { syncJobEmbedding } from "@/lib/sync-embeddings";
 
 export async function GET(
     request: Request,
@@ -96,6 +97,9 @@ export async function PUT(
             .single();
 
         if (error) throw error;
+
+        // Sync semantic embedding for intelligent matchmaking
+        await syncJobEmbedding(id, data);
 
         return NextResponse.json({ success: true, job: data });
     } catch (error: any) {
@@ -202,6 +206,9 @@ export async function POST(
             .single();
 
         if (slugError) throw slugError;
+
+        // Sync semantic embedding for the new reposted job
+        await syncJobEmbedding(newJob.id, newJob);
 
         return NextResponse.json({ success: true, job: newJob });
     } catch (error: any) {

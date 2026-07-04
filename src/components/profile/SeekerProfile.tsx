@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { apiFetch, apiFetchJson } from "@/lib/api";
 import { JobSeeker } from "@/types";
 import { Camera, Check, Loader2, Plus, Trash2, Award, ExternalLink, FileText, UploadCloud } from "lucide-react";
@@ -30,20 +30,24 @@ interface Certificate {
     credential_url: string | null;
 }
 
-export default function SeekerProfile() {
-    const [profile, setProfile] = useState<SeekerProfileData | null>(null);
-    const [loading, setLoading] = useState(true);
+export default function SeekerProfile({ 
+    initialProfile, 
+    initialCertificates 
+}: { 
+    initialProfile: SeekerProfileData; 
+    initialCertificates: Certificate[]; 
+}) {
+    const profile = initialProfile;
     const [saving, setSaving] = useState(false);
     const [newSkill, setNewSkill] = useState("");
     const [newLink, setNewLink] = useState("");
-    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(initialProfile.avatar_url ?? null);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
-    const [resumeUrl, setResumeUrl] = useState<string | null>(null);
+    const [resumeUrl, setResumeUrl] = useState<string | null>(initialProfile.resume_url ?? null);
     const [uploadingResume, setUploadingResume] = useState(false);
     
     // Certificates state
-    const [certificates, setCertificates] = useState<Certificate[]>([]);
-    const [certLoading, setCertLoading] = useState(true);
+    const [certificates, setCertificates] = useState<Certificate[]>(initialCertificates);
     const [newCert, setNewCert] = useState({ title: "", issuer: "", issue_date: "", credential_url: "" });
     const [addingCert, setAddingCert] = useState(false);
 
@@ -65,7 +69,7 @@ export default function SeekerProfile() {
             skills: profile.skills ?? [],
             experience: (profile as any).experience ?? [],
             education: (profile as any).education ?? [],
-            qualification: (profile as any).qualification ?? "",
+            qualification: profile.qualification ?? "",
             salaryExpectation: profile.salaryExpectation ?? "",
             seniorityLevel: profile.seniorityLevel ?? "",
             employmentType: profile.employmentType ?? "",
@@ -74,7 +78,7 @@ export default function SeekerProfile() {
             searchIntent: profile.searchIntent ?? "ACTIVELY_LOOKING",
             profileVisibility: profile.profileVisibility ?? "HIDDEN",
             portfolioLinks: profile.portfolioLinks ?? [],
-            employmentStatus: profile.employmentStatus ?? "",
+            employmentStatus: (profile as any).employment_status ?? "",
         } : undefined,
     });
 
@@ -82,35 +86,6 @@ export default function SeekerProfile() {
     const { fields: educationFields, append: educationAppend, remove: educationRemove } = useFieldArray({ control, name: "education" });
     const watchedSkills = watch("skills") || [];
     const watchedPortfolioLinks = watch("portfolioLinks") || [];
-
-    const fetchProfile = async () => {
-        try {
-            const res = await apiFetch("/api/profile");
-            const data: SeekerProfileData = await res.json();
-            setProfile(data);
-            setAvatarUrl((data as any).avatarUrl ?? null);
-            setResumeUrl(data.resumeUrl ?? null);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchCertificates = async () => {
-        try {
-            const res = await apiFetch("/api/profile/certificates");
-            if (res.ok) {
-                const data = await res.json();
-                setCertificates(data);
-            }
-        } finally {
-            setCertLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchProfile();
-        fetchCertificates();
-    }, []);
 
     const addSkill = (skill: string) => {
         const trimmed = skill.trim();
@@ -224,23 +199,12 @@ export default function SeekerProfile() {
         setSaving(true);
         try {
             await apiFetchJson("/api/profile", { method: "PUT", body: JSON.stringify(data) });
-            await fetchProfile();
             router.refresh();
             toast.success("Profile updated");
         } finally {
             setSaving(false);
         }
     };
-
-    if (loading) {
-        return (
-            <div className="flex min-h-[60vh] items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-[#16324f]" />
-            </div>
-        );
-    }
-
-    if (!profile) return null;
 
     const inputClass = "w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white";
     const publicCareerPath = profile.publicSlug ? `/in/${profile.publicSlug}` : profile.id ? `/career/${profile.id}` : null;
@@ -453,9 +417,7 @@ export default function SeekerProfile() {
 
                     <SectionCard title="Certifications">
                         <div className="space-y-4 p-6">
-                            {certLoading ? (
-                                <div className="flex justify-center py-4"><Loader2 className="animate-spin text-slate-400" /></div>
-                            ) : certificates.length > 0 ? (
+                            {certificates.length > 0 ? (
                                 <div className="space-y-3">
                                     {certificates.map((cert) => (
                                         <div key={cert.id} className="flex items-start justify-between rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-slate-800 dark:bg-slate-900">

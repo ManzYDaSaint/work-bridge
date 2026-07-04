@@ -1,12 +1,27 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import PublicJobBoard from "@/components/jobs/PublicJobBoard";
 import { UserProvider } from "@/context/UserContext";
 import { buildMeProfile } from "@/lib/me-profile";
 import { getAuthOptional } from "@/lib/auth-guard";
+import { jobService } from "@/services/jobService";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+    title: "Browse Jobs in Malawi — Remote, Hybrid & On-site Roles | Aganyu",
+    description:
+        "Search hundreds of remote, hybrid, and on-site jobs in Malawi. Filter by role type, work mode, and location. Apply in seconds — no account needed to browse.",
+    alternates: { canonical: "/jobs" },
+    openGraph: {
+        title: "Browse Jobs in Malawi | Aganyu",
+        description: "Explore remote, hybrid, and on-site roles from trusted Malawian employers.",
+        url: "/jobs",
+        type: "website",
+    },
+};
 
 function JobsFallback() {
     return (
@@ -18,7 +33,18 @@ function JobsFallback() {
     );
 }
 
-export default async function JobsPage() {
+export default async function JobsPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+    const params = await searchParams;
+    const page = parseInt(params.page as string) || 1;
+    const query = params.query as string || "";
+    const workMode = params.workMode as string || "ALL";
+    const type = params.type as string || "ALL";
+    const limit = 20;
+
     const supabase = await createSupabaseServerClient();
     const auth = await getAuthOptional();
     const user = auth.user;
@@ -31,6 +57,22 @@ export default async function JobsPage() {
         redirect("/dashboard/seeker/jobs");
     }
 
+    // 1. Parallel Data Fetching
+    const [jobsResponse, savedQuery, appsQuery] = await Promise.all([
+        jobService.getJobs({
+            page,
+            limit,
+            query: query || undefined,
+            workMode,
+            type
+        }),
+        user ? supabase.from("saved_jobs").select("job_id") : Promise.resolve({ data: [] }),
+        user ? supabase.from("applications").select("jobId") : Promise.resolve({ data: [] }),
+    ]);
+
+    const savedJobIds = new Set((savedQuery.data || []).map((s: any) => s.job_id));
+    const appliedJobIds = new Set((appsQuery.data || []).map((a: any) => a.jobId));
+
     return (
         <Suspense fallback={<JobsFallback />}>
             <UserProvider initialUser={profile}>
@@ -41,7 +83,7 @@ export default async function JobsPage() {
                                 Browse jobs
                             </p>
                             <h1 className="mt-4 text-4xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-5xl">
-                                Explore Malawi-first jobs with a calm, modern landing experience.
+                                Browse Jobs in Malawi — Remote, Hybrid &amp; On-site Roles
                             </h1>
                             <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300 sm:text-lg">
                                 Discover remote, hybrid, and on-site roles from trusted employers. This board is styled for the landing page while the in-platform job board stays unchanged.
@@ -71,7 +113,16 @@ export default async function JobsPage() {
 
                     <section id="job-board" className="px-4 sm:px-6 max-w-6xl mx-auto">
                         <div className="rounded-[2rem] border border-stone-200 bg-stone-50 p-6 shadow-[0_24px_80px_-50px_rgba(17,24,39,0.18)] dark:border-slate-800 dark:bg-slate-900/80">
-                            <PublicJobBoard />
+                            <PublicJobBoard 
+                                initialJobs={jobsResponse.jobs}
+                                initialTotalPages={jobsResponse.totalPages}
+                                initialSavedJobIds={savedJobIds}
+                                initialAppliedJobIds={appliedJobIds}
+                                currentPage={page}
+                                currentQuery={query}
+                                currentWorkMode={workMode}
+                                currentType={type}
+                            />
                         </div>
                     </section>
                 </div>

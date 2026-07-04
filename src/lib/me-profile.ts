@@ -30,6 +30,7 @@ export async function buildMeProfile(
         id: userData.id,
         email: userData.email,
         role: userData.role,
+        plan: userData.plan || 'FREE',
         createdAt: userData.created_at,
         onboardingCompletedAt: userData.onboarding_completed_at ?? null,
         jobSeeker: userData.jobSeeker

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { User, JobSeeker } from "@/types";
 import {
-    LayoutDashboard, Briefcase, BookmarkCheck, UserCircle2
+    LayoutDashboard, Briefcase, BookmarkCheck, UserCircle2, Sparkles
 } from "lucide-react";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
 import { UserProvider, useUser } from "@/context/UserContext";
@@ -42,6 +42,7 @@ function SeekerLayoutInner({ children }: { children: React.ReactNode }) {
             items: [
                 { label: "Home", href: "/dashboard/seeker", icon: LayoutDashboard },
                 { label: "Find Jobs", href: "/dashboard/seeker/jobs", icon: Briefcase },
+                { label: "Recommended", href: "/dashboard/seeker/recommendations", icon: Sparkles },
                 { label: "Applications", href: "/dashboard/seeker/applications", icon: Briefcase },
                 { label: "Saved Jobs", href: "/dashboard/seeker/saved", icon: BookmarkCheck },
             ]

@@ -2,6 +2,7 @@ import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { buildPublicJobSlug } from "@/lib/public-slugs";
+import { syncJobEmbedding } from "@/lib/sync-embeddings";
 
 export const dynamic = "force-dynamic";
 
@@ -172,25 +173,18 @@ export async function POST(request: Request) {
 
         if (error) throw error;
 
+        // Sync semantic embedding for intelligent matchmaking
+        await syncJobEmbedding(data.id, data);
+
         // --- Notification Trigger ---
-        const job = data;
-        const { data: allSeekers } = await supabase.from("job_seekers").select("*");
-
-        if (allSeekers) {
-            const notifications = allSeekers.map((seeker) => ({
-                user_id: seeker.id,
-                job_id: job.id,
-                title: "New job posted",
-                message: `New job posted: ${job.title} in ${job.location}. Review the structured requirements before you apply.`,
-                type: "GENERAL",
-                is_read: false,
-            }));
-
-            // Batch insert notifications
-            if (notifications.length > 0) {
-                const { error: notifyError } = await supabase.from("notifications").insert(notifications);
-                if (notifyError) console.error("Notification trigger error:", notifyError);
-            }
+        // Fire-and-forget AI matchmaking notifications
+        try {
+            const { triggerMatchNotifications } = await import("@/lib/match-notification-service");
+            triggerMatchNotifications(data.id).catch((err) =>
+                console.error("Background match notification failed:", err)
+            );
+        } catch (e) {
+            console.error("Failed to trigger match notifications:", e);
         }
 
         return NextResponse.json({ success: true, job: data });

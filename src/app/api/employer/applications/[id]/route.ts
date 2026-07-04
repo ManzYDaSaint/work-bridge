@@ -3,7 +3,7 @@ import { withAuth } from "@/lib/auth-guard";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { sendApplicationStatusEmail } from "@/lib/resend";
-import { createNotification } from "@/lib/notifications";
+import { NotificationService } from "@/services/notification.service";
 
 export const PATCH = withAuth(async (request, auth, { params }) => {
     const supabase = await createSupabaseServerClient();
@@ -87,7 +87,7 @@ export const PATCH = withAuth(async (request, auth, { params }) => {
             });
  
             // Notify employer
-            await createNotification({
+            await NotificationService.createNotification({
                 userId: userId,
                 title: "Hire Reported - Bonus Earned!",
                 message: "Thanks for reporting your hire! You've been rewarded with +5 free candidate contact views.",
@@ -122,7 +122,7 @@ export const PATCH = withAuth(async (request, auth, { params }) => {
                         status: status as any,
                         interviewLink: status === "INTERVIEWING" ? interviewLink : undefined,
                     }),
-                    createNotification({
+                    await NotificationService.createNotification({
                         userId: application.user_id,
                         title: `Application ${status.toLowerCase()}`,
                         message: `${companyName} has updated your application for ${jobTitle} to ${status.toLowerCase()}.`,

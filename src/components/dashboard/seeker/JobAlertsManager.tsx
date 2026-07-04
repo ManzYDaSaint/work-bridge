@@ -68,7 +68,8 @@ export default function JobAlertsManager() {
             } else {
                 toast.error(data.error || "Failed to create alert");
             }
-        } catch (error) {
+        } catch (err) {
+            console.error(err);
             toast.error("Something went wrong");
         } finally {
             setIsCreating(false);
@@ -87,7 +88,8 @@ export default function JobAlertsManager() {
             } else {
                 toast.error("Failed to delete alert");
             }
-        } catch (error) {
+        } catch (err) {
+            console.error(err);
             toast.error("Something went wrong");
         }
     };

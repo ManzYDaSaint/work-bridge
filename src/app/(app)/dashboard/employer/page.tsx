@@ -1,50 +1,15 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { apiFetch } from "@/lib/api";
-import { Briefcase, Users, ArrowRight, CheckCircle, Loader2 } from "lucide-react";
+import { Briefcase, Users, ArrowRight, CheckCircle } from "lucide-react";
 import { PageHeader, StatCard, SectionCard, Badge } from "@/components/dashboard/ui";
-import { useUser } from "@/context/UserContext";
 import Link from "next/link";
 import OnboardingChecklist from "@/components/dashboard/OnboardingChecklist";
+import { requireDashboardProfile } from "@/lib/dashboard-auth";
+import { EmployerService } from "@/services/employer.service";
 
-export default function EmployerOverviewPage() {
-    const { user } = useUser();
-    const [stats, setStats] = useState({
-        activeJobs: 0,
-        totalApplicants: 0,
-        shortlisted: 0,
-        interviewsSet: 0,
-    });
-    const [loading, setLoading] = useState(true);
+export default async function EmployerOverviewPage() {
+    const { profile: user } = await requireDashboardProfile("EMPLOYER");
+    const stats = await EmployerService.getEmployerStats(user.id);
 
-    useEffect(() => {
-        const fetchEmployerData = async () => {
-            try {
-                const res = await apiFetch("/api/employer/stats");
-                if (res.ok) {
-                    const data = await res.json();
-                    setStats(data);
-                }
-            } catch (err) {
-                console.error("Failed to load employer dashboard:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchEmployerData();
-    }, []);
-
-    const isApproved = user?.employer?.status === "APPROVED";
-
-    if (loading) {
-        return (
-            <div className="flex min-h-[60vh] items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-[#16324f]" />
-            </div>
-        );
-    }
+    const isApproved = user.employer?.status === "APPROVED";
 
     return (
         <div className="space-y-8 pb-20">

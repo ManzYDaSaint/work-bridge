@@ -52,6 +52,7 @@ CREATE TABLE public.job_seekers (
   portfolio_links TEXT[] DEFAULT '{}',
   profile_views INTEGER DEFAULT 0,
   application_limit_bonus INTEGER DEFAULT 0,
+  dna_hash TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -96,6 +97,7 @@ CREATE TABLE public.jobs (
   screening_questions JSONB DEFAULT '[]'::jsonb,
   status public.job_status DEFAULT 'PENDING' NOT NULL,
   public_slug TEXT,
+  dna_hash TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

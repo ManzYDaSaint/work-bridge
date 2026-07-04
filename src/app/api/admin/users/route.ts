@@ -1,13 +1,12 @@
 import { validateAuth } from "@/lib/auth-guard";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { adminService } from "@/services/adminService";
+import { userService } from "@/services/userService";
 import { NextResponse } from "next/server";
 import { recordAuditLog } from "@/lib/audit";
 
 export async function GET(request: Request) {
     const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
-
-    const supabase = await createSupabaseServerClient();
 
     try {
         const { searchParams } = new URL(request.url);
@@ -16,38 +15,17 @@ export async function GET(request: Request) {
         const search = searchParams.get("search") || "";
         const role = searchParams.get("role") || "ALL";
 
-        let query = supabase
-            .from("users")
-            .select(`
-                id,
-                email,
-                role,
-                created_at,
-                job_seekers:job_seekers (full_name, location),
-                employers:employers (company_name, location)
-            `, { count: "exact" });
-
-        if (role !== "ALL") {
-            query = query.eq("role", role);
-        }
-
-        if (search) {
-            query = query.ilike("email", `%${search}%`);
-        }
-
-        const from = (page - 1) * limit;
-        const to = from + limit - 1;
-
-        const { data: users, error, count } = await query
-            .order('created_at', { ascending: false })
-            .range(from, to);
-
-        if (error) throw error;
+        const { users, total } = await adminService.getSystemUsers({
+            page,
+            limit,
+            search,
+            role
+        });
 
         // Simplify user object for frontend
         const formattedUsers = users.map(u => {
-            const seeker = Array.isArray(u.job_seekers) ? u.job_seekers[0] : u.job_seekers;
-            const employer = Array.isArray(u.employers) ? u.employers[0] : u.employers;
+            const seeker = u.job_seeker;
+            const employer = u.employer;
 
             return {
                 id: u.id,
@@ -65,7 +43,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({
             users: formattedUsers,
-            total: count || 0,
+            total,
             page,
             limit
         });
@@ -79,8 +57,6 @@ export async function DELETE(request: Request) {
     const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
-    const supabase = await createSupabaseServerClient();
-
     try {
         const { searchParams } = new URL(request.url);
         const userId = searchParams.get('userId');
@@ -89,14 +65,7 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: "User ID required" }, { status: 400 });
         }
 
-        // Deleting from public.users cascades to job_seekers, employers, jobs, applications, etc.
-        // It also causes validateAuth to fail, effectively banning the user even if they are still in auth.users
-        const { error } = await supabase
-            .from("users")
-            .delete()
-            .eq("id", userId);
-
-        if (error) throw error;
+        await userService.deleteUser(userId);
 
         await recordAuditLog({
             action: "users_DELETE",

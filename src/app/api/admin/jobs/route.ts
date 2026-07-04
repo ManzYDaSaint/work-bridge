@@ -1,5 +1,6 @@
 import { validateAuth } from "@/lib/auth-guard";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { adminService } from "@/services/adminService";
+import { jobService } from "@/services/jobService";
 import { withAudit } from "@/lib/api-utils";
 import { NextResponse } from "next/server";
 
@@ -9,7 +10,6 @@ export const GET = withAudit(async (request: Request) => {
     const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
-    const supabase = await createSupabaseServerClient();
     try {
         const { searchParams } = new URL(request.url);
         const page = parseInt(searchParams.get("page") || "1");
@@ -17,33 +17,16 @@ export const GET = withAudit(async (request: Request) => {
         const search = searchParams.get("search") || "";
         const status = searchParams.get("status") || "ALL";
 
-        let query = supabase
-            .from("jobs")
-            .select(`
-                *,
-                employer:employers(id, company_name, location, status, logo_url, industry, website, description, recruiter_verified)
-            `, { count: "exact" });
-
-        if (status !== "ALL") {
-            query = query.eq("status", status);
-        }
-
-        if (search) {
-            query = query.ilike("title", `%${search}%`);
-        }
-
-        const from = (page - 1) * limit;
-        const to = from + limit - 1;
-
-        const { data: jobs, error, count } = await query
-            .order('created_at', { ascending: false })
-            .range(from, to);
-
-        if (error) throw error;
+        const { jobs, total } = await adminService.getSystemJobs({
+            page,
+            limit,
+            search,
+            status
+        });
 
         // Camelize response and handle auto-approval logic
         const formattedJobs = jobs.map(j => {
-            const employer = Array.isArray(j.employer) ? j.employer[0] : j.employer;
+            const employer = j.employer;
             const employerStatus = employer?.status;
 
             return {
@@ -66,7 +49,7 @@ export const GET = withAudit(async (request: Request) => {
 
         return NextResponse.json({
             jobs: formattedJobs,
-            total: count || 0,
+            total,
             page,
             limit
         });
@@ -80,8 +63,6 @@ export const PATCH = withAudit(async (request: Request) => {
     const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
-    const supabase = await createSupabaseServerClient();
-
     try {
         const { jobId, status } = await request.json();
 
@@ -93,12 +74,7 @@ export const PATCH = withAudit(async (request: Request) => {
             return NextResponse.json({ error: "Invalid job status" }, { status: 400 });
         }
 
-        const { error } = await supabase
-            .from("jobs")
-            .update({ status })
-            .eq("id", jobId);
-
-        if (error) throw error;
+        await jobService.updateJob(jobId, { status });
 
         return NextResponse.json({ success: true, metadata: { jobId, status } });
     } catch (error) {
@@ -111,8 +87,6 @@ export const DELETE = withAudit(async (request: Request) => {
     const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
-    const supabase = await createSupabaseServerClient();
-
     try {
         const { searchParams } = new URL(request.url);
         const jobId = searchParams.get('jobId');
@@ -121,12 +95,7 @@ export const DELETE = withAudit(async (request: Request) => {
             return NextResponse.json({ error: "Job ID required" }, { status: 400 });
         }
 
-        const { error } = await supabase
-            .from("jobs")
-            .delete()
-            .eq("id", jobId);
-
-        if (error) throw error;
+        await jobService.deleteJob(jobId);
 
         return NextResponse.json({ success: true, metadata: { jobId } });
     } catch (error) {

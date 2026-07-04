@@ -30,8 +30,7 @@ export async function GET(
 
         const companyName = (job.employer as any)?.company_name || "Aganyu Partner";
 
-        // 2. Render dynamic OG image
-        return new ImageResponse(
+        const imageResponse = new ImageResponse(
             (
                 <div
                     style={{
@@ -89,11 +88,12 @@ export async function GET(
                     </div>
                 </div>
             ),
-            {
-                width: 1200,
-                height: 630,
-            }
+            { width: 1200, height: 630 }
         );
+
+        // Cache for 10 minutes on CDN — social crawlers won't hammer the server
+        imageResponse.headers.set('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=3600');
+        return imageResponse;
     } catch (e: any) {
         console.error(e);
         return new Response(`Failed to generate image`, { status: 500 });

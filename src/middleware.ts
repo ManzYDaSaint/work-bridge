@@ -1,15 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import type { AuthError } from "@supabase/supabase-js";
+// AuthError type removed — helper function was removed and import is unused
 import { rateLimit, getIP, rateLimitResponse } from "@/lib/rate-limit";
 import { getAuthOptional } from "@/lib/auth-guard";
 import { isOnboardingComplete } from "@/lib/onboarding";
-
-function isBenignUnauthenticatedAuthError(error: AuthError): boolean {
-    if (error.status === 401) return true;
-    const msg = error.message?.toLowerCase() ?? "";
-    return msg.includes("session missing");
-}
 
 export async function middleware(request: NextRequest) {
     const { pathname, searchParams, origin } = request.nextUrl;

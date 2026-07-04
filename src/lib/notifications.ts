@@ -9,7 +9,78 @@ export type NotificationType =
   | "PAYMENT_SUCCESS"
   | "REFERRAL_BONUS"
   | "WARNING"
-  | "PROFILE_VIEW";
+  | "PROFILE_VIEW"
+  | "JOB_MATCH"
+  | "INVITE_TO_APPLY";
+
+const TYPE_TO_PREFERENCE_MAP: Record<NotificationType, string> = {
+  APPLICATION_UPDATE: "application_updates",
+  NEW_APPLICATION: "application_updates",
+  SYSTEM: "security_alerts",
+  VERIFICATION_UPDATE: "security_alerts",
+  PAYMENT_SUCCESS: "payment_notifications",
+  REFERRAL_BONUS: "payment_notifications",
+  WARNING: "security_alerts",
+  PROFILE_VIEW: "profile_view_notifications",
+  JOB_MATCH: "job_match_notifications",
+  INVITE_TO_APPLY: "application_updates",
+};
+
+/**
+ * Structured templates for notifications to maintain consistent wording.
+ */
+const NOTIFICATION_TEMPLATES: Record<NotificationType, { title: string; message: (vars: any) => string }> = {
+  APPLICATION_UPDATE: {
+    title: "Application Update",
+    message: ({ companyName, jobTitle, status }) => 
+      `${companyName} has updated your application for ${jobTitle} to ${status.toLowerCase()}.`,
+  },
+  NEW_APPLICATION: {
+    title: "New Job Application",
+    message: ({ candidateName, jobTitle }) => 
+      `${candidateName} applied for ${jobTitle}`,
+  },
+  SYSTEM: {
+    title: "System Notification",
+    message: ({ text }) => text || "You have a new system update.",
+  },
+  VERIFICATION_UPDATE: {
+    title: "Verification Update",
+    message: ({ status, companyName }) => 
+      status === 'APPROVED' 
+        ? `Congratulations! ${companyName} has been approved. You can now post jobs.` 
+        : `Your employer verification for ${companyName} was not successful.`,
+  },
+  PAYMENT_SUCCESS: {
+    title: "Payment Successful",
+    message: ({ amount, item }) => `Your payment for ${item} was successful. Amount: ${amount}.`,
+  },
+  REFERRAL_BONUS: {
+    title: "Referral Bonus Earned!",
+    message: ({ friendName }) => 
+      friendName 
+        ? `${friendName} completed their profile. You earned 5 bonus applications!` 
+        : `A friend you invited completed their profile. You earned 5 bonus applications!`,
+  },
+  WARNING: {
+    title: "System Warning",
+    message: ({ text }) => text || "A warning requires your attention.",
+  },
+  PROFILE_VIEW: {
+    title: "New Profile View",
+    message: ({ companyName }) => `${companyName} just viewed your profile!`,
+  },
+  JOB_MATCH: {
+    title: "Great Match Found!",
+    message: ({ companyName, jobTitle }) => 
+      `${companyName} just posted a ${jobTitle} position that matches your profile perfectly!`,
+  },
+  INVITE_TO_APPLY: {
+    title: "Exclusive Invite",
+    message: ({ companyName, jobTitle }) => 
+      `${companyName} has personally invited you to apply for the ${jobTitle} role!`,
+  },
+};
 
 export async function createNotification({
   userId,
@@ -17,12 +88,14 @@ export async function createNotification({
   message,
   type,
   link,
+  templateVars,
 }: {
   userId: string;
-  title: string;
-  message: string;
+  title?: string;
+  message?: string;
   type: NotificationType;
   link?: string;
+  templateVars?: any;
 }) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) {
@@ -35,12 +108,32 @@ export async function createNotification({
     return null;
   }
 
+  // Resolve content from template if not explicitly provided
+  const template = NOTIFICATION_TEMPLATES[type];
+  const finalTitle = title || template.title;
+  const finalMessage = message || template.message(templateVars || {});
+
+  // Check user preferences first
+  const { data: userData } = await supabase
+    .from("users")
+    .select("email_preferences")
+    .eq("id", userId)
+    .single();
+
+  const preferences = userData?.email_preferences as any || {};
+  const preferenceKey = TYPE_TO_PREFERENCE_MAP[type];
+
+  if (preferenceKey && preferences[preferenceKey] === false) {
+    console.log(`[NOTIFICATION_DEBUG] SKIPPED: User ${userId} has disabled ${preferenceKey} notifications.`);
+    return null;
+  }
+
   const { data, error } = await supabase
     .from("notifications")
     .insert({
       user_id: userId,
-      title,
-      message,
+      title: finalTitle,
+      message: finalMessage,
       type,
       link,
       is_read: false,
@@ -57,10 +150,9 @@ export async function createNotification({
   console.log(`[NOTIFICATION_DEBUG] SUCCESS: Notification created for user ${userId}`);
 
   // Fire a Web Push notification to all the user's subscribed devices
-  // This runs fire-and-forget — don't await so we don't block the response
   sendPushNotification(userId, {
-    title,
-    body: message,
+    title: finalTitle,
+    body: finalMessage,
     url: link,
     tag: type,
   }).catch((err) => console.warn("[PUSH] Non-critical push failure:", err));
@@ -85,7 +177,6 @@ export async function notifyAdmin({
     return null;
   }
 
-  // Find users with admin role
   const { data: admins } = await supabase
     .from("users")
     .select("id")
@@ -93,7 +184,6 @@ export async function notifyAdmin({
 
   if (!admins || admins.length === 0) return null;
 
-  // Create notifications for all admins
   const notifications = admins.map(admin => ({
     user_id: admin.id,
     title,

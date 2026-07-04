@@ -10,7 +10,7 @@ type ApiHandler = (request: Request, ...args: any[]) => Promise<NextResponse>;
  */
 export function withAudit(handler: ApiHandler, actionName?: string) {
     return async (request: Request, ...args: any[]) => {
-        const supabase = await createSupabaseServerClient();
+        await createSupabaseServerClient();
         const auth = await getAuthOptional();
         const user = auth.user;
 

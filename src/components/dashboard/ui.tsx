@@ -204,30 +204,51 @@ export function Badge({ label, children, variant = "slate", className }: BadgePr
     );
 }
 
+// ... (previous code remains unchanged until Tabs)
+
 // ─── Tabs ────────────────────────────────────────────────────────
 interface TabsProps {
     tabs: { id: string; label: string }[];
     activeTab: string;
-    onChange: (id: string) => void;
+    basePath?: string;
+    onChange?: (tabId: string) => void;
 }
 
-export function Tabs({ tabs, activeTab, onChange }: TabsProps) {
+export function Tabs({ tabs, activeTab, basePath, onChange }: TabsProps) {
     return (
         <div className="flex w-fit rounded-2xl border border-stone-200 bg-stone-50 p-1 dark:border-slate-700/50 dark:bg-slate-800/50">
-            {tabs.map((tab) => (
-                <button
-                    key={tab.id}
-                    onClick={() => onChange(tab.id)}
-                    className={cn(
-                        "px-4 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap",
-                        activeTab === tab.id
-                            ? "bg-white dark:bg-slate-700 text-[#16324f] dark:text-white shadow-sm"
-                            : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-                    )}
-                >
-                    {tab.label}
-                </button>
-            ))}
+            {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                const sharedClassName = cn(
+                    "px-4 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap",
+                    isActive
+                        ? "bg-white dark:bg-slate-700 text-[#16324f] dark:text-white shadow-sm"
+                        : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                );
+
+                if (onChange) {
+                    return (
+                        <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => onChange(tab.id)}
+                            className={sharedClassName}
+                        >
+                            {tab.label}
+                        </button>
+                    );
+                }
+
+                return (
+                    <Link
+                        key={tab.id}
+                        href={basePath ? `${basePath}?tab=${tab.id}` : "#"}
+                        className={sharedClassName}
+                    >
+                        {tab.label}
+                    </Link>
+                );
+            })}
         </div>
     );
 }
@@ -236,31 +257,54 @@ export function Tabs({ tabs, activeTab, onChange }: TabsProps) {
 interface PaginationProps {
     currentPage: number;
     totalPages: number;
-    onPageChange: (page: number) => void;
+    basePath?: string;
+    onPageChange?: (page: number) => void;
+    preserveParams?: string;
 }
 
-export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
+export function Pagination({ currentPage, totalPages, basePath, onPageChange, preserveParams }: PaginationProps) {
     if (totalPages <= 1) return null;
+
+    const getPageUrl = (page: number) => {
+        if (!basePath) return "#";
+        const qs = new URLSearchParams(preserveParams || "");
+        qs.set("page", String(page));
+        return `${basePath}?${qs.toString()}`;
+    };
+
+    const prevClass = cn(
+        "rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700",
+        currentPage === 1 && "pointer-events-none opacity-50"
+    );
+
+    const nextClass = cn(
+        "rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700",
+        currentPage === totalPages && "pointer-events-none opacity-50"
+    );
 
     return (
         <div className="flex items-center justify-center gap-4 mt-8">
-            <button
-                disabled={currentPage === 1}
-                onClick={() => onPageChange(currentPage - 1)}
-                className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
-            >
-                Previous
-            </button>
+            {onPageChange ? (
+                <button onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className={prevClass}>
+                    Previous
+                </button>
+            ) : (
+                <Link href={getPageUrl(currentPage - 1)} className={prevClass}>
+                    Previous
+                </Link>
+            )}
             <span className="text-xs font-medium text-slate-500">
                 Page <span className="font-semibold text-slate-900 dark:text-white">{currentPage}</span> of <span className="font-semibold text-slate-900 dark:text-white">{totalPages}</span>
             </span>
-            <button
-                disabled={currentPage === totalPages}
-                onClick={() => onPageChange(currentPage + 1)}
-                className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
-            >
-                Next
-            </button>
+            {onPageChange ? (
+                <button onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className={nextClass}>
+                    Next
+                </button>
+            ) : (
+                <Link href={getPageUrl(currentPage + 1)} className={nextClass}>
+                    Next
+                </Link>
+            )}
         </div>
     );
 }

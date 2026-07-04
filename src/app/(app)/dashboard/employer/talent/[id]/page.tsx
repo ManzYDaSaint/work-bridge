@@ -67,7 +67,7 @@ export default function TalentProfilePage() {
                     const data = await res.json();
                     setIsSaved(data.isSaved);
                 }
-            } catch (e) {}
+            } catch (e) { console.error(e); }
         };
 
         fetchProfile();

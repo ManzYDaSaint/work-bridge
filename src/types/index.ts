@@ -92,6 +92,7 @@ export interface User {
     id: string;
     email: string;
     role: UserRole;
+    plan: "FREE" | "PREMIUM" | "PRO";
     jobSeeker?: JobSeeker;
     employer?: Employer;
     createdAt?: string;

@@ -1,5 +1,6 @@
 import { validateAuth } from "@/lib/auth-guard";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
+import { NotificationService } from "@/services/notification.service";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -70,8 +71,7 @@ export async function GET(
                 .maybeSingle();
 
             if (!recentNotif) {
-                const { createNotification } = await import("@/lib/notifications");
-                await createNotification({
+                await NotificationService.createNotification({
                     userId: seeker.id,
                     title: "New Profile View",
                     message: `${employerData.company_name} just viewed your profile!`,
