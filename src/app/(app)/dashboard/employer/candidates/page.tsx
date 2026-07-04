@@ -12,7 +12,7 @@ export default async function CandidatesPage({
     const params = await searchParams;
     const page = parseInt(params.page || "1");
     
-    let { data: applications, totalPages } = await ApplicationService.getEmployerApplications(
+    let { data: applications } = await ApplicationService.getEmployerApplications(
         user.id,
         params.jobId,
         page
@@ -40,7 +40,6 @@ export default async function CandidatesPage({
     return (
         <CandidatesClient 
             initialApplications={applications} 
-            jobId={params.jobId}
             plan={user.plan}
         />
     );

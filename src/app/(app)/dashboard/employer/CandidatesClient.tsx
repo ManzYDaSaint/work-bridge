@@ -15,11 +15,9 @@ import {
 
 export default function CandidatesClient({ 
     initialApplications,
-    jobId,
     plan = "FREE"
 }: { 
     initialApplications: any[]; 
-    jobId?: string;
     plan?: string;
 }) {
     const [applications, setApplications] = useState<any[]>(initialApplications);

@@ -30,7 +30,7 @@ export default async function DiscoverTalentPage({
         skills: params.skills,
     };
 
-    const { seekers, totalPages } = await jobService.getDiscoverTalent(user.id, filters, page);
+    const { seekers } = await jobService.getDiscoverTalent(user.id, filters, page);
 
     return (
         <DiscoverTalentClient 

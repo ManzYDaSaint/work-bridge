@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader, SectionCard, Badge } from "@/components/dashboard/ui";
+import { PageHeader, Badge } from "@/components/dashboard/ui";
 import JobDetailModal, { ExtendedJob } from "@/components/jobs/JobDetailModal";
 import { Sparkles, Briefcase, Lock } from "lucide-react";
 import { toast } from "sonner";
