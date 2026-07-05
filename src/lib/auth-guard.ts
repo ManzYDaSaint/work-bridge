@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "./supabase-server";
+import { getSupabaseAdminClient } from "./supabase-admin";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { UserRole } from "@/types";
@@ -76,14 +77,19 @@ export async function validateAuth(
         }
     }
 
-    // Fetch the user role from our public.users table
-    const { data: profile, error: profileError } = await supabase
+    // Fetch the user role from our public.users table.
+    // Use the service-role client to bypass RLS — identity is already
+    // cryptographically verified by supabase.auth.getUser() above.
+    const adminClient = getSupabaseAdminClient();
+    const profileClient = adminClient ?? supabase;
+    const { data: profile, error: profileError } = await profileClient
         .from("users")
         .select("role")
         .eq("id", user.id)
         .single();
 
     if (profileError || !profile) {
+        console.error("[AUTH_GUARD] Profile lookup failed for user", user.id, profileError?.message);
         return {
             userId: user.id,
             role: "JOB_SEEKER",

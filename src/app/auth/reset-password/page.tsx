@@ -39,15 +39,15 @@ export default function ResetPasswordPage() {
     // Guard: ensure a valid recovery session exists before rendering the form
     useEffect(() => {
         let mounted = true;
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
             if (!mounted) return;
-            if (!session) {
+            if (!data.session) {
                 toast.error("Reset link has expired or is invalid. Please request a new one.");
                 router.replace("/auth/forgot-password");
             } else {
                 setSessionReady(true);
             }
-        }).catch((err) => {
+        }).catch((err: any) => {
             console.warn("Session check lock error safely ignored:", err);
             // If we get a lock error here, it means AuthContext is also fetching the session.
             // We can safely assume the session exists for now, or let AuthContext handle it.

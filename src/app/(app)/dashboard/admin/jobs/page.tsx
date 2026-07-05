@@ -1,25 +1,49 @@
-import { serverApiFetchJson } from "@/lib/server-api";
 import AdminJobsClient from "./AdminJobsClient";
-
-interface AdminJobsResponse {
-    jobs?: unknown[];
-    total?: number;
-}
+import { adminService } from "@/services/adminService";
+import { validateAuth } from "@/lib/auth-guard";
+import { redirect } from "next/navigation";
 
 export default async function AdminJobsPage({
     searchParams,
 }: {
     searchParams: Promise<{ page?: string; search?: string; status?: string }>;
 }) {
+    const auth = await validateAuth(["ADMIN"], false);
+    if (auth.error || !auth.user) {
+        redirect("/login");
+    }
+
     const params = await searchParams;
     const page = parseInt(params.page || "1");
     const search = params.search || "";
     const status = params.status || "ALL";
     const limit = 20;
 
-    let data: AdminJobsResponse;
+    let jobs: any[] = [];
+    let total = 0;
+
     try {
-        data = await serverApiFetchJson<AdminJobsResponse>(`/api/admin/jobs?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}&status=${status}`);
+        const result = await adminService.getSystemJobs({ page, limit, search, status });
+        jobs = result.jobs.map(j => {
+            const employer = Array.isArray(j.employer) ? j.employer[0] : j.employer;
+            return {
+                ...j,
+                createdAt: j.created_at,
+                companyName: employer?.company_name,
+                employer: {
+                    id: employer?.id,
+                    companyName: employer?.company_name,
+                    location: employer?.location,
+                    logoUrl: employer?.logo_url,
+                    industry: employer?.industry,
+                    website: employer?.website,
+                    description: employer?.description,
+                    recruiterVerified: employer?.recruiter_verified,
+                },
+                employerStatus: employer?.status,
+            };
+        });
+        total = result.total;
     } catch (error) {
         console.error("Failed to fetch initial jobs:", error);
         return (
@@ -31,8 +55,8 @@ export default async function AdminJobsPage({
     
     return (
         <AdminJobsClient 
-            initialJobs={data.jobs || []} 
-            initialTotal={data.total || 0} 
+            initialJobs={jobs} 
+            initialTotal={total} 
             initialSearchParams={{
                 page: params.page || "1",
                 search: params.search || "",

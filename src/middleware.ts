@@ -86,9 +86,11 @@ export async function middleware(request: NextRequest) {
 
     let user = null;
     if (shouldCallGetUser) {
-        // Use centralized optional auth resolver to avoid duplicate Auth server calls
-        const auth = await getAuthOptional();
-        user = auth.user || null;
+        // MUST use the middleware's supabase client to trigger token refreshes.
+        // If we use getAuthOptional() here, it creates a Server Component client
+        // which cannot save rotated tokens to cookies, causing infinite refresh loops.
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        user = authUser;
     }
 
     // 2. Session Idle Timeout Enforcement (30 Minutes)

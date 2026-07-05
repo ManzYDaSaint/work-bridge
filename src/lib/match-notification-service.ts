@@ -34,8 +34,8 @@ export async function triggerMatchNotifications(jobId: string) {
 
     console.log(`[MATCH_SERVICE] Starting AI match scan for job: ${job.title}`);
 
-    // 2. Use the match_candidates_v2 RPC to instantly find the top matching seekers
-    const { data: matches, error: matchError } = await supabase.rpc("match_candidates_v2", {
+    // 2. Use the match_candidates RPC to instantly find the top matching seekers
+    const { data: matches, error: matchError } = await supabase.rpc("match_candidates", {
       query_embedding: job.embedding,
       match_threshold: 0.25, // fairly strict match
       match_count: 50 // top 50 candidates
@@ -102,7 +102,7 @@ export async function triggerDelayedFreeMatchNotifications(jobId: string) {
         const { data: job } = await supabase.from("jobs").select("*, employer:employers(company_name)").eq("id", jobId).single();
         if (!job || !job.embedding) return;
 
-        const { data: matches } = await supabase.rpc("match_candidates_v2", {
+        const { data: matches } = await supabase.rpc("match_candidates", {
             query_embedding: job.embedding,
             match_threshold: 0.25,
             match_count: 50

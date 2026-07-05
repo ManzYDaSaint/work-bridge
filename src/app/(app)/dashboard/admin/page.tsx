@@ -1,18 +1,21 @@
-import { serverApiFetchJson } from "@/lib/server-api";
 import AdminOverviewClient from "./AdminOverviewClient";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-
-interface AdminOverviewResponse {
-    stats?: Record<string, unknown>;
-    items?: unknown[];
-    data?: unknown[];
-}
+import { adminService } from "@/services/adminService";
+import { userService } from "@/services/userService";
+import { validateAuth } from "@/lib/auth-guard";
+import { redirect } from "next/navigation";
 
 export default async function AdminOverviewPage() {
-    // Fetch initial data on the server
-    const [statsData, closeRequests, activity] = await Promise.all([
-        serverApiFetchJson<AdminOverviewResponse>("/api/admin/stats"),
-        serverApiFetchJson<AdminOverviewResponse>("/api/admin/close-requests").then((data) => Array.isArray(data.items) ? data.items : Array.isArray(data.data) ? data.data : []),
+    // Auth check directly in the server component — no internal HTTP round-trip needed.
+    const auth = await validateAuth(["ADMIN"], false);
+    if (auth.error || !auth.user) {
+        redirect("/login");
+    }
+
+    // Fetch all data directly from services using the cookie-based Supabase client.
+    const [stats, closeRequestsResult, activity] = await Promise.all([
+        adminService.getMarketplaceStats(),
+        userService.getAccountClosureRequests({ status: "PENDING", limit: 5 }),
         (async () => {
             const supabase = await createSupabaseServerClient();
             const { data } = await supabase
@@ -21,17 +24,14 @@ export default async function AdminOverviewPage() {
                 .order("created_at", { ascending: false })
                 .limit(6);
             return data ?? [];
-        })()
+        })(),
     ]);
 
-    // Filter close requests for pending only, just like the original client logic
-    const pendingCloseRequests = closeRequests.filter((r: any) => r.status === "PENDING").slice(0, 5);
-
     return (
-        <AdminOverviewClient 
-            initialStats={statsData.stats} 
-            initialActivity={activity} 
-            initialCloseRequests={pendingCloseRequests} 
+        <AdminOverviewClient
+            initialStats={stats}
+            initialActivity={activity}
+            initialCloseRequests={closeRequestsResult.items}
         />
     );
 }

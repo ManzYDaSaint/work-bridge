@@ -238,11 +238,11 @@ export const adminService = {
 
         let query = supabase
             .from("users")
-            .select("*, job_seeker(full_name, location), employer(company_name, location)")
+            .select("*, job_seekers(full_name, location), employers(company_name, location)")
             .order("created_at", { ascending: false });
 
         if (params.search) {
-            query = query.or(`email.ilike.%${params.search}%,job_seeker.full_name.ilike.%${params.search}%,employer.company_name.ilike.%${params.search}%`);
+            query = query.or(`email.ilike.%${params.search}%,job_seekers.full_name.ilike.%${params.search}%,employers.company_name.ilike.%${params.search}%`);
         }
         if (params.role && params.role !== "ALL") {
             query = query.eq("role", params.role);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { User, Employer } from "@/types";
 import { LayoutDashboard, Briefcase, Settings, Users, PlusCircle, Lock, Search, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -45,24 +45,33 @@ export default function EmployerLayoutClient({
 
 function EmployerLayoutInner({ children }: { children: React.ReactNode }) {
     const router = useRouter();
+    const pathname = usePathname();
     const { user, refreshUser } = useUser();
-    
+
+    // Derive approval status early so it's available in effects
+    const employerProfile: Employer | null = (user?.employer as Employer | null) ?? null;
+    const isApproved = employerProfile?.status === "APPROVED";
+
     // Sync with DB on mount to fix stale SSR data
     useEffect(() => {
         refreshUser();
     }, [refreshUser]);
 
+    // Gate: pending employers can only access the settings page to complete their profile
+    useEffect(() => {
+        if (user && !isApproved && pathname !== "/dashboard/employer/settings") {
+            router.replace("/dashboard/employer/settings");
+        }
+    }, [user, isApproved, pathname, router]);
+
     if (!user) return null;
 
-    const employerProfile: Employer | null = user.employer ?? null;
+    const companyName = employerProfile?.companyName || user?.email?.split("@")[0] || "Company";
+    const initials = companyName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
     const handleLogout = async () => {
         await signOutAndRedirect();
     };
-
-    const isApproved = employerProfile?.status === "APPROVED";
-    const companyName = employerProfile?.companyName || user?.email?.split("@")[0] || "Company";
-    const initials = companyName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
     return (
         <DashboardLayout

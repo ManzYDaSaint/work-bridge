@@ -48,6 +48,11 @@ export default function DiscoverTalentClient({
     const [hasResumeFilter, setHasResumeFilter] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     
+    // Sync state when server re-renders with new filtered results via URL params
+    useEffect(() => {
+        setSeekers(initialSeekers);
+    }, [initialSeekers]);
+    
     const router = useRouter();
     const appliedSet = new Set(appliedSeekerIds);
 

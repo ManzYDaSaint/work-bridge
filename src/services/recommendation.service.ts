@@ -92,15 +92,34 @@ export class RecommendationService {
     }
 
     // 3. Call pgvector matching function
-    const { data: candidates, error: candError } = await supabase.rpc('match_candidates_v2', {
+    const { data: candidates, error: candError } = await supabase.rpc('match_candidates', {
       query_embedding: job.embedding,
       match_threshold: threshold,
       match_count: limit,
     });
 
     if (candError) throw candError;
+    
+    let validCandidates = candidates || [];
+    
+    if (validCandidates.length > 0) {
+        const { getSupabaseAdminClient } = await import("@/lib/supabase-admin");
+        const adminClient = getSupabaseAdminClient();
+        if (adminClient) {
+            const seekerIds = validCandidates.map((c: any) => c.id);
+            const { data: userRoles } = await adminClient
+                .from("users")
+                .select("id, role")
+                .in("id", seekerIds);
+            
+            if (userRoles) {
+                const validIds = new Set(userRoles.filter(u => u.role === "JOB_SEEKER").map(u => u.id));
+                validCandidates = validCandidates.filter((c: any) => validIds.has(c.id));
+            }
+        }
+    }
 
-    return candidates;
+    return validCandidates;
   }
 
   /**

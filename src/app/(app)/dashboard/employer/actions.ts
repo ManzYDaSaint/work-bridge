@@ -356,7 +356,7 @@ export async function toggleSaveTalent(seekerId: string, isCurrentlySaved: boole
  * Updates the employer's profile details.
  */
 export async function updateEmployerProfile(values: any) {
-    const auth = await validateAuth(["EMPLOYER"], false, true);
+    const auth = await validateAuth(["EMPLOYER"], false, false);
     if (auth.error || !auth.user) {
         throw new Error("Unauthorized");
     }
@@ -402,7 +402,7 @@ export async function updateEmployerProfile(values: any) {
  * Submits a request to close the employer account.
  */
 export async function requestAccountClosure(reasons: string[], additionalNotes: string) {
-    const auth = await validateAuth(["EMPLOYER"], false, true);
+    const auth = await validateAuth(["EMPLOYER"], false, false);
     if (auth.error || !auth.user) {
         throw new Error("Unauthorized");
     }

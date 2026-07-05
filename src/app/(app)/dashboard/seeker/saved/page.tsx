@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import SavedJobsOverview from "@/components/dashboard/seeker/SavedJobsOverview";
@@ -5,7 +6,7 @@ import SavedJobsOverview from "@/components/dashboard/seeker/SavedJobsOverview";
 export default async function SavedJobsPage() {
     // 1. Server-side Auth Check
     const auth = await validateAuth(["JOB_SEEKER"]);
-    if (auth.error) return auth.error;
+    if (auth.error) redirect("/login");
 
     const supabase = await createSupabaseServerClient();
 

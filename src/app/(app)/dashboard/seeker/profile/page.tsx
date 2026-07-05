@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import SeekerProfile from "@/components/profile/SeekerProfile";
@@ -5,7 +6,7 @@ import SeekerProfile from "@/components/profile/SeekerProfile";
 export default async function SeekerProfilePage() {
     // 1. Server-side Auth Check
     const auth = await validateAuth(["JOB_SEEKER"]);
-    if (auth.error) return auth.error;
+    if (auth.error) redirect("/login");
 
     const supabase = await createSupabaseServerClient();
 
@@ -15,7 +16,7 @@ export default async function SeekerProfilePage() {
             supabase
                 .from("job_seekers")
                 .select("*")
-                .eq("user_id", auth.userId)
+                .eq("id", auth.userId)  // job_seekers.id is the user FK
                 .single(),
             supabase
                 .from("certificates")

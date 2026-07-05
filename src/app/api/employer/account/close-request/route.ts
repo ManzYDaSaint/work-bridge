@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { withAudit } from "@/lib/api-utils";
 
 export const POST = withAudit(async (request: Request) => {
-    const auth = await validateAuth(["EMPLOYER"], false, true);
+    const auth = await validateAuth(["EMPLOYER"], false, false);
     if (auth.error) return auth.error;
 
     const supabase = await createSupabaseServerClient();

@@ -1,10 +1,11 @@
+import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { validateAuth } from "@/lib/auth-guard";
 import CertificateVerificationClient from "@/components/dashboard/admin/CertificateVerificationClient";
 
 export default async function CertificateVerificationPage() {
     const auth = await validateAuth(['ADMIN'], false);
-    if (auth.error) return auth.error;
+    if (auth.error) redirect("/login");
 
     const supabase = await createSupabaseServerClient();
 

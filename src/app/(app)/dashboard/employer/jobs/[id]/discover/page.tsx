@@ -45,7 +45,7 @@ export default async function JobDiscoveryPage({
     const FREE_LIMIT = 5;
 
     // 3. Call the RPC to get recommended candidates
-    const { data: matches, error: rpcError } = await supabase.rpc("match_candidates_v2", {
+    const { data: matches, error: rpcError } = await supabase.rpc("match_candidates", {
         query_embedding: job.embedding,
         match_threshold: 0.15,
         match_count: 10
@@ -59,7 +59,7 @@ export default async function JobDiscoveryPage({
     const candidateIds = matches?.map((m: any) => m.id) || [];
 
     // 4. Fetch full candidate details
-    let fullCandidates = [];
+    let fullCandidates: any[] = [];
     if (candidateIds.length > 0) {
         const { data: seekers } = await supabase
             .from("job_seekers")
@@ -67,7 +67,26 @@ export default async function JobDiscoveryPage({
             .in("id", candidateIds)
             .neq("profile_visibility", "HIDDEN");
             
-        fullCandidates = seekers || [];
+        let validSeekers = seekers || [];
+        
+        if (validSeekers.length > 0) {
+            const { getSupabaseAdminClient } = await import("@/lib/supabase-admin");
+            const adminClient = getSupabaseAdminClient();
+            if (adminClient) {
+                const fetchedIds = validSeekers.map(s => s.id);
+                const { data: userRoles } = await adminClient
+                    .from("users")
+                    .select("id, role")
+                    .in("id", fetchedIds);
+                
+                if (userRoles) {
+                    const validIds = new Set(userRoles.filter(u => u.role === "JOB_SEEKER").map(u => u.id));
+                    validSeekers = validSeekers.filter(s => validIds.has(s.id));
+                }
+            }
+        }
+            
+        fullCandidates = validSeekers;
     }
 
     // Combine similarity score

@@ -2,9 +2,9 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { withAuth } from "@/lib/auth-guard";
 import { NextResponse } from "next/server";
 
-export const GET = withAuth(async (request, auth, { params }) => {
+export const GET = withAuth(async (request, auth, context: { params: Promise<{ id: string }> }) => {
     const supabase = await createSupabaseServerClient();
-    const jobId = params?.id;
+    const { id: jobId } = await context.params;
 
     if (!jobId) {
         return NextResponse.json({ error: "Job ID required" }, { status: 400 });

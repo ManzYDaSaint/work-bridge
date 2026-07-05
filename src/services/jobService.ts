@@ -26,9 +26,7 @@ export const jobService = {
     /**
      * Calculate summary statistics for an employer's active job pipeline.
      */
-    getEmployerStats: (employerId: string) => 
-        unstable_cache(
-            async () => {
+    getEmployerStats: cache(async (employerId: string) => {
                 const supabase = await createSupabaseServerClient();
 
                 const { data: activeJobRows, error: jobErr } = await supabase
@@ -61,10 +59,7 @@ export const jobService = {
                     shortlisted: shortlistedRes.count || 0,
                     interviewsSet: interviewingRes.count || 0,
                 };
-            },
-            [`employer_stats_${employerId}`],
-            { tags: [`employer_stats_${employerId}`] }
-        )(),
+    }),
 
     /**
      * Fetch active jobs for the public board (Seeker view).
@@ -78,7 +73,13 @@ export const jobService = {
     }) => 
         unstable_cache(
             async () => {
-                const supabase = await createSupabaseServerClient();
+                // Use a cookie-free client here — unstable_cache cannot access cookies().
+                // Public job listings don't require a user session.
+                const { createClient } = await import("@supabase/supabase-js");
+                const supabase = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+                );
                 const page = params.page || 1;
                 const limit = params.limit || 20;
                 const offset = (page - 1) * limit;
@@ -146,9 +147,7 @@ export const jobService = {
     /**
      * Fetch jobs owned by a specific employer.
      */
-    getEmployerJobs: (employerId: string, status: string = "all", page: number = 1, limit: number = 8) => 
-        unstable_cache(
-            async () => {
+    getEmployerJobs: cache(async (employerId: string, status: string = "all", page: number = 1, limit: number = 8) => {
                 const supabase = await createSupabaseServerClient();
                 const offset = (page - 1) * limit;
 
@@ -222,10 +221,7 @@ export const jobService = {
                     limit,
                     totalPages: Math.ceil((count || 0) / limit),
                 };
-            },
-            [`employer_jobs_${employerId}_${status}_${page}_${limit}`],
-            { tags: [`jobs_${employerId}`] }
-        )(),
+    }),
 
     /**
      * Fetch applications for an employer with pagination.
@@ -315,7 +311,7 @@ export const jobService = {
         let query = supabase
             .from("job_seekers")
             .select(`
-                id, user_id, full_name, bio, location, skills, seniority_level,
+                id, full_name, bio, location, skills, seniority_level,
                 employment_status, search_intent, qualification, resume_url,
                 avatar_url, created_at, experience, education, employment_type,
                 profile_visibility, portfolio_links
@@ -332,17 +328,41 @@ export const jobService = {
             query = query.contains("skills", skillArray);
         }
 
+        // Fetch extra records in case we need to filter out admins/employers
         const { data, error, count } = await query
             .order("created_at", { ascending: false })
-            .range(offset, offset + limit - 1);
+            .range(offset, offset + limit * 2);
 
         if (error) {
             console.error("jobService.getDiscoverTalent error:", error);
             throw new Error("Failed to fetch talent");
         }
 
+        let validSeekers = data || [];
+        
+        // Filter out any accounts that aren't actually JOB_SEEKERs (like admins)
+        if (validSeekers.length > 0) {
+            const { getSupabaseAdminClient } = await import("@/lib/supabase-admin");
+            const adminClient = getSupabaseAdminClient();
+            if (adminClient) {
+                const seekerIds = validSeekers.map(s => s.id);
+                const { data: userRoles } = await adminClient
+                    .from("users")
+                    .select("id, role")
+                    .in("id", seekerIds);
+                
+                if (userRoles) {
+                    const validIds = new Set(userRoles.filter(u => u.role === "JOB_SEEKER").map(u => u.id));
+                    validSeekers = validSeekers.filter(s => validIds.has(s.id));
+                }
+            }
+        }
+
+        // Slice back to the requested limit
+        validSeekers = validSeekers.slice(0, limit);
+
         return {
-            seekers: (data || []).map((seeker) => ({
+            seekers: validSeekers.map((seeker) => ({
                 ...seeker,
                 is_saved: savedSet.has(seeker.id),
             })),

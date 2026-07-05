@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
@@ -23,7 +24,7 @@ export default async function SeekerJobsPage({
 }) {
     // 1. Auth Check
     const auth = await validateAuth(["JOB_SEEKER"]);
-    if (auth.error) return auth.error;
+    if (auth.error) redirect("/login");
 
     const params = await searchParams;
     const page = parseInt(params.page as string) || 1;

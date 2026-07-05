@@ -1,12 +1,13 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { validateAuth } from "@/lib/auth-guard";
+import { redirect } from "next/navigation";
 import SettingsClient from "./SettingsClient";
 // EmployerProfileValues type intentionally unused in this server wrapper
 
 export default async function EmployerSettingsPage() {
-    const auth = await validateAuth(["EMPLOYER"], false, true);
+    const auth = await validateAuth(["EMPLOYER"], false, false);
     if (auth.error || !auth.user) {
-        throw new Error("Unauthorized");
+        redirect("/login");
     }
 
     const supabase = await createSupabaseServerClient();

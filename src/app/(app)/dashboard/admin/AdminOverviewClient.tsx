@@ -154,7 +154,8 @@ export default function AdminOverviewClient({
         const res = await apiFetch("/api/admin/close-requests");
         if (res.ok) {
             const data = await res.json();
-            setCloseRequests(data.filter((r: any) => r.status === "PENDING").slice(0, 5));
+            const items: any[] = Array.isArray(data) ? data : (data.items ?? []);
+            setCloseRequests(items.filter((r: any) => r.status === "PENDING").slice(0, 5));
         }
     }, []);
 

@@ -56,7 +56,7 @@ export default function NotificationCenter() {
                     schema: 'public', 
                     table: 'notifications' 
                 },
-                (payload) => {
+                (payload: any) => {
                     console.log('[NOTIFICATION_REALTIME] Payload received:', payload);
                     // Refresh notifications on any change to keep state synced
                     fetchNotifications();

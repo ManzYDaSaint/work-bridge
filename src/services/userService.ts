@@ -73,7 +73,7 @@ export const userService = {
 
         let query = supabase
             .from("account_close_requests")
-            .select("*, company_name:employers(company_name)")
+            .select("*, user:users(id, email, role)")
             .order("created_at", { ascending: false });
 
         if (filters.status) {

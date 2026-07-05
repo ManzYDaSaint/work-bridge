@@ -1,5 +1,6 @@
-import { serverApiFetchJson } from "@/lib/server-api";
-import type { AuditLogResponse } from "@/types";
+import { adminService } from "@/services/adminService";
+import { validateAuth } from "@/lib/auth-guard";
+import { redirect } from "next/navigation";
 import AdminAuditClient from "./AdminAuditClient";
 
 export default async function AdminAuditPage({
@@ -7,6 +8,11 @@ export default async function AdminAuditPage({
 }: {
     searchParams: Promise<{ offset?: string; userId?: string; action?: string; path?: string }>;
 }) {
+    const auth = await validateAuth(["ADMIN"], false);
+    if (auth.error || !auth.user) {
+        redirect("/login");
+    }
+
     const params = await searchParams;
     const offset = parseInt(params.offset || "0");
     const userId = params.userId || "";
@@ -14,17 +20,22 @@ export default async function AdminAuditPage({
     const path = params.path || "";
     const limit = 50;
 
-    let data: AuditLogResponse;
-    try {
-        const searchParamsStr = new URLSearchParams({
-            limit: String(limit),
-            offset: String(offset),
-        });
-        if (userId) searchParamsStr.set("userId", userId);
-        if (action) searchParamsStr.set("action", action);
-        if (path) searchParamsStr.set("path", path);
+    let items: any[] = [];
+    let total = 0;
 
-        data = await serverApiFetchJson<AuditLogResponse>(`/api/admin/audit-logs?${searchParamsStr.toString()}`);
+    try {
+        const result = await adminService.getAuditLogs({ limit, offset, userId, action, path });
+        items = result.items.map((item: any) => ({
+            id: item.id,
+            action: item.action,
+            path: item.path,
+            method: item.method,
+            statusCode: item.status_code,
+            createdAt: item.created_at,
+            userId: item.user_id,
+            user: item.user
+        }));
+        total = result.total;
     } catch (error) {
         console.error("Failed to fetch initial audit logs:", error);
         return (
@@ -36,9 +47,9 @@ export default async function AdminAuditPage({
 
     return (
         <AdminAuditClient 
-            initialLogs={data.items || []} 
+            initialLogs={items} 
             initialMeta={{ 
-                total: data.total || 0, 
+                total, 
                 limit, 
                 offset 
             }} 

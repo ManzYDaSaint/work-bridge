@@ -1,25 +1,48 @@
-import { serverApiFetchJson } from "@/lib/server-api";
 import EmployerVerificationClient from "./EmployerVerificationClient";
-
-interface EmployerPageResponse {
-    items?: unknown[];
-    data?: unknown[];
-}
+import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { userService } from "@/services/userService";
+import { validateAuth } from "@/lib/auth-guard";
+import { redirect } from "next/navigation";
 
 export default async function EmployerVerificationPage({
     searchParams,
 }: {
     searchParams: Promise<{ tab?: string; search?: string; status?: string }>;
 }) {
+    const auth = await validateAuth(["ADMIN"], false);
+    if (auth.error || !auth.user) {
+        redirect("/login");
+    }
+
     const params = await searchParams;
     
-    let employers: unknown[] = [];
-    let closeRequests: unknown[] = [];
+    let employers: any[] = [];
+    let closeRequests: any[] = [];
     try {
-        [employers, closeRequests] = await Promise.all([
-            serverApiFetchJson<EmployerPageResponse>("/api/admin/employers").then((data) => Array.isArray(data.items) ? data.items : Array.isArray(data.data) ? data.data : []),
-            serverApiFetchJson<EmployerPageResponse>("/api/admin/close-requests").then((data) => Array.isArray(data.items) ? data.items : Array.isArray(data.data) ? data.data : [])
+        const [employersResult, closeRequestsResult] = await Promise.all([
+            (async () => {
+                const supabase = await createSupabaseServerClient();
+                const { data, error } = await supabase
+                    .from("employers")
+                    .select("*")
+                    .order('company_name', { ascending: true });
+                if (error) throw error;
+                return (data || []).map(e => ({
+                    id: e.id,
+                    companyName: e.company_name,
+                    industry: e.industry,
+                    location: e.location,
+                    status: e.status || 'PENDING',
+                    website: e.website,
+                    description: e.description,
+                    createdAt: e.created_at
+                }));
+            })(),
+            userService.getAccountClosureRequests({})
         ]);
+        
+        employers = employersResult;
+        closeRequests = closeRequestsResult.items || [];
     } catch (error) {
         console.error("Failed to fetch initial employers data:", error);
         return (

@@ -35,7 +35,7 @@ function AuthConfirmInner() {
 
         if (code) {
             // PKCE flow: exchange code for session server-side style (client)
-            supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+            supabase.auth.exchangeCodeForSession(code).then(({ error }: { error: Error | null }) => {
                 if (error) {
                     toast.error("Link has expired. Please request a new one.");
                     router.replace("/auth/forgot-password");
@@ -56,7 +56,7 @@ function AuthConfirmInner() {
 
         if (accessToken && refreshToken) {
             supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-                .then(({ error }) => {
+                .then(({ error }: { error: Error | null }) => {
                     if (error) {
                         toast.error("Link has expired. Please request a new one.");
                         router.replace("/auth/forgot-password");
