@@ -89,14 +89,14 @@ function JobListRow({
                                 </span>
                             )}
                         </div>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                             <div className="inline-flex items-center gap-1.5">
                                 <span className="font-medium text-slate-700 dark:text-slate-300">{company}</span>
                                 <VerifiedBadge isVerified={job.employer?.recruiterVerified} />
                             </div>
                             <span className="mx-2 text-stone-300 dark:text-slate-700">/</span>
                             {job.location}
-                        </p>
+                        </div>
                     </div>
                 </div>
             </button>
@@ -147,6 +147,7 @@ export default function PublicJobBoard({
     currentQuery = "",
     currentWorkMode = "ALL",
     currentType = "ALL",
+    basePath = "/jobs",
 }: {
     initialJobs?: ExtendedJob[];
     initialTotalPages?: number;
@@ -156,6 +157,7 @@ export default function PublicJobBoard({
     currentQuery?: string;
     currentWorkMode?: string;
     currentType?: string;
+    basePath?: string;
 }) {
     const [jobs, setJobs] = useState<ExtendedJob[]>(initialJobs);
     const [loading, setLoading] = useState(false);
@@ -284,7 +286,7 @@ export default function PublicJobBoard({
         if (next.workMode && next.workMode !== "ALL") qs.set("workMode", next.workMode);
         if (next.type && next.type !== "ALL") qs.set("type", next.type);
         setPage(1);
-        router.push(qs.toString() ? `/jobs?${qs.toString()}` : "/jobs");
+        router.push(qs.toString() ? `${basePath}?${qs.toString()}` : basePath);
     };
 
     const handleSearch = (e: React.FormEvent) => {

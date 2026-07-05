@@ -88,7 +88,7 @@ export const jobService = {
                     .from("jobs")
                     .select(`
                         *,
-                        employer(company_name, id, logo_url, industry, website, location, recruiter_verified)
+                        employer:employers(company_name, id, logo_url, industry, website, location, recruiter_verified)
                     `, { count: 'exact' })
                     .eq("status", "ACTIVE");
 
@@ -132,8 +132,22 @@ export const jobService = {
                     throw new Error("Failed to fetch jobs");
                 }
 
+                const formattedJobs = (data || []).map((job: any) => ({
+                    ...job,
+                    employer: {
+                        id: job.employer?.id,
+                        company_name: job.employer?.company_name || "Unknown Company",
+                        companyName: job.employer?.company_name || "Unknown Company",
+                        logoUrl: job.employer?.logo_url || null,
+                        industry: job.employer?.industry,
+                        website: job.employer?.website,
+                        location: job.employer?.location,
+                        recruiterVerified: job.employer?.recruiter_verified,
+                    },
+                }));
+
                 return {
-                    jobs: data || [],
+                    jobs: formattedJobs,
                     total: count || 0,
                     totalPages: Math.ceil((count || 0) / limit),
                     page,

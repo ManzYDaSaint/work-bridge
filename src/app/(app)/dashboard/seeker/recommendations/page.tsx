@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { fetchJobsWithEmployers } from "@/lib/seeker-data";
 import RecommendedJobsClient from "./RecommendedJobsClient";
+import type { ExtendedJob } from "@/components/jobs/JobDetailModal";
+
+type JobWithScore = ExtendedJob & { similarity: number };
 
 export default async function RecommendedJobsPage() {
     // 1. Server-side Auth Check
@@ -44,37 +48,53 @@ export default async function RecommendedJobsPage() {
     }
 
     // 4. Call the RPC to get matches
+    const embedding = typeof seekerData.embedding === "string" 
+        ? JSON.parse(seekerData.embedding) 
+        : seekerData.embedding;
+
     const { data: matches, error: rpcError } = await supabase.rpc("match_jobs_for_seeker", {
-        query_embedding: seekerData.embedding,
-        match_threshold: 0.15,
-        match_count: 15
+        query_embedding: embedding,
     });
 
     if (rpcError) {
-        console.error("RPC Error:", rpcError);
+        const errorStr = JSON.stringify(rpcError);
+        if (errorStr.includes("PGRST202")) {
+            // Silently handle the missing function in console, but show UI state
+            return (
+                <div className="flex min-h-[60vh] flex-col items-center justify-center p-6 text-center">
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Recommendations initializing</h2>
+                    <p className="mt-2 text-slate-500 max-w-md">
+                        Our AI matching system is currently being updated to provide better recommendations. 
+                        Please check back shortly or browse the main job board.
+                    </p>
+                </div>
+            );
+        }
+        
+        console.error("RPC Error:", JSON.stringify(rpcError, null, 2));
         return <div className="p-6 text-red-500">Failed to load recommendations.</div>;
     }
 
     const jobIds = matches?.map((m: any) => m.id) || [];
     
-    // 5. Fetch full job details
-    let fullJobs = [];
-    if (jobIds.length > 0) {
-        const { data: jobs } = await supabase
-            .from("jobs")
-            .select("*, employer(*)")
-            .in("id", jobIds)
-            .eq("status", "ACTIVE");
-            
-        fullJobs = jobs || [];
+    // 5. Fetch full job details (employers fetched separately to avoid RLS join issues)
+    const { data: fullJobs, error: jobsError } = await fetchJobsWithEmployers(
+        supabase,
+        jobIds,
+        { status: "ACTIVE" }
+    );
+
+    if (jobsError) {
+        console.error("Recommendations jobs fetch error:", jobsError.message);
+        return <div className="p-6 text-red-500">Failed to load recommendations.</div>;
     }
 
     // Combine similarity score into the full jobs
-    const jobsWithScores = fullJobs.map(job => {
+    const jobsWithScores: JobWithScore[] = fullJobs.map((job) => {
         const matchInfo = matches?.find((m: any) => m.id === job.id);
         return {
-            ...job,
-            similarity: matchInfo?.similarity || 0
+            ...(job as unknown as ExtendedJob),
+            similarity: matchInfo?.similarity || 0,
         };
     }).sort((a, b) => b.similarity - a.similarity);
 

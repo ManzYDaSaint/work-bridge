@@ -12,7 +12,7 @@ interface AppEntry {
     jobId: string;
     status: string;
     createdAt: string;
-    viewed_at?: string;
+    viewedAt?: string;
     job: ExtendedJob | null;
 }
 
@@ -84,7 +84,7 @@ export default function ApplicationsOverview({ applications }: { applications: A
                                         "yellow"
                                     } 
                                 />
-                                {app.viewed_at && app.status === "PENDING" && (
+                                {app.viewedAt && app.status === "PENDING" && (
                                     <span className="text-xs font-semibold text-sky-600 bg-sky-50 px-2 py-0.5 rounded border border-sky-100">
                                         Viewed
                                     </span>

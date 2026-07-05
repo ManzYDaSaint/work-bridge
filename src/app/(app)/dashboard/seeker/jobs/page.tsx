@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { fetchSeekerAppliedJobIds, fetchSeekerSavedJobIds } from "@/lib/seeker-data";
 import PublicJobBoard from "@/components/jobs/PublicJobBoard";
 import { jobService } from "@/services/jobService";
 
@@ -36,7 +37,7 @@ export default async function SeekerJobsPage({
     const supabase = await createSupabaseServerClient();
 
     // 2. Parallel Data Fetching
-    const [jobsResponse, savedQuery, appsQuery] = await Promise.all([
+    const [jobsResponse, savedResult, appsResult] = await Promise.all([
         // Jobs fetch with filters via cached service
         jobService.getJobs({
             page,
@@ -45,18 +46,12 @@ export default async function SeekerJobsPage({
             workMode,
             type
         }),
-        // Saved jobs
-        supabase
-            .from("saved_jobs")
-            .select("job_id"),
-        // Applications
-        supabase
-            .from("applications")
-            .select("jobId"),
+        fetchSeekerSavedJobIds(supabase, auth.userId),
+        fetchSeekerAppliedJobIds(supabase, auth.userId),
     ]);
 
-    if (savedQuery.error || appsQuery.error) {
-        console.error("Jobs Server Error:", savedQuery.error || appsQuery.error);
+    if (savedResult.error || appsResult.error) {
+        console.error("Jobs Server Error:", savedResult.error?.message || appsResult.error?.message);
         return (
             <div className="flex min-h-[60vh] items-center justify-center">
                 <p className="text-slate-500">Failed to load jobs. Please try refreshing.</p>
@@ -64,8 +59,8 @@ export default async function SeekerJobsPage({
         );
     }
 
-    const savedJobIds = new Set((savedQuery.data || []).map((s: any) => s.job_id));
-    const appliedJobIds = new Set((appsQuery.data || []).map((a: any) => a.jobId));
+    const savedJobIds = new Set(savedResult.data);
+    const appliedJobIds = new Set(appsResult.data);
 
     return (
         <Suspense fallback={<JobsFallback />}>
@@ -78,6 +73,7 @@ export default async function SeekerJobsPage({
                 currentQuery={query}
                 currentWorkMode={workMode}
                 currentType={type}
+                basePath="/dashboard/seeker/jobs"
             />
         </Suspense>
     );

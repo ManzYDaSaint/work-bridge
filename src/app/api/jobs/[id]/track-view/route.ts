@@ -4,10 +4,10 @@ import crypto from "crypto";
 
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const jobId = params.id;
+        const { id: jobId } = await params;
         if (!jobId) {
             return NextResponse.json({ error: "Job ID required" }, { status: 400 });
         }

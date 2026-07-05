@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { fetchSeekerApplications, fetchSeekerSavedJobs } from "@/lib/seeker-data";
 import SeekerOverview from "@/components/dashboard/seeker/SeekerOverview";
 import SeekerPaymentToast from "@/components/dashboard/seeker/PaymentToast";
-// types removed: Application, SavedJob (not used here)
 
 export default async function SeekerDashboardPage() {
     // 1. Server-side Auth Check
@@ -12,20 +12,17 @@ export default async function SeekerDashboardPage() {
 
     const supabase = await createSupabaseServerClient();
 
-    // 2. Parallel Data Fetching on the Server
-    const [appData, savedData] = await Promise.all([
-        supabase
-            .from("applications")
-            .select("*, job:jobs(*, employer(*))")
-            .order("created_at", { ascending: false }),
-        supabase
-            .from("saved_jobs")
-            .select("*, job:jobs(*, employer(*))")
-            .order("created_at", { ascending: false }),
+    // 2. Parallel data fetching (employers fetched separately to avoid RLS join issues)
+    const [appResult, savedResult] = await Promise.all([
+        fetchSeekerApplications(supabase, auth.userId),
+        fetchSeekerSavedJobs(supabase, auth.userId),
     ]);
 
-    if (appData.error || savedData.error) {
-        console.error("Seeker Dashboard Server Error:", appData.error || savedData.error);
+    if (appResult.error || savedResult.error) {
+        console.error(
+            "Seeker Dashboard Server Error:",
+            appResult.error?.message || savedResult.error?.message
+        );
         return (
             <div className="flex min-h-[60vh] items-center justify-center">
                 <p className="text-slate-500">Failed to load dashboard. Please try refreshing.</p>
@@ -33,8 +30,8 @@ export default async function SeekerDashboardPage() {
         );
     }
 
-    const applications = appData.data || [];
-    const savedJobs = savedData.data || [];
+    const applications = appResult.data;
+    const savedJobs = savedResult.data;
 
     // Compute applied IDs for the client component
     const appliedJobIds = new Set(
