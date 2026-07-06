@@ -2,14 +2,14 @@ import { Sparkles, Search, Bookmark, Send, Shield, Award, BarChart2, Bell } from
 
 const features = [
     {
-        title: "Proactive Talent Discovery",
-        description: "Employers don't wait for applications — they search and filter a live pool of candidates by skill, seniority, and search intent.",
+        title: "Intelligent Talent Sourcing",
+        description: "We don't just match keywords. We understand the context of experience to connect employers with the most compatible talent.",
         icon: Search,
         accent: "bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400",
     },
     {
-        title: "Automated Skill Matching",
-        description: "Every job listing instantly surfaces candidates whose skills overlap with the role — and seekers see matched jobs right on their dashboard.",
+        title: "Intuitive Smart-Matching",
+        description: "Our system understands that a 'React Developer' is also a 'Frontend Engineer,' ensuring no great opportunity is missed.",
         icon: Sparkles,
         accent: "bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400",
     },

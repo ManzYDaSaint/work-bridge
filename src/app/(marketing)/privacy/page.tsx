@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { EyeOff, Database, Bot, RefreshCw, Key, ShieldCheck, Chrome } from 'lucide-react';
+import { EyeOff, Database, Bot, RefreshCw, Key, ShieldCheck, Chrome, Sparkles } from 'lucide-react';
 import React from 'react';
 
 export const metadata: Metadata = {
@@ -8,6 +8,11 @@ export const metadata: Metadata = {
 };
 
 const principles = [
+    {
+        title: "Intelligent Career Matching",
+        icon: <Sparkles className="text-amber-500" size={24} />,
+        content: `To connect you with the perfect opportunity, Aganyu utilizes an intelligent matching engine. This system analyzes your skills and experience to understand your unique "Professional DNA," allowing us to suggest roles and candidates that are intuitively compatible, rather than just matching keywords.`
+    },
     {
         title: "Zero-Bias Anonymization Protocol",
         icon: <EyeOff className="text-purple-500" size={24} />,

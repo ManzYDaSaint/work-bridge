@@ -24,6 +24,10 @@ const faqs = [
         q: "Is there any cost to use Aganyu?",
         a: "No. Aganyu is completely free for both job seekers and employers. You can list jobs, build profiles, and discover talent at no cost.",
     },
+    {
+        q: "Can someone post a job on my behalf?",
+        a: "Yes! If you prefer a managed experience, you can email your job vacancy to jobs@aganyu.com. Our team will handle the posting and forward the best AI-matched candidates to you for a small administrative fee.",
+    },
 ];
 
 export default function FAQ() {

@@ -51,7 +51,7 @@ export function HeroSection() {
                     </h1>
 
                     <p className="max-w-xl text-lg sm:text-xl text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                        Build your professional profile, get discovered by employers searching for your exact skills, and receive direct invites — before you even apply.
+                        Build your professional profile and let our intelligent system connect you with employers who understand your true value—even before you hit apply.
                     </p>
                 </div>
 
@@ -119,15 +119,22 @@ export function AudienceCards() {
                     </p>
                     <ul className="space-y-4 text-base text-slate-600 dark:text-slate-300 mb-10">
                         {[
-                            "Get discovered by employers searching for your exact skills",
+                            "Get discovered by employers who are looking for your unique professional DNA",
                             "Set your intent — job, internship, or open to offers",
                             "Receive direct 'Invite to Apply' messages from employers",
                             "Track how many times employers view your profile",
                             "Control your privacy — Public, Anonymous, or Hidden",
-                        ].map((item) => (
+                        ].map((item, idx) => (
                             <li key={item} className="flex items-start gap-3">
                                 <div className="mt-1.5 flex-shrink-0 h-2 w-2 rounded-full bg-sky-500" />
-                                <span className="leading-tight">{item}</span>
+                                <span className="leading-tight flex items-center gap-2">
+                                    {item}
+                                    {idx === 0 && (
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:bg-sky-900/40 dark:text-sky-400 border border-sky-200 dark:border-sky-800">
+                                            <Sparkles size={10} /> Smart Match
+                                        </span>
+                                    )}
+                                </span>
                             </li>
                         ))}
                     </ul>
@@ -159,13 +166,20 @@ export function AudienceCards() {
                         {[
                             "Post structured jobs with must-have skills & screening",
                             "Discover talent — filter by skill, seniority, and intent",
-                            "See instant suggested candidates when you post a role",
+                            "Stop sifting through CVs. Instantly see the 'Perfect Fit' candidates the moment you post a role",
                             "Save candidates to a private talent pool for later",
                             "Send direct 'Invite to Apply' messages — no cold contact",
-                        ].map((item) => (
+                        ].map((item, idx) => (
                             <li key={item} className="flex items-start gap-3">
                                 <div className="mt-1.5 flex-shrink-0 h-2 w-2 rounded-full bg-slate-400" />
-                                <span className="leading-tight">{item}</span>
+                                <span className="leading-tight flex items-center gap-2">
+                                    {item}
+                                    {idx === 2 && (
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                            <Sparkles size={10} /> Smart Match
+                                        </span>
+                                    )}
+                                </span>
                             </li>
                         ))}
                     </ul>
@@ -194,7 +208,7 @@ export function PlatformHighlights() {
                     {[
                         { label: "Work Modes", value: "Remote · Hybrid · On-site" },
                         { label: "Visibility Options", value: "Public · Anonymous · Hidden" },
-                        { label: "Matching", value: "Skill-based & instant" },
+                        { label: "Matching", value: "Intuitive & Instant" },
                         { label: "Cost to join", value: "Free forever" },
                     ].map(({ label, value }) => (
                         <div key={label} className="space-y-2">

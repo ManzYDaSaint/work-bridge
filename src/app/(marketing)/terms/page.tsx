@@ -19,9 +19,9 @@ const sections = [
         content: `Seekers have the ability to upload up to 5 academic or professional certificates. These documents may be stored and reviewed within the platform to support candidate evaluation. Uploading forged documents or documents belonging to another individual is a severe violation of these Terms and will result in a permanent ban and potential referral to relevant authorities.`
     },
     {
-        title: "3. Structured Matching & Recruiting",
+        title: "3. Intelligent Matching & Discovery",
         icon: <BookOpen className="text-emerald-500" size={24} />,
-        content: `Aganyu uses structured requirements, screening questions, and profile data to help employers review candidates consistently. Aganyu does not guarantee employment or interview placements. Employers remain responsible for their own hiring decisions.`
+        content: `Aganyu employs an intelligent matching engine to connect users based on professional compatibility and "Professional DNA". This system provides recommendations and discovers talent by analyzing skills and experience. While our system suggests "Perfect Fit" matches to increase efficiency, these are recommendations only. Aganyu does not guarantee employment, and all final hiring decisions remain the sole responsibility of the employer.`
     },
     {
         title: "4. Subscription Billing & Mobile Money",

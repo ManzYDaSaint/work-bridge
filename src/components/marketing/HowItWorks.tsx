@@ -18,8 +18,8 @@ const seekerSteps = [
         color: "bg-[#1a4f7a]",
     },
     {
-        title: "Get Discovered",
-        description: "Employers searching for your skills will find you instantly. Control your visibility — public, anonymous, or hidden.",
+        title: "The Magic Match",
+        description: "Our system works in the background, intuitively matching your profile to the right employers while you sleep.",
         icon: Sparkles,
         color: "bg-[#1e6ea5]",
     },
@@ -45,8 +45,8 @@ const employerSteps = [
         color: "bg-[#1a4f7a]",
     },
     {
-        title: "Get Instant Matches",
-        description: "Each job automatically surfaces candidates whose skills match your requirements — no manual searching needed.",
+        title: "Instant Compatibility",
+        description: "No more manual searching. We surface the most compatible talent immediately, based on actual capability, not just keywords.",
         icon: Sparkles,
         color: "bg-[#1e6ea5]",
     },
