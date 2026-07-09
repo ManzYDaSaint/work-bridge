@@ -10,7 +10,7 @@ export function TurnstileChallenge({ onVerify, onError, onExpire }: TurnstileCha
   return (
     <div className="flex flex-col gap-2 my-4">
       <Turnstile
-        siteKey={process.env.TURNSTILE_SITE_KEY}
+        siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ""}
         onSuccess={onVerify}
         onError={onError}
         onExpire={onExpire}

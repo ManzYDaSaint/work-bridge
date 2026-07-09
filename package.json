@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@marsidev/react-turnstile": "^1.5.3",
     "@napi-rs/canvas": "^0.1.97",
     "@react-email/components": "^1.0.12",
     "@supabase/ssr": "^0.8.0",
