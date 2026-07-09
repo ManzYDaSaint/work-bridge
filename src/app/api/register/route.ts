@@ -3,6 +3,7 @@ import { canUseEmailForRegistration, isFreeEmailDomain } from "@/lib/email-safet
 import { NotificationService } from "@/services/notification.service";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const PUBLIC_REGISTRATION_ROLES = new Set(["JOB_SEEKER", "EMPLOYER"]);
 
@@ -15,11 +16,19 @@ function getPublicRole(value: unknown): "JOB_SEEKER" | "EMPLOYER" | null {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { email, role, full_name, companyName, industry, location } = body;
+        const { email, role, full_name, companyName, industry, location, turnstileToken } = body;
         const registrationEmail = String(email || "").trim().toLowerCase();
         const requestedRole = getPublicRole(role);
         if (!requestedRole) {
             return NextResponse.json({ error: "Invalid registration role" }, { status: 400 });
+        }
+
+        // Verify Turnstile Token
+        try {
+            await verifyTurnstileToken(turnstileToken);
+        } catch (error: any) {
+            console.warn("[register] turnstile verification failed:", error.message);
+            return NextResponse.json({ error: "Security verification failed. Please try again." }, { status: 403 });
         }
 
         const emailValidation = canUseEmailForRegistration(registrationEmail);

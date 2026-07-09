@@ -3,10 +3,10 @@ import Link from "next/link";
 import Image from "next/image";
 
 const social = [
-    { Icon: Facebook, href: "https://facebook.com/aganyu.mw" },
-    { Icon: Instagram, href: "https://instagram.com/aganyu.mw" },
-    { Icon: Twitter, href: "https://twitter.com/aganyu_mw" },
-    { Icon: Linkedin, href: "https://linkedin.com/company/aganyu-mw" },
+    { Icon: Facebook, href: "https://web.facebook.com/profile.php?id=61591723502553" },
+    { Icon: Instagram, href: "https://instagram.com/AganyuPlatform" },
+    { Icon: Twitter, href: "https://x.com/AganyuSystems" },
+    { Icon: Linkedin, href: "https://www.linkedin.com/in/aganyu-platform-b10bb2327?utm_source=share_via&utm_content=profile&utm_medium=member_android" },
 ];
 
 export default function Footer() {

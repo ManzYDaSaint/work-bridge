@@ -9,6 +9,7 @@ import { Briefcase, User, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import AuthLayout from "@/components/auth/AuthLayout";
 import GoogleAuthButtons from "@/components/auth/GoogleAuthButtons";
+import { TurnstileChallenge } from "@/components/turnstile-challenge";
 import { cn } from "@/lib/utils";
 import {
     canUseEmailForRegistration,
@@ -38,6 +39,7 @@ function RegisterForm() {
         email: "",
         password: "",
     });
+    const [turnstileToken, setTurnstileToken] = useState<string>("");
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
     const supabase = createBrowserSupabaseClient();
@@ -63,6 +65,12 @@ function RegisterForm() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!turnstileToken) {
+            toast.error("Please complete the security challenge.");
+            return;
+        }
+
         setIsLoading(true);
 
         const email = formData.email.trim().toLowerCase();
@@ -114,7 +122,13 @@ function RegisterForm() {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     credentials: "include",
-                    body: JSON.stringify({ email, password: formData.password, role, userId: signUpData.user?.id }),
+                    body: JSON.stringify({ 
+                        email, 
+                        password: formData.password, 
+                        role, 
+                        userId: signUpData.user?.id,
+                        turnstileToken 
+                    }),
                 });
                 if (!regRes.ok) {
                     const regBody = await regRes.json().catch(() => ({}));
@@ -246,6 +260,8 @@ function RegisterForm() {
                                 );
                             })()}
                         </div>
+
+                        <TurnstileChallenge onVerify={setTurnstileToken} />
 
                         <button
                             type="submit"
