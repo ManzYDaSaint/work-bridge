@@ -216,6 +216,7 @@ export const jobService = {
                     skills: job.skills,
                     isNew: job.is_new,
                     createdAt: job.created_at,
+                    public_slug: job.public_slug,
                     application_method: job.application_method,
                     external_apply_url: job.external_apply_url,
                     apply_email: job.apply_email,
