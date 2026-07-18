@@ -64,6 +64,8 @@ export async function buildMeProfile(
                   companyName: userData.employer.company_name,
                   industry: userData.employer.industry,
                   location: userData.employer.location,
+                  website: userData.employer.website,
+                  description: userData.employer.description,
                   status: userData.employer.status,
                   logo_url: userData.employer.logo_url,
                   logoUrl: userData.employer.logo_url,
