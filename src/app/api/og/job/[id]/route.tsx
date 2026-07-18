@@ -19,6 +19,7 @@ export async function GET(
                 location,
                 type,
                 work_mode,
+                salary_range,
                 employer:employers(company_name)
             `)
             .eq("id", id)
@@ -70,6 +71,12 @@ export async function GET(
                             <span style={{ color: '#94a3b8', fontSize: '32px' }}>{job.location}</span>
                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#334155' }} />
                             <span style={{ color: '#94a3b8', fontSize: '32px' }}>{String(job.work_mode || 'REMOTE').replace(/_/g, ' ')}</span>
+                            {job.salary_range && (
+                                <>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#334155' }} />
+                                    <span style={{ color: '#34d399', fontSize: '32px', fontWeight: 'bold' }}>{job.salary_range}</span>
+                                </>
+                            )}
                         </div>
                     </div>
 

@@ -43,6 +43,17 @@ const jobUpdateSchema = z.object({
     salaryRange: z.string().nullable().optional(),
     deadline: z.string().refine((value) => !Number.isNaN(Date.parse(value)), "Invalid deadline date").optional(),
     status: z.enum(["ACTIVE", "PENDING", "EXPIRED", "FILLED", "ARCHIVED"]).optional(),
+    // ── Architecture V2 ──────────────────────────────────────────────────
+    applicationMethod: z.enum(["one_tap", "external_url", "email", "whatsapp", "phone", "manual"]).optional(),
+    externalApplyUrl: z.string().nullable().optional(),
+    applyEmail: z.string().nullable().optional(),
+    applyWhatsapp: z.string().nullable().optional(),
+    applyPhone: z.string().nullable().optional(),
+    applicationInstructions: z.string().nullable().optional(),
+    allowOneTapApply: z.boolean().optional(),
+    postingType: z.enum(["DIRECT", "AGENCY", "AGANYU"]).optional(),
+    displayCompanyName: z.string().nullable().optional(),
+    jobSource: z.string().optional(),
 });
 
 const jobPartialUpdateSchema = z.object({
@@ -82,6 +93,17 @@ export async function PUT(
             ...(parsed.data.salaryRange !== undefined && { salary_range: parsed.data.salaryRange }),
             ...(parsed.data.deadline !== undefined && { deadline: parsed.data.deadline }),
             ...(parsed.data.status !== undefined && { status: parsed.data.status }),
+            // ── Architecture V2 ──────────────────────────────────────────────────
+            ...(parsed.data.applicationMethod !== undefined && { application_method: parsed.data.applicationMethod }),
+            ...(parsed.data.externalApplyUrl !== undefined && { external_apply_url: parsed.data.externalApplyUrl }),
+            ...(parsed.data.applyEmail !== undefined && { apply_email: parsed.data.applyEmail }),
+            ...(parsed.data.applyWhatsapp !== undefined && { apply_whatsapp: parsed.data.applyWhatsapp }),
+            ...(parsed.data.applyPhone !== undefined && { apply_phone: parsed.data.applyPhone }),
+            ...(parsed.data.applicationInstructions !== undefined && { application_instructions: parsed.data.applicationInstructions }),
+            ...(parsed.data.allowOneTapApply !== undefined && { allow_one_tap_apply: parsed.data.allowOneTapApply }),
+            ...(parsed.data.postingType !== undefined && { posting_type: parsed.data.postingType }),
+            ...(parsed.data.displayCompanyName !== undefined && { display_company_name: parsed.data.displayCompanyName }),
+            ...(parsed.data.jobSource !== undefined && { job_source: parsed.data.jobSource }),
         };
 
         if (Object.keys(updateData).length === 0) {
@@ -191,6 +213,17 @@ export async function POST(
                 salary_range: originalJob.salary_range,
                 deadline: body.deadline, // Expecting a new deadline from the request
                 status: 'ACTIVE',
+                // ── Carry V2 fields forward on repost ──────────────────────────────
+                application_method: originalJob.application_method || 'one_tap',
+                external_apply_url: originalJob.external_apply_url || null,
+                apply_email: originalJob.apply_email || null,
+                apply_whatsapp: originalJob.apply_whatsapp || null,
+                apply_phone: originalJob.apply_phone || null,
+                application_instructions: originalJob.application_instructions || null,
+                allow_one_tap_apply: originalJob.allow_one_tap_apply !== false,
+                posting_type: originalJob.posting_type || 'DIRECT',
+                display_company_name: originalJob.display_company_name || null,
+                job_source: originalJob.job_source || 'Employer Portal',
             })
             .select()
             .single();

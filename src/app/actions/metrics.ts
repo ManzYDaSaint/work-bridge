@@ -43,6 +43,7 @@ export async function getLiveMetrics() {
                 title,
                 location,
                 created_at,
+                display_company_name,
                 employer:employers(company_name)
             `)
             .order("created_at", { ascending: false })
@@ -51,7 +52,7 @@ export async function getLiveMetrics() {
         const recentActivities = (recentJobsData || []).map(job => {
             const employer = Array.isArray(job.employer) ? job.employer[0] : job.employer;
             return {
-                company: employer?.company_name || "Confidential",
+                company: job.display_company_name || employer?.company_name || "Confidential",
                 role: job.title,
                 location: job.location || "Remote",
                 time: job.created_at

@@ -157,9 +157,21 @@ export async function POST(request: Request) {
                 salary_range: body.salaryRange,
                 deadline,
                 status: 'ACTIVE',
+                // ── Architecture V2 ───────────────────────────────────────────
+                application_method: body.applicationMethod || 'one_tap',
+                external_apply_url: body.externalApplyUrl || null,
+                apply_email: body.applyEmail || null,
+                apply_whatsapp: body.applyWhatsapp || null,
+                apply_phone: body.applyPhone || null,
+                application_instructions: body.applicationInstructions || null,
+                allow_one_tap_apply: body.allowOneTapApply !== false, // default true
+                posting_type: body.postingType || 'DIRECT',
+                display_company_name: body.displayCompanyName || null,
+                job_source: body.jobSource || 'Employer Portal',
             })
             .select()
             .single();
+
 
         if (insertError) throw insertError;
 

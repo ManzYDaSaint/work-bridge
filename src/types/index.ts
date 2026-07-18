@@ -6,6 +6,24 @@ export type JobWorkMode = 'REMOTE' | 'HYBRID' | 'ON_SITE';
 export type ApplicationStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SHORTLISTED' | 'INTERVIEWING' | 'INVITED' | 'WITHDRAWN';
 export type ScreeningAnswer = 'YES' | 'NO';
 
+/** How candidates should apply to this job. */
+export type ApplicationMethod = 'one_tap' | 'external_url' | 'email' | 'whatsapp' | 'phone' | 'manual';
+
+/** Who is responsible for this listing. */
+export type PostingType = 'DIRECT' | 'AGENCY' | 'AGANYU';
+
+/** Where the vacancy originated from. */
+export type JobSource =
+    | 'Employer Portal'
+    | 'Recruitment Agency'
+    | 'Website Scraper'
+    | 'LinkedIn'
+    | 'Facebook'
+    | 'Newspaper'
+    | 'Email Submission'
+    | 'Manual Entry'
+    | 'API Import';
+
 export interface ScreeningQuestion {
     id: string;
     question: string;
@@ -137,6 +155,30 @@ export interface Job {
     createdAt?: string;
     viewedAt?: string;
     lastAlertSentAt?: string;
+    public_slug?: string;
+    publicSlug?: string;
+
+    // ── Job Architecture V2 ─────────────────────────────────────────────────
+    /** Controls how candidates submit their application. Defaults to 'one_tap'. */
+    application_method?: ApplicationMethod;
+    /** URL to redirect candidates for external ATS applications (method = external_url). */
+    external_apply_url?: string | null;
+    /** Email address for CV submissions (method = email). */
+    apply_email?: string | null;
+    /** WhatsApp number for applications (method = whatsapp). */
+    apply_whatsapp?: string | null;
+    /** Phone number to call (method = phone). */
+    apply_phone?: string | null;
+    /** Free-text instructions shown to candidates (method = manual). */
+    application_instructions?: string | null;
+    /** When true, internal One-Tap apply is offered alongside any external method. */
+    allow_one_tap_apply?: boolean;
+    /** Who is responsible for this listing. */
+    posting_type?: PostingType;
+    /** Displayed company name — overrides employer.company_name when set. */
+    display_company_name?: string | null;
+    /** Source of the vacancy for analytics. */
+    job_source?: JobSource | string;
 }
 
 export interface Application {
@@ -224,4 +266,3 @@ export interface SavedJob {
     created_at: string;
     job: Job;
 }
-

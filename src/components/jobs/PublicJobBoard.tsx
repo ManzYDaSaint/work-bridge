@@ -73,7 +73,7 @@ function JobListRow({
     onOpen: () => void;
     onToggleSave: () => void;
 }) {
-    const company = job.employer?.companyName || "Independent team";
+    const company = job.display_company_name || job.employer?.companyName || "Independent team";
 
     return (
         <div className="grid grid-cols-1 gap-y-4 border-b border-stone-200/70 px-4 py-4 transition-colors hover:bg-stone-50/70 dark:border-slate-800 dark:hover:bg-slate-900/60 sm:grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-4">
@@ -121,8 +121,12 @@ function JobListRow({
                     <ShareJobButton
                         jobId={job.id}
                         jobTitle={job.title}
-                        companyName={job.employer?.companyName}
+                        publicSlug={job.public_slug || job.publicSlug}
+                        companyName={job.display_company_name || job.employer?.companyName}
                         location={job.location}
+                        workMode={job.work_mode}
+                        salaryRange={job.salary_range}
+                        jobType={job.type}
                     />
                     <button
                         type="button"

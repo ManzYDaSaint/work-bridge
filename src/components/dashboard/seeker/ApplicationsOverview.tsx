@@ -71,7 +71,7 @@ export default function ApplicationsOverview({ applications }: { applications: A
                         <div key={app.id} className="grid grid-cols-1 gap-4 border-b border-stone-200/70 px-4 py-4 last:border-b-0 dark:border-slate-800 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-4">
                             <button type="button" onClick={() => app.job && setSelectedJob(app.job)} className="min-w-0 text-left">
                                 <p className="truncate text-sm font-semibold text-slate-900 dark:text-white sm:text-base">{app.job?.title || "Unknown role"}</p>
-                                <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">{app.job?.employer?.companyName || "Company"}</p>
+                                <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">{app.job?.display_company_name || app.job?.employer?.companyName || "Company"}</p>
                             </button>
                             <div className="flex flex-col gap-1.5 items-start sm:items-center sm:flex-row sm:gap-2">
                                 <Badge 

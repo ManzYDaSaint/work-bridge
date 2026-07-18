@@ -1,4 +1,4 @@
-const DEFAULT_SITE_URL = "https://aganyu.co";
+const DEFAULT_SITE_URL = "https://aganyu.com";
 
 export function getSiteUrl(fallback = DEFAULT_SITE_URL) {
     const configuredUrl =

@@ -17,6 +17,7 @@ import {
     ExternalLink,
     ShieldCheck,
     AlertTriangle,
+    Users,
 } from "lucide-react";
 import { cn, timeAgo, formatJobType, formatWorkMode } from "@/lib/utils";
 import Link from "next/link";
@@ -26,6 +27,7 @@ import { Job, ScreeningAnswer } from "@/types";
 import { CompanyAvatar } from "@/components/dashboard/ui";
 export { CompanyAvatar } from "@/components/dashboard/ui";
 import ShareJobButton from "@/components/jobs/ShareJobButton";
+import ApplyActionButton from "@/components/jobs/ApplyActionButton";
 
 export interface ExtendedJob extends Omit<Job, "employer"> {
     employer: {
@@ -92,9 +94,6 @@ export default function JobDetailModal({
 
     const screeningQuestions = job.screening_questions || [];
     const canSubmitApplication = screeningQuestions.every((question) => !!screeningAnswers[question.id]);
-
-
-    console.log(job.employer?.description || "No description available");
 
     return (
         <>
@@ -318,7 +317,7 @@ export default function JobDetailModal({
                         <div className="mb-3 flex items-center gap-4">
                             <CompanyAvatar logoUrl={job.employer?.logoUrl} name={job.employer?.companyName || ""} size="sm" />
                             <div>
-                                <p className="font-semibold text-slate-900 dark:text-white">{job.employer?.companyName || "Company"}</p>
+                                <p className="font-semibold text-slate-900 dark:text-white">{job.display_company_name || job.employer?.companyName || "Company"}</p>
                                 {job.employer?.industry && <p className="text-xs font-medium text-slate-400">{job.employer.industry}</p>}
                             </div>
                         </div>
@@ -331,6 +330,20 @@ export default function JobDetailModal({
                         )}
                         {job.employer?.description && (
                             <p className="mt-2 text-sm text-slate-500">{job.employer.description}</p>
+                        )}
+                        {/* Recruitment partner attribution */}
+                        {(job.posting_type === "AGENCY" || job.posting_type === "AGANYU") && (
+                            <div className="mt-4 border-t border-stone-200 pt-3 dark:border-slate-700">
+                                <div className="flex items-center gap-1.5">
+                                    <Users size={12} className="text-slate-400" />
+                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                                        {job.posting_type === "AGANYU" ? "Posted by" : "Recruitment Partner"}
+                                    </p>
+                                </div>
+                                <p className="mt-0.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                    {job.employer?.companyName || "Aganyu Recruitment"}
+                                </p>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -384,30 +397,31 @@ export default function JobDetailModal({
                             <ShareJobButton
                                 jobId={job.id}
                                 jobTitle={job.title}
-                                companyName={job.employer?.companyName}
+                                publicSlug={job.public_slug || job.publicSlug}
+                                companyName={job.display_company_name || job.employer?.companyName}
                                 location={job.location}
+                                workMode={job.work_mode}
+                                salaryRange={job.salary_range}
+                                jobType={job.type}
                             />
-                            {isApplied ? (
-                                <div className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 py-3 text-sm font-bold text-green-600 dark:border-green-800 dark:bg-green-900/20 sm:py-3.5">
-                                    <CheckCircle2 size={18} /> Applied
-                                </div>
-                            ) : isProfileIncomplete ? (
-                                <button disabled className="flex-1 cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 py-3 text-xs font-bold text-slate-400 dark:border-slate-700 dark:bg-slate-800 sm:py-3.5 sm:text-sm">
-                                    Complete Profile to Apply
-                                </button>
-                            ) : isLimitReached ? (
-                                <button disabled className="flex-1 cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 py-3 text-xs font-bold text-slate-400 dark:border-slate-700 dark:bg-slate-800 sm:py-3.5 sm:text-sm">
-                                    Monthly Limit Reached
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={() => onApply(screeningAnswers)}
-                                    disabled={!canSubmitApplication}
-                                    className="flex-1 rounded-xl bg-[#16324f] py-3 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 dark:disabled:bg-slate-800 sm:py-3.5"
-                                >
-                                    Apply now
-                                </button>
-                            )}
+                            <div className="flex-1">
+                                <ApplyActionButton
+                                    jobId={job.id}
+                                    jobTitle={job.title}
+                                    applicationMethod={job.application_method || "one_tap"}
+                                    externalApplyUrl={job.external_apply_url}
+                                    applyEmail={job.apply_email}
+                                    applyWhatsapp={job.apply_whatsapp}
+                                    applyPhone={job.apply_phone}
+                                    applicationInstructions={job.application_instructions}
+                                    allowOneTapApply={job.allow_one_tap_apply !== false}
+                                    isApplied={isApplied}
+                                    isProfileIncomplete={isProfileIncomplete}
+                                    isLimitReached={isLimitReached}
+                                    canSubmitApplication={canSubmitApplication}
+                                    onApply={() => onApply(screeningAnswers)}
+                                />
+                            </div>
                         </div>
                         {onReport && (
                             <button

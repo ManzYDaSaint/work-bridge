@@ -70,7 +70,7 @@ export async function triggerMatchNotifications(jobId: string) {
           userId: seeker.user_id,
           type: "JOB_MATCH",
           templateVars: {
-            companyName: job.employer?.company_name || "a company",
+            companyName: job.display_company_name || job.employer?.company_name || "a company",
             jobTitle: job.title,
           },
           link: `/dashboard/seeker/recommendations`,
@@ -121,7 +121,7 @@ export async function triggerDelayedFreeMatchNotifications(jobId: string) {
               userId: seeker.user_id,
               type: "JOB_MATCH",
               templateVars: {
-                companyName: job.employer?.company_name || "a company",
+                companyName: job.display_company_name || job.employer?.company_name || "a company",
                 jobTitle: job.title,
               },
               link: `/dashboard/seeker/recommendations`,

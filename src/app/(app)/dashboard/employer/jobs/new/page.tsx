@@ -8,9 +8,11 @@ import {
     JobQuickFormValues,
     parseCommaSkills,
     parseScreeningQuestions,
+    APPLICATION_METHODS,
+    POSTING_TYPES,
 } from "@/lib/validations/job";
 import { apiFetchJson } from "@/lib/api";
-import { Briefcase, MapPin, Loader2, Calendar, DollarSign, ChevronDown, ChevronUp, Globe2 } from "lucide-react";
+import { Briefcase, MapPin, Loader2, Calendar, DollarSign, ChevronDown, ChevronUp, Globe2, Link2, Mail, MessageCircle, Phone, FileText } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/ui";
 import { useRouter } from "next/navigation";
 import { Employer } from "@/types";
@@ -23,6 +25,7 @@ const defaultDeadline = () =>
 export default function NewJobPage() {
     const [saving, setSaving] = useState(false);
     const [advancedOpen, setAdvancedOpen] = useState(false);
+    const [sourcingOpen, setSourcingOpen] = useState(false);
     const [profile, setProfile] = useState<Employer | null>(null);
     const [loadingProfile, setLoadingProfile] = useState(true);
     const router = useRouter();
@@ -39,6 +42,7 @@ export default function NewJobPage() {
     const {
         register,
         handleSubmit,
+        watch,
         formState: { errors },
     } = useForm<JobQuickFormValues>({
         resolver: zodResolver(jobQuickFormSchema) as any,
@@ -53,8 +57,13 @@ export default function NewJobPage() {
             screeningQuestionsInput: "",
             salaryRange: "",
             deadline: "",
+            applicationMethod: "one_tap",
+            allowOneTapApply: true,
+            postingType: "DIRECT",
         },
     });
+
+    const applicationMethod = watch("applicationMethod");
 
     const isApproved = profile?.status === "APPROVED";
 
@@ -88,6 +97,17 @@ export default function NewJobPage() {
                     screeningQuestions,
                     salaryRange: data.salaryRange?.trim() || undefined,
                     deadline,
+                    // ── Architecture V2 ─────────────────────────────────────
+                    applicationMethod: data.applicationMethod,
+                    externalApplyUrl: data.externalApplyUrl?.trim() || undefined,
+                    applyEmail: data.applyEmail?.trim() || undefined,
+                    applyWhatsapp: data.applyWhatsapp?.trim() || undefined,
+                    applyPhone: data.applyPhone?.trim() || undefined,
+                    applicationInstructions: data.applicationInstructions?.trim() || undefined,
+                    allowOneTapApply: data.allowOneTapApply,
+                    postingType: data.postingType,
+                    displayCompanyName: data.displayCompanyName?.trim() || undefined,
+                    jobSource: data.jobSource?.trim() || undefined,
                 }),
             });
             toast.success("Job posted");
@@ -292,6 +312,125 @@ export default function NewJobPage() {
                                 {errors.deadline && (
                                     <p className="text-xs text-red-600 dark:text-red-400">{errors.deadline.message}</p>
                                 )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Architecture V2: Application & Sourcing Section ── */}
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                    <button
+                        type="button"
+                        onClick={() => setSourcingOpen((o) => !o)}
+                        className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-800 dark:text-slate-200 bg-slate-50/80 dark:bg-slate-900/50 hover:bg-slate-100/80 dark:hover:bg-slate-800/50 transition-colors"
+                    >
+                        Application settings & sourcing
+                        {sourcingOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                    </button>
+                    {sourcingOpen && (
+                        <div className="p-4 sm:p-5 space-y-6 border-t border-slate-200 dark:border-slate-800">
+                            
+                            {/* Application Method */}
+                            <div className="space-y-3">
+                                <label className="text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                                    How should candidates apply?
+                                </label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <label className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all", applicationMethod === "one_tap" ? "border-blue-600 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-900/20" : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/50")}>
+                                        <input type="radio" value="one_tap" {...register("applicationMethod")} className="mt-1" />
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Aganyu One-Tap (Recommended)</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Applications appear in your Aganyu dashboard.</p>
+                                        </div>
+                                    </label>
+                                    <label className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all", applicationMethod === "external_url" ? "border-blue-600 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-900/20" : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/50")}>
+                                        <input type="radio" value="external_url" {...register("applicationMethod")} className="mt-1" />
+                                        <div>
+                                            <p className="flex items-center gap-1 text-sm font-semibold text-slate-900 dark:text-slate-100"><Link2 size={14} /> External Link / ATS</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Redirect applicants to your website.</p>
+                                        </div>
+                                    </label>
+                                    <label className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all", applicationMethod === "email" ? "border-blue-600 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-900/20" : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/50")}>
+                                        <input type="radio" value="email" {...register("applicationMethod")} className="mt-1" />
+                                        <div>
+                                            <p className="flex items-center gap-1 text-sm font-semibold text-slate-900 dark:text-slate-100"><Mail size={14} /> Email Submission</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Candidates send their CV to an email address.</p>
+                                        </div>
+                                    </label>
+                                    <label className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all", applicationMethod === "whatsapp" ? "border-blue-600 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-900/20" : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/50")}>
+                                        <input type="radio" value="whatsapp" {...register("applicationMethod")} className="mt-1" />
+                                        <div>
+                                            <p className="flex items-center gap-1 text-sm font-semibold text-slate-900 dark:text-slate-100"><MessageCircle size={14} /> WhatsApp</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Redirect applicants to a WhatsApp chat.</p>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                {/* Conditional Fields Based on Method */}
+                                {applicationMethod === "external_url" && (
+                                    <div className="mt-3">
+                                        <input {...register("externalApplyUrl")} placeholder="https://jobs.lever.co/..." className={inputClass} />
+                                        {errors.externalApplyUrl && <p className="mt-1 text-xs text-red-600">{errors.externalApplyUrl.message}</p>}
+                                    </div>
+                                )}
+                                {applicationMethod === "email" && (
+                                    <div className="mt-3">
+                                        <input type="email" {...register("applyEmail")} placeholder="careers@company.com" className={inputClass} />
+                                        {errors.applyEmail && <p className="mt-1 text-xs text-red-600">{errors.applyEmail.message}</p>}
+                                    </div>
+                                )}
+                                {applicationMethod === "whatsapp" && (
+                                    <div className="mt-3">
+                                        <input type="tel" {...register("applyWhatsapp")} placeholder="+265 888 123 456" className={inputClass} />
+                                    </div>
+                                )}
+                                {applicationMethod === "phone" && (
+                                    <div className="mt-3">
+                                        <input type="tel" {...register("applyPhone")} placeholder="+265 999 123 456" className={inputClass} />
+                                    </div>
+                                )}
+                                {applicationMethod === "manual" && (
+                                    <div className="mt-3">
+                                        <textarea {...register("applicationInstructions")} rows={3} placeholder="Please send your CV and cover letter in a sealed envelope to..." className={cn(inputClass, "resize-y")} />
+                                    </div>
+                                )}
+
+                                {/* Allow One-Tap Toggle (only show if method is not one_tap) */}
+                                {applicationMethod !== "one_tap" && (
+                                    <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-stone-200 bg-stone-50 p-4 dark:border-slate-700 dark:bg-slate-900/60">
+                                        <div className="flex h-5 items-center">
+                                            <input type="checkbox" {...register("allowOneTapApply")} className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Allow Aganyu applicants to bypass this</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">If checked, candidates can still apply instantly using their Aganyu profile instead of following the external link.</p>
+                                        </div>
+                                    </label>
+                                )}
+                            </div>
+
+                            <div className="h-px bg-slate-200 dark:bg-slate-800" />
+
+                            {/* Posting Type & Display Details */}
+                            <div className="space-y-4">
+                                <label className="text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                                    Display Settings
+                                </label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Posting Type</label>
+                                        <select {...register("postingType")} className={cn(inputClass, "appearance-none")}>
+                                            <option value="DIRECT">Direct Employer</option>
+                                            <option value="AGENCY">Recruitment Agency</option>
+                                            <option value="AGANYU">Aganyu Sourced</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Hiring Company Name (Optional)</label>
+                                        <input {...register("displayCompanyName")} placeholder={`Overrides: ${profile?.companyName || 'your name'}`} className={inputClass} />
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Use this if you are recruiting on behalf of a client.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

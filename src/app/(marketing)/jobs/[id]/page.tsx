@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Briefcase, Building2, CalendarDays, CheckCircle2, DollarSign, ExternalLink, MapPin, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Briefcase, Building2, CalendarDays, CheckCircle2, DollarSign, ExternalLink, MapPin, ShieldCheck, Users } from "lucide-react";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { formatJobType, formatWorkMode } from "@/lib/utils";
+import ShareJobButton from "@/components/jobs/ShareJobButton";
+import ApplyActionButton from "@/components/jobs/ApplyActionButton";
 
 // Revalidate every 10 minutes — much better than force-dynamic for crawlers
 export const revalidate = 600;
@@ -26,6 +28,17 @@ type PublicJob = {
     status: string;
     public_slug: string | null;
     created_at: string;
+    // V2 architecture fields
+    application_method: string | null;
+    external_apply_url: string | null;
+    apply_email: string | null;
+    apply_whatsapp: string | null;
+    apply_phone: string | null;
+    application_instructions: string | null;
+    allow_one_tap_apply: boolean | null;
+    posting_type: string | null;
+    display_company_name: string | null;
+    job_source: string | null;
 };
 
 type PublicEmployer = {
@@ -49,7 +62,7 @@ async function getPublicJob(slugOrId: string) {
 
     const { data } = await supabase
         .from("jobs")
-        .select("id, employer_id, title, description, location, type, work_mode, skills, must_have_skills, nice_to_have_skills, minimum_years_experience, qualification, salary_range, deadline, status, public_slug, created_at")
+        .select("id, employer_id, title, description, location, type, work_mode, skills, must_have_skills, nice_to_have_skills, minimum_years_experience, qualification, salary_range, deadline, status, public_slug, created_at, application_method, external_apply_url, apply_email, apply_whatsapp, apply_phone, application_instructions, allow_one_tap_apply, posting_type, display_company_name, job_source")
         .eq(looksLikeUuid(slugOrId) ? "id" : "public_slug", slugOrId)
         .maybeSingle();
 
@@ -117,13 +130,14 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
     if (!result) notFound();
 
     const { job, employer } = result;
-    const company = employer?.company_name || "Aganyu employer";
+    // display_company_name overrides the employer account name
+    const company = job.display_company_name || employer?.company_name || "Aganyu employer";
+    const isAgencyPosting = job.posting_type === "AGENCY" || job.posting_type === "AGANYU";
     const skills = uniqueList([...(job.must_have_skills || []), ...(job.skills || []), ...(job.nice_to_have_skills || [])]);
     const applyHref = `/jobs?job=${job.id}`;
     const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://aganyu.com").replace(/\/$/, "");
     const sharePath = `${siteUrl}/jobs/${job.public_slug || job.id}`;
 
-    // JSON-LD JobPosting schema for Google rich results
     const jobPostingSchema = {
         "@context": "https://schema.org",
         "@type": "JobPosting",
@@ -153,7 +167,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
             : undefined,
         skills: skills.join(", ") || undefined,
         url: sharePath,
-        directApply: true,
+        directApply: job.allow_one_tap_apply !== false,
     };
 
     return (
@@ -197,9 +211,20 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
                                 {job.minimum_years_experience != null && <p>{job.minimum_years_experience}+ years experience</p>}
                                 {job.qualification && <p>{job.qualification}</p>}
                             </div>
-                            <Link href={applyHref} className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-[#16324f] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0f2439]">
-                                View and apply
-                            </Link>
+                            <div className="mt-5">
+                                <ApplyActionButton
+                                    jobId={job.id}
+                                    jobTitle={job.title}
+                                    applicationMethod={(job.application_method as any) || "one_tap"}
+                                    externalApplyUrl={job.external_apply_url}
+                                    applyEmail={job.apply_email}
+                                    applyWhatsapp={job.apply_whatsapp}
+                                    applyPhone={job.apply_phone}
+                                    applicationInstructions={job.application_instructions}
+                                    allowOneTapApply={job.allow_one_tap_apply !== false}
+                                    applyHref={applyHref}
+                                />
+                            </div>
                         </aside>
                     </div>
                 </div>
@@ -209,7 +234,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
                 <div className="space-y-6">
                     <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                         <h2 className="text-lg font-semibold">About this role</h2>
-                        <div className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-700 dark:text-slate-300">
+                        <div className="mt-4 whitespace-pre-line text-base leading-relaxed text-slate-700 dark:text-slate-300">
                             {job.description || "No description has been added yet."}
                         </div>
                     </section>
@@ -226,7 +251,9 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
 
                 <aside className="space-y-6">
                     <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                        <h2 className="text-lg font-semibold">Company</h2>
+                        <h2 className="text-lg font-semibold">
+                            {isAgencyPosting ? "Hiring Company" : "Company"}
+                        </h2>
                         <div className="mt-4 flex items-center gap-3">
                             <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-stone-200 bg-stone-100 text-sm font-semibold text-[#16324f] dark:border-slate-700 dark:bg-slate-800 dark:text-white">
                                 {employer?.logo_url ? <img src={employer.logo_url} alt={company} className="h-full w-full object-cover" /> : company.slice(0, 2).toUpperCase()}
@@ -242,15 +269,47 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
                                 Visit website <ExternalLink size={14} />
                             </a>
                         )}
+
+                        {/* Recruitment Partner section for Agency / Aganyu postings */}
+                        {isAgencyPosting && (
+                            <div className="mt-5 border-t border-stone-200 pt-4 dark:border-slate-700">
+                                <div className="flex items-center gap-2">
+                                    <Users size={14} className="text-slate-400" />
+                                    <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                                        {job.posting_type === "AGANYU" ? "Posted by" : "Recruitment Partner"}
+                                    </p>
+                                </div>
+                                <p className="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                    {employer?.company_name || "Aganyu Recruitment"}
+                                </p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500">
+                                    {job.posting_type === "AGANYU"
+                                        ? "Aganyu is recruiting on behalf of the hiring company."
+                                        : "A certified recruitment partner is managing this vacancy."}
+                                </p>
+                            </div>
+                        )}
                     </section>
 
                     <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                         <div className="flex items-start gap-3">
                             <CheckCircle2 className="mt-0.5 text-emerald-600" size={18} />
-                            <div>
+                            <div className="flex-1 min-w-0">
                                 <h2 className="font-semibold text-slate-950 dark:text-white">Shareable job link</h2>
                                 <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">Send this page to candidates or post it anywhere. Applicants can open the job directly.</p>
                                 <p className="mt-3 break-all rounded-lg bg-stone-50 px-3 py-2 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-300">{sharePath}</p>
+                                <div className="mt-4">
+                                    <ShareJobButton
+                                        jobId={job.id}
+                                        jobTitle={job.title}
+                                        publicSlug={job.public_slug || undefined}
+                                        companyName={company}
+                                        location={job.location}
+                                        workMode={job.work_mode || undefined}
+                                        salaryRange={job.salary_range || undefined}
+                                        jobType={job.type}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </section>

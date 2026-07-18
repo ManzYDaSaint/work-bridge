@@ -382,7 +382,7 @@ export const JobAlertEmail = ({ seekerName, matchedJobs }: { seekerName: string;
         <Section key={i} style={{ padding: "20px", marginBottom: "16px", border: "1px solid #e2e8f0", borderRadius: "16px", backgroundColor: "#ffffff", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
           <Text style={{ margin: "0 0 4px 0", color: "#0f172a", fontSize: "18px", fontWeight: "700" }}>{job.title}</Text>
           <Text style={{ margin: "0 0 16px 0", color: "#64748b", fontSize: "14px" }}>
-            {job.employer?.company_name || 'Unknown Company'} • {job.location || 'Remote'} • {job.type}
+            {job.display_company_name || job.employer?.company_name || 'Unknown Company'} • {job.location || 'Remote'} • {job.type}
           </Text>
           <Link href={`${APP_URL}/jobs/${job.id}`} style={{ color: BRAND_COLOR, textDecoration: "none", fontWeight: "700", fontSize: "15px" }}>View Job &rarr;</Link>
         </Section>

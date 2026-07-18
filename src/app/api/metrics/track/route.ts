@@ -16,7 +16,14 @@ export async function POST(request: Request) {
         const auth = await getAuthOptional();
         const user = auth.user;
 
-        const sessionId = cookieStore.get("sb-access-token")?.value?.slice(0, 24) || null;
+        let visitorId = cookieStore.get("visitor_id")?.value;
+        let isNewVisitor = false;
+        if (!visitorId) {
+            visitorId = crypto.randomUUID();
+            isNewVisitor = true;
+        }
+
+        const sessionId = cookieStore.get("sb-access-token")?.value?.slice(0, 24) || visitorId;
 
         const payload = {
             user_id: user?.id || null,
@@ -38,14 +45,34 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: true, message: "Tracking skipped (Admin key missing)" });
         }
 
-        const { error } = await adminClient.from("audit_logs").insert(payload);
-        if (error) {
-            console.error("Metrics track DB error:", error);
-            // Don't fail the request for a tracking error, but log it
-            return NextResponse.json({ success: true, warning: "Failed to track event" });
+        const { error: auditError } = await adminClient.from("audit_logs").insert(payload);
+        if (auditError) {
+            console.error("Metrics track DB error (audit):", auditError);
         }
 
-        return NextResponse.json({ success: true });
+        if (body.stage) {
+            const productEventPayload = {
+                user_id: user?.id || null,
+                session_id: sessionId,
+                role: body.role || null,
+                stage: body.stage,
+                variant: variant || null
+            };
+            const { error: funnelError } = await adminClient.from("product_events").insert(productEventPayload);
+            if (funnelError) {
+                console.error("Metrics track DB error (funnel):", funnelError);
+            }
+        }
+
+        const response = NextResponse.json({ success: true });
+        if (isNewVisitor) {
+            response.cookies.set("visitor_id", visitorId, {
+                path: "/",
+                maxAge: 60 * 60 * 24 * 365, // 1 year
+                sameSite: "lax",
+            });
+        }
+        return response;
     } catch (e) {
         console.error("Metrics track parse error:", e);
         return NextResponse.json({ error: "Invalid payload" }, { status: 400 });

@@ -29,7 +29,7 @@ export default async function AdminJobsPage({
             return {
                 ...j,
                 createdAt: j.created_at,
-                companyName: employer?.company_name,
+                companyName: j.display_company_name || employer?.company_name,
                 employer: {
                     id: employer?.id,
                     companyName: employer?.company_name,

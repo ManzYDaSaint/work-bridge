@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { ScreeningAnswer, ScreeningQuestion } from "@/types";
 
+const APPLICATION_METHODS = ['one_tap', 'external_url', 'email', 'whatsapp', 'phone', 'manual'] as const;
+const POSTING_TYPES = ['DIRECT', 'AGENCY', 'AGANYU'] as const;
+
 export const jobSchema = z.object({
     title: z.string().min(3, "Title must be at least 3 characters"),
     description: z.string().min(20, "Description must be at least 20 characters"),
@@ -20,9 +23,21 @@ export const jobSchema = z.object({
     salaryRange: z.string().optional(),
     deadline: z.string().min(1, "Deadline is required"),
     status: z.enum(["ACTIVE", "PENDING", "EXPIRED", "FILLED", "ARCHIVED"]).optional(),
+    // ── Architecture V2 ──────────────────────────────────────────────────
+    applicationMethod: z.enum(APPLICATION_METHODS).optional(),
+    externalApplyUrl: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
+    applyEmail: z.string().email("Please enter a valid email").optional().or(z.literal("")),
+    applyWhatsapp: z.string().optional(),
+    applyPhone: z.string().optional(),
+    applicationInstructions: z.string().optional(),
+    allowOneTapApply: z.boolean().optional(),
+    postingType: z.enum(POSTING_TYPES).optional(),
+    displayCompanyName: z.string().optional(),
+    jobSource: z.string().optional(),
 });
 
 export type JobValues = z.infer<typeof jobSchema>;
+export { APPLICATION_METHODS, POSTING_TYPES };
 
 /** Comma-separated skills → array (supports English comma and ideographic comma) */
 export function parseCommaSkills(input: string): string[] {
@@ -86,6 +101,17 @@ export const jobQuickFormSchema = z.object({
     salaryRange: z.string().optional(),
     deadline: z.string().optional(),
     status: z.enum(["ACTIVE", "PENDING", "EXPIRED", "FILLED", "ARCHIVED"]).optional(),
+    // ── Architecture V2 ──────────────────────────────────────────────────────
+    applicationMethod: z.enum(APPLICATION_METHODS).optional(),
+    externalApplyUrl: z.string().optional(),
+    applyEmail: z.string().optional(),
+    applyWhatsapp: z.string().optional(),
+    applyPhone: z.string().optional(),
+    applicationInstructions: z.string().optional(),
+    allowOneTapApply: z.boolean().optional(),
+    postingType: z.enum(POSTING_TYPES).optional(),
+    displayCompanyName: z.string().optional(),
+    jobSource: z.string().optional(),
 });
 
 export type JobQuickFormValues = z.infer<typeof jobQuickFormSchema>;

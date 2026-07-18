@@ -26,7 +26,7 @@ export async function POST(
     // Verify the job exists and is active
     const { data: job, error: jobError } = await supabase
         .from("jobs")
-        .select("id, title, employer_id, status, deadline, skills, must_have_skills, nice_to_have_skills, minimum_years_experience, qualification, screening_questions")
+        .select("id, title, employer_id, status, deadline, skills, must_have_skills, nice_to_have_skills, minimum_years_experience, qualification, screening_questions, application_method, allow_one_tap_apply")
         .eq("id", jobId)
         .single();
 
@@ -41,6 +41,14 @@ export async function POST(
     if (job.deadline && new Date(job.deadline) < new Date()) {
         return NextResponse.json({ error: "The application deadline has passed" }, { status: 400 });
     }
+
+    // Guard: if one-tap is disabled for this job, block internal submissions
+    if ((job as any).application_method && (job as any).application_method !== "one_tap" && !(job as any).allow_one_tap_apply) {
+        return NextResponse.json({
+            error: "This job does not accept applications through Aganyu. Please follow the employer's application instructions.",
+        }, { status: 405 });
+    }
+
 
     const { data: block } = await supabase
         .from("user_blocks")

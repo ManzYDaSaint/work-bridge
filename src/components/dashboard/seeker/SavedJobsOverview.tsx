@@ -80,7 +80,7 @@ export default function SavedJobsOverview({ savedEntries, appliedJobIds }: Saved
                                     {job?.title || "Job no longer active"}
                                 </p>
                                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                    {job ? `${job.employer?.companyName || "Company"} · ${job.location}` : "This position has been filled or removed."}
+                                    {job ? `${job.display_company_name || job.employer?.companyName || "Company"} · ${job.location}` : "This position has been filled or removed."}
                                 </p>
                             </button>
                             <div className="flex items-center gap-2">
