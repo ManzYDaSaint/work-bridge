@@ -23,6 +23,7 @@ interface JobDetail {
     salary_range: string | null;
     deadline: string | null;
     status: string;
+    public_slug?: string;
     created_at: string;
     employer_id: string;
     employers?: { company_name: string; logo_url: string | null };
@@ -106,7 +107,7 @@ export default function JobDetailPage() {
                             Edit Role
                         </Link>
                         <Link
-                            href={`/jobs/${job.id}`}
+                            href={`/jobs/${job.public_slug || job.id}?utm_source=copy_link&utm_medium=social&utm_campaign=job_share`}
                             target="_blank"
                             className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:text-slate-300"
                         >

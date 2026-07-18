@@ -82,8 +82,9 @@ export default function JobListTable({
         }
     };
 
-    const handleCopyLink = (jobId: string) => {
-        const url = `${window.location.origin}/jobs/${jobId}`;
+    const handleCopyLink = (job: Job) => {
+        const slugOrId = job.public_slug || job.id;
+        const url = `${window.location.origin}/jobs/${slugOrId}?utm_source=copy_link&utm_medium=social&utm_campaign=job_share`;
         navigator.clipboard.writeText(url).then(() => {
             toast.success("Job link copied to clipboard!");
         }).catch(() => {
@@ -137,7 +138,7 @@ export default function JobListTable({
 
                                 {job.status === "ACTIVE" && (
                                     <button
-                                        onClick={() => handleCopyLink(job.id)}
+                                        onClick={() => handleCopyLink(job)}
                                         className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300"
                                         title="Copy Link"
                                     >
