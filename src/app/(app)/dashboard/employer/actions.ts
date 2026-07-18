@@ -319,14 +319,14 @@ export async function toggleSaveTalent(seekerId: string, isCurrentlySaved: boole
     try {
         if (isCurrentlySaved) {
             const { error } = await supabase
-                .from("saved_candidates")
+                .from("employer_saved_candidates")
                 .delete()
                 .eq("seeker_id", seekerId)
                 .eq("employer_id", auth.user.id);
             if (error) throw error;
         } else {
             const { error } = await supabase
-                .from("saved_candidates")
+                .from("employer_saved_candidates")
                 .insert([{
                     employer_id: auth.user.id,
                     seeker_id: seekerId

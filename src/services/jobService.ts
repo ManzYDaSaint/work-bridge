@@ -326,7 +326,7 @@ export const jobService = {
         // Fetch this employer's saved candidate IDs separately to avoid
         // the broken PostgREST join filter that incorrectly filtered OUT unsaved candidates.
         const { data: savedRows } = await supabase
-            .from("saved_candidates")
+            .from("employer_saved_candidates")
             .select("seeker_id")
             .eq("employer_id", employerId);
 
