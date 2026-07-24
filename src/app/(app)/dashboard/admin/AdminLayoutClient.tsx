@@ -1,7 +1,7 @@
 "use client";
 
 import { User } from "@/types";
-import { LayoutDashboard, Users, ShieldCheck, Briefcase } from "lucide-react";
+import { BrainCircuit, Briefcase, ClipboardList, LayoutDashboard, ShieldCheck, Users } from "lucide-react";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
 import { signOutAndRedirect } from "@/lib/auth-utils";
 
@@ -13,6 +13,8 @@ const adminNavGroups: NavGroup[] = [
             { label: "User Management", href: "/dashboard/admin/users", icon: Users },
             { label: "Market Moderation", href: "/dashboard/admin/jobs", icon: Briefcase },
             { label: "Employer Verification", href: "/dashboard/admin/employers", icon: ShieldCheck },
+            { label: "Employer CRM", href: "/dashboard/admin/crm", icon: ClipboardList },
+            { label: "AI Health", href: "/dashboard/admin/ai-health", icon: BrainCircuit },
         ]
     },
 ];

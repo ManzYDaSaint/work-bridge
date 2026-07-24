@@ -193,23 +193,35 @@ psql -h <host> -U postgres -d postgres -f supabase/schema.sql
 
 ## Current Platform Status
 
-### ✅ Working
+### Working
 
 | Feature | Status |
 |---|---|
-| AI Semantic Matchmaking (HuggingFace + pgvector) | ✅ |
-| Verified Employer Badges | ✅ |
-| Admin Certificate Verification Pipeline | ✅ |
-| Profile Strength Gamification (Actionable suggestions) | ✅ |
-| Closed-loop Application Feedback (Instant notifications) | ✅ |
-| Public job board & Structured job posting | ✅ |
-| Transparent screening scores & pipeline management | ✅ |
-| Full seeker profile & certifications management | ✅ |
-| Profile visibility & search intent controls | ✅ |
-| Employer Discover page with semantic filters | ✅ |
-| Payments & subscriptions (PayChangu) | ✅ |
-| Admin dashboard & Audit logging | ✅ |
-| Mobile responsive UI | ✅ |
+| AI Semantic Matchmaking (HuggingFace + pgvector) | Working |
+| Verified Employer Badges | Working |
+| Admin Certificate Verification Pipeline | Working |
+| Profile Strength Gamification (Actionable suggestions) | Working |
+| Closed-loop Application Feedback (Instant notifications) | Working |
+| Public job board & Structured job posting | Working |
+| Transparent screening scores & pipeline management | Working |
+| Full seeker profile & certifications management | Working |
+| Profile visibility & search intent controls | Working |
+| Employer Discover page with semantic filters | Working |
+| Payments & subscriptions (PayChangu) | Working |
+| Admin dashboard & Audit logging | Working |
+| Employer CRM pipeline | In progress |
+| AI health and automation monitoring | In progress |
+| Mobile responsive UI | Working |
+
+### Engineering Health
+
+```bash
+npm run lint
+npm run type-check
+npm run build
+```
+
+The CRM and automation tables live in migrations and should be applied before enabling the admin CRM and AI health dashboards in production.
 
 ---
 

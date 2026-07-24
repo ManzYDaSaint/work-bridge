@@ -106,12 +106,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     const company = result.employer?.company_name || "Aganyu employer";
     const description = result.job.description || `${company} is hiring ${result.job.title} on Aganyu.`;
 
+    const canonicalSlug = result.job.public_slug || result.job.id;
+
     return {
         title: `${result.job.title} at ${company} | Aganyu`,
         description,
+        alternates: {
+            canonical: `/jobs/${canonicalSlug}`,
+        },
         openGraph: {
             title: `${result.job.title} at ${company}`,
             description,
+            url: `/jobs/${canonicalSlug}`,
             type: "article",
             images: [{ url: `/api/og/job/${result.job.id}` }],
         },

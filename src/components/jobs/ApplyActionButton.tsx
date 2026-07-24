@@ -43,7 +43,6 @@ function buildWhatsAppLink(number: string, jobTitle: string) {
  * the public-facing job page (pass `applyHref` for SSR-safe link rendering).
  */
 export default function ApplyActionButton({
-    jobId,
     jobTitle,
     applicationMethod = "one_tap",
     externalApplyUrl,

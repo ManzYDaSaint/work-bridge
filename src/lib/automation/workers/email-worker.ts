@@ -1,0 +1,69 @@
+import { registerPlugin } from "../registry";
+import * as emailUtils from "@/lib/resend";
+import { getSupabaseAdminClient } from "@/lib/supabase-admin";
+
+export const EmailNotificationWorker = {
+    id: 'email-notifier',
+    run: async (payload: any) => {
+        const supabase = getSupabaseAdminClient();
+        if (!supabase) throw new Error("Admin client not initialized");
+
+        // 1. Log attempt
+        const { data: log, error: logError } = await supabase
+            .from('email_logs')
+            .insert({
+                task_id: payload.taskId,
+                recipient_email: payload.to,
+                template_id: payload.templateId,
+                status: 'QUEUED'
+            })
+            .select('id')
+            .single();
+
+        if (logError) throw logError;
+
+        try {
+            // 2. Map templateId to specific sendEmail function
+            const { templateId, to, context } = payload;
+            let result;
+
+            switch (templateId) {
+                case 'WELCOME_EMAIL':
+                    result = await emailUtils.sendWelcomeEmail(to, context.name);
+                    break;
+                case 'NEW_APPLICATION':
+                    result = await emailUtils.sendNewApplicationEmail(to, context);
+                    break;
+                // Add more mappings as needed
+                default:
+                    throw new Error(`Template not implemented: ${templateId}`);
+            }
+
+            if (!result.success) throw result.error;
+
+            await supabase
+                .from('email_logs')
+                .update({ status: 'SENT', updated_at: new Date().toISOString() })
+                .eq('id', log.id);
+
+        } catch (error: any) {
+            // Log Failure and alert Admin
+            await supabase
+                .from('email_logs')
+                .update({ status: 'FAILED', error_message: error.message })
+                .eq('id', log?.id);
+            
+            await supabase
+                .from('ai_health_logs')
+                .insert({
+                    event_type: 'EMAIL_FAILURE',
+                    status: 'CRITICAL',
+                    message: `Email failed to ${payload.to}: ${error.message}`,
+                    metadata: { taskId: payload.taskId }
+                });
+            throw error;
+        }
+    }
+};
+
+registerPlugin(EmailNotificationWorker);

@@ -2,10 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 // AuthError type removed — helper function was removed and import is unused
 import { rateLimit, getIP, rateLimitResponse } from "@/lib/rate-limit";
-import { getAuthOptional } from "@/lib/auth-guard";
 import { isOnboardingComplete } from "@/lib/onboarding";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname, searchParams, origin } = request.nextUrl;
 
     // 0. Auth code rescue (from original middleware.ts)

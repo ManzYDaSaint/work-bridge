@@ -10,11 +10,9 @@ import {
     parseScreeningQuestions,
     serializeCommaSkills,
     serializeScreeningQuestions,
-    APPLICATION_METHODS,
-    POSTING_TYPES
 } from "@/lib/validations/job";
 import { apiFetch, apiFetchJson } from "@/lib/api";
-import { Briefcase, MapPin, Loader2, Calendar, DollarSign, ChevronDown, ChevronUp, Globe2, Link2, Mail, MessageCircle, Phone, FileText } from "lucide-react";
+import { Briefcase, Calendar, ChevronDown, ChevronUp, DollarSign, Globe2, Link2, Loader2, Mail, MapPin, MessageCircle } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/ui";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";

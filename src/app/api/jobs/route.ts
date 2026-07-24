@@ -175,6 +175,14 @@ export async function POST(request: Request) {
 
         if (insertError) throw insertError;
 
+        // Trigger CRM automation
+        import("@/lib/automation/event-bus").then(({ emitEvent }) => {
+            emitEvent({
+                type: 'JOB_POSTED',
+                payload: { employerId: auth.userId, jobId: createdJob.id }
+            }).catch((err) => console.error("CRM automation enqueue failed:", err));
+        }).catch((err) => console.error("CRM automation import failed:", err));
+
         const publicSlug = buildPublicJobSlug(createdJob.title, createdJob.id);
         const { data, error } = await supabase
             .from("jobs")
