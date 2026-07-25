@@ -2,6 +2,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getPlugin } from "./registry";
 import "./workers/crm-worker";
 import "./workers/email-worker";
+import "./workers/buffer-worker";
 
 export async function processQueue() {
     const supabase = getSupabaseAdminClient();
