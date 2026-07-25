@@ -63,11 +63,11 @@ export default function MissionControlClient({ initialEvents }: { initialEvents:
     const [filterSeverity, setFilterSeverity] = useState<EventSeverity | "ALL">("ALL");
     const [searchQuery, setSearchQuery] = useState("");
     const [filterDays, setFilterDays] = useState<number | "ALL">(7);
-    const supabase = createBrowserSupabaseClient();
-
     useEffect(() => {
+        const supabase = createBrowserSupabaseClient();
+        const channelId = `system_events_${Math.random().toString(36).substring(2, 9)}`;
         const channel = supabase
-            .channel('system_events_changes')
+            .channel(channelId)
             .on(
                 'postgres_changes',
                 {
@@ -85,7 +85,7 @@ export default function MissionControlClient({ initialEvents }: { initialEvents:
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [supabase]);
+    }, []);
 
     const filteredEvents = events.filter(e => {
         if (filterCategory !== "ALL" && e.category !== filterCategory) return false;
