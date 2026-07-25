@@ -5,6 +5,8 @@ import { userService } from "@/services/userService";
 import { validateAuth } from "@/lib/auth-guard";
 import { redirect } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminOverviewPage() {
     // Auth check directly in the server component — no internal HTTP round-trip needed.
     const auth = await validateAuth(["ADMIN"], false);

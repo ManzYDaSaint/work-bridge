@@ -196,6 +196,27 @@ export async function POST(request: Request) {
         // Sync semantic embedding for intelligent matchmaking
         await syncJobEmbedding(data.id, data);
 
+
+        // Fire-and-forget Buffer social share
+        import("@/lib/buffer").then(async ({ postJobToBuffer }) => {
+            const { data: employer } = await supabase
+                .from("employers")
+                .select("company_name")
+                .eq("id", auth.userId)
+                .single();
+
+            postJobToBuffer({
+                id: data.id,
+                title: data.title,
+                companyName: employer?.company_name,
+                location: data.location,
+                workMode: data.work_mode,
+                jobType: data.type,
+                salaryRange: data.salary_range,
+                publicSlug: data.public_slug,
+            }).catch((err) => console.error("Immediate Buffer job post failed:", err));
+        }).catch((err) => console.error("Failed to import Buffer lib:", err));
+
         // --- Notification Trigger ---
         // Fire-and-forget AI matchmaking notifications
         try {
