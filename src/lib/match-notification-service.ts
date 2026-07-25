@@ -1,5 +1,6 @@
 import { createNotification } from "./notifications";
 import { getSupabaseAdminClient } from "./supabase-admin";
+import { emitSystemEvent } from "./mission-control";
 
 /**
  * Triggers AI match notifications for a newly posted job.
@@ -81,13 +82,36 @@ export async function triggerMatchNotifications(jobId: string) {
 
     await Promise.all(notifications);
     console.log(`[MATCH_SERVICE] Done. Sent INSTANT AI Match alerts to ${notifications.length} Premium candidates for job ${jobId}.`);
+    
+    await emitSystemEvent({
+        category: "MATCHING",
+        severity: "SUCCESS",
+        event: "AI_MATCH_ALERTS_SENT",
+        message: `Sent INSTANT AI Match alerts to ${notifications.length} Premium candidates for job ${jobId}`,
+        metadata: { jobId, jobTitle: job.title, count: notifications.length, type: "PREMIUM" }
+    });
 
     // For Free users, we queue them into a separate table or process them via a Cron job.
     // For now, we will simply log that they are queued for the 24h delay batch.
     console.log(`[MATCH_SERVICE] ${freeSeekers.length} Free candidates are queued for the 24-hour delayed alert.`);
+    
+    await emitSystemEvent({
+        category: "MATCHING",
+        severity: "INFO",
+        event: "AI_MATCH_ALERTS_QUEUED",
+        message: `${freeSeekers.length} Free candidates queued for delayed match alert for job ${jobId}`,
+        metadata: { jobId, count: freeSeekers.length, type: "FREE" }
+    });
 
-  } catch (err) {
+  } catch (err: any) {
     console.error("[MATCH_SERVICE] Unexpected error:", err);
+    await emitSystemEvent({
+        category: "MATCHING",
+        severity: "CRITICAL",
+        event: "AI_MATCH_FAILED",
+        message: `AI Match service failed for job ${jobId}`,
+        metadata: { jobId, error: err.message }
+    });
   }
 }
 
@@ -130,7 +154,22 @@ export async function triggerDelayedFreeMatchNotifications(jobId: string) {
 
         await Promise.all(notifications);
         console.log(`[MATCH_SERVICE] Sent DELAYED AI Match alerts to ${notifications.length} Free candidates for job ${jobId}.`);
-    } catch (err) {
+        
+        await emitSystemEvent({
+            category: "MATCHING",
+            severity: "SUCCESS",
+            event: "DELAYED_AI_MATCH_ALERTS_SENT",
+            message: `Sent DELAYED AI Match alerts to ${notifications.length} Free candidates for job ${jobId}`,
+            metadata: { jobId, count: notifications.length, type: "FREE_DELAYED" }
+        });
+    } catch (err: any) {
         console.error("[MATCH_SERVICE] Delayed error:", err);
+        await emitSystemEvent({
+            category: "MATCHING",
+            severity: "CRITICAL",
+            event: "DELAYED_AI_MATCH_FAILED",
+            message: `Delayed AI Match service failed for job ${jobId}`,
+            metadata: { jobId, error: err.message }
+        });
     }
 }

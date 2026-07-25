@@ -14,6 +14,7 @@ import {
   JobAlertEmail
 } from "../emails/templates";
 import { getSupabaseAdminClient } from "./supabase-admin";
+import { emitSystemEvent } from "./mission-control";
 
 export const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key");
 
@@ -65,9 +66,25 @@ export async function sendWelcomeEmail(to: string, name?: string) {
 
     if (data.error) throw data.error;
     console.log(`[EMAIL_DEBUG] SUCCESS: Welcome email sent to ${to}`);
+    
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "SUCCESS",
+      event: "EMAIL_SENT",
+      message: `Welcome email sent to ${to}`,
+      metadata: { to, type: "welcome", data }
+    });
+    
     return { success: true, data };
   } catch (error) {
     console.error(`[EMAIL_DEBUG] EXCEPTION sending welcome email to ${to}:`, error);
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "WARNING",
+      event: "EMAIL_FAILED",
+      message: `Welcome email failed to ${to}`,
+      metadata: { to, type: "welcome", error }
+    });
     return { success: false, error };
   }
 }
@@ -96,9 +113,25 @@ export async function sendApplicationStatusEmail(to: string, payload: {
     });
 
     if (data.error) throw data.error;
+    
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "SUCCESS",
+      event: "EMAIL_SENT",
+      message: `Application status email (${payload.status}) sent to ${to}`,
+      metadata: { to, type: "application_status", status: payload.status, data }
+    });
+    
     return { success: true, data };
   } catch (error) {
     console.error(`[EMAIL_DEBUG] EXCEPTION sending application status email to ${to}:`, error);
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "WARNING",
+      event: "EMAIL_FAILED",
+      message: `Application status email (${payload.status}) failed to ${to}`,
+      metadata: { to, type: "application_status", status: payload.status, error }
+    });
     return { success: false, error };
   }
 }
@@ -117,8 +150,22 @@ export async function sendAdminSecurityAlert(payload: {
       html,
     });
     if (data.error) throw data.error;
+    await emitSystemEvent({
+      category: "SECURITY",
+      severity: "CRITICAL",
+      event: "SECURITY_ALERT_EMAIL_SENT",
+      message: `Security alert email sent for ${payload.event}`,
+      metadata: { event: payload.event, details: payload.details, data }
+    });
     return { success: true, data };
   } catch (error) {
+    await emitSystemEvent({
+      category: "SECURITY",
+      severity: "CRITICAL",
+      event: "SECURITY_ALERT_EMAIL_FAILED",
+      message: `Security alert email failed for ${payload.event}`,
+      metadata: { event: payload.event, details: payload.details, error }
+    });
     return { success: false, error };
   }
 }
@@ -140,8 +187,22 @@ export async function sendEmployerVerificationEmail(to: string, payload: {
       html,
     });
     if (data.error) throw data.error;
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "SUCCESS",
+      event: "EMAIL_SENT",
+      message: `Employer verification email (${payload.status}) sent to ${to}`,
+      metadata: { to, type: "employer_verification", status: payload.status, data }
+    });
     return { success: true, data };
   } catch (error) {
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "WARNING",
+      event: "EMAIL_FAILED",
+      message: `Employer verification email (${payload.status}) failed to ${to}`,
+      metadata: { to, type: "employer_verification", status: payload.status, error }
+    });
     return { success: false, error };
   }
 }
@@ -163,8 +224,22 @@ export async function sendRevealResponseEmail(to: string, payload: {
       html,
     });
     if (data.error) throw data.error;
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "SUCCESS",
+      event: "EMAIL_SENT",
+      message: `Reveal response email (${payload.status}) sent to ${to}`,
+      metadata: { to, type: "reveal_response", status: payload.status, data }
+    });
     return { success: true, data };
   } catch (error) {
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "WARNING",
+      event: "EMAIL_FAILED",
+      message: `Reveal response email (${payload.status}) failed to ${to}`,
+      metadata: { to, type: "reveal_response", status: payload.status, error }
+    });
     return { success: false, error };
   }
 }
@@ -184,8 +259,22 @@ export async function sendJobExpirationAlertEmail(to: string, payload: {
       html,
     });
     if (data.error) throw data.error;
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "SUCCESS",
+      event: "EMAIL_SENT",
+      message: `Job expiration alert email sent to ${to} for job ${payload.jobId}`,
+      metadata: { to, type: "job_expiration", jobId: payload.jobId, data }
+    });
     return { success: true, data };
   } catch (error) {
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "WARNING",
+      event: "EMAIL_FAILED",
+      message: `Job expiration alert email failed to ${to} for job ${payload.jobId}`,
+      metadata: { to, type: "job_expiration", jobId: payload.jobId, error }
+    });
     return { success: false, error };
   }
 }
@@ -213,8 +302,22 @@ export async function sendEmployerMatchDigestEmail(to: string, payload: {
       html,
     });
     if (data.error) throw data.error;
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "SUCCESS",
+      event: "EMAIL_SENT",
+      message: `Employer match digest email sent to ${to} (${payload.matches.length} matches)`,
+      metadata: { to, type: "employer_match_digest", matchCount: payload.matches.length, data }
+    });
     return { success: true, data };
   } catch (error) {
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "WARNING",
+      event: "EMAIL_FAILED",
+      message: `Employer match digest email failed to ${to}`,
+      metadata: { to, type: "employer_match_digest", error }
+    });
     return { success: false, error };
   }
 }
@@ -235,8 +338,22 @@ export async function sendNewApplicationEmail(to: string, payload: {
       html,
     });
     if (data.error) throw data.error;
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "SUCCESS",
+      event: "EMAIL_SENT",
+      message: `New application email sent to ${to} for job ${payload.jobTitle}`,
+      metadata: { to, type: "new_application", jobTitle: payload.jobTitle, data }
+    });
     return { success: true, data };
   } catch (error) {
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "WARNING",
+      event: "EMAIL_FAILED",
+      message: `New application email failed to ${to} for job ${payload.jobTitle}`,
+      metadata: { to, type: "new_application", jobTitle: payload.jobTitle, error }
+    });
     return { success: false, error };
   }
 }
@@ -258,8 +375,22 @@ export async function sendPaymentConfirmationEmail(to: string, payload: {
       html,
     });
     if (data.error) throw data.error;
+    await emitSystemEvent({
+      category: "PAYMENT",
+      severity: "SUCCESS",
+      event: "PAYMENT_CONFIRMATION_EMAIL_SENT",
+      message: `Payment confirmation email sent to ${to} for ${payload.amount} ${payload.currency}`,
+      metadata: { to, amount: payload.amount, currency: payload.currency, reference: payload.reference, data }
+    });
     return { success: true, data };
   } catch (error) {
+    await emitSystemEvent({
+      category: "PAYMENT",
+      severity: "WARNING",
+      event: "PAYMENT_CONFIRMATION_EMAIL_FAILED",
+      message: `Payment confirmation email failed to ${to}`,
+      metadata: { to, amount: payload.amount, currency: payload.currency, error }
+    });
     return { success: false, error };
   }
 }
@@ -288,9 +419,23 @@ export async function sendJobAlertEmail(to: string, payload: {
       html,
     });
     if (data.error) throw data.error;
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "SUCCESS",
+      event: "EMAIL_SENT",
+      message: `Job alert email sent to ${to} (${payload.matchedJobs.length} jobs)`,
+      metadata: { to, type: "job_alert", jobCount: payload.matchedJobs.length, data }
+    });
     return { success: true, data };
   } catch (error) {
     console.error("Error sending job alert email:", error);
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "WARNING",
+      event: "EMAIL_FAILED",
+      message: `Job alert email failed to ${to}`,
+      metadata: { to, type: "job_alert", error }
+    });
     return { success: false, error };
   }
 }

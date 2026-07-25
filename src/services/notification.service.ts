@@ -1,6 +1,7 @@
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { sendPushNotification } from "@/lib/push-notifications";
 import { evaluateCandidateMatch } from "@/lib/candidate-match";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export type NotificationType = 
   | "APPLICATION_UPDATE" 
@@ -140,8 +141,24 @@ export const NotificationService = {
 
         if (error) {
             console.error(`[NOTIFICATION_DEBUG] DATABASE_ERROR [${error.code}]: ${error.message}`);
+            
+            await emitSystemEvent({
+                category: "NOTIFICATION",
+                severity: "WARNING",
+                event: "IN_APP_NOTIFICATION_FAILED",
+                message: `Failed to create notification for user ${userId}`,
+                metadata: { userId, type, error: error.message }
+            });
             return null;
         }
+
+        await emitSystemEvent({
+            category: "NOTIFICATION",
+            severity: "INFO",
+            event: "IN_APP_NOTIFICATION_CREATED",
+            message: `Created notification: ${finalTitle}`,
+            metadata: { userId, type, notificationId: data.id }
+        });
 
         sendPushNotification(userId, {
             title: finalTitle,

@@ -1,13 +1,13 @@
-import { createSupabaseServerClient } from "./supabase-server";
 import { sendAdminSecurityAlert } from "./resend";
+import { emitSystemEvent } from "./mission-control";
 
 /**
- * Aganyu Auditing System
+ * Aganyu Auditing System (Now routed to Mission Control)
  * -------------------------
  * 1. DATABASE AUTOMATED: INSERT, UPDATE, DELETE on high-risk tables (users, jobs, etc.)
  *    are handled by 'audit_trigger_function' in Postgres.
  * 2. MANUAL EVENTS: Auth attempts, data exports, profile redaction, and other non-CRUD
- *    events should use this recordAuditLog function.
+ *    events should use this recordAuditLog function, which routes to Mission Control.
  */
 
 const HIGH_RISK_EVENTS = [
@@ -26,26 +26,24 @@ export async function recordAuditLog(payload: {
     metadata?: any;
 }) {
     try {
-        const supabase = await createSupabaseServerClient();
+        const isHighRisk = HIGH_RISK_EVENTS.includes(payload.action) || payload.statusCode >= 500;
+        
+        await emitSystemEvent({
+            category: isHighRisk ? "SECURITY" : "SYSTEM",
+            severity: isHighRisk ? "CRITICAL" : (payload.statusCode >= 400 ? "WARNING" : "INFO"),
+            event: payload.action,
+            message: `Audit log: ${payload.action} on ${payload.path}`,
+            actorId: payload.userId,
+            metadata: {
+                path: payload.path,
+                method: payload.method,
+                statusCode: payload.statusCode,
+                ...payload.metadata
+            }
+        });
 
-        const auditData: any = {
-            action: payload.action,
-            path: payload.path,
-            method: payload.method,
-            status_code: payload.statusCode,
-            user_id: payload.userId,
-            metadata: payload.metadata || {},
-            ip: 'server_side'
-        };
-
-        const { error } = await supabase.from("audit_logs").insert(auditData);
-
-        if (error) {
-            console.warn("[Audit] Log insertion failed:", error.message);
-        }
-
-        // Trigger Security Alerts for High-Risk Events
-        if (HIGH_RISK_EVENTS.includes(payload.action) || payload.statusCode >= 500) {
+        // Still trigger Security Alerts for High-Risk Events
+        if (isHighRisk) {
             await sendAdminSecurityAlert({
                 event: payload.action,
                 details: `High-risk event detected at ${payload.path}. Status: ${payload.statusCode}`,

@@ -4,6 +4,7 @@ import { NotificationService } from "@/services/notification.service";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { verifyTurnstileToken } from "@/lib/turnstile";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 const PUBLIC_REGISTRATION_ROLES = new Set(["JOB_SEEKER", "EMPLOYER"]);
 
@@ -146,6 +147,15 @@ export async function POST(request: Request) {
                 link: `/dashboard/admin/employers`
             });
         }
+        
+        await emitSystemEvent({
+            category: effectiveRole === "EMPLOYER" ? "EMPLOYER" : "USER",
+            severity: "SUCCESS",
+            event: "USER_REGISTERED",
+            message: `New ${effectiveRole} registered: ${authEmail}`,
+            actorId: authUser.id,
+            metadata: { role: effectiveRole, email: authEmail, industry, location }
+        });
 
         return NextResponse.json({ success: true });
     } catch (error: any) {

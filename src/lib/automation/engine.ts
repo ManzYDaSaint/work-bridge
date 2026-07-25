@@ -1,5 +1,6 @@
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getPlugin } from "./registry";
+import { emitSystemEvent } from "@/lib/mission-control";
 import "./workers/crm-worker";
 import "./workers/email-worker";
 import "./workers/buffer-worker";
@@ -44,6 +45,14 @@ export async function processQueue() {
                         updated_at: new Date().toISOString(),
                     })
                     .eq('id', task.id);
+                
+                await emitSystemEvent({
+                    category: "AUTOMATION",
+                    severity: "SUCCESS",
+                    event: "TASK_COMPLETED",
+                    message: `Automation task completed: ${task.plugin_id}`,
+                    metadata: { taskId: task.id, pluginId: task.plugin_id }
+                });
             } catch (error: any) {
                 await supabase
                     .from('automation_tasks')
@@ -53,6 +62,14 @@ export async function processQueue() {
                         updated_at: new Date().toISOString(),
                     })
                     .eq('id', task.id);
+                
+                await emitSystemEvent({
+                    category: "AUTOMATION",
+                    severity: "WARNING",
+                    event: "TASK_FAILED",
+                    message: `Automation task failed: ${task.plugin_id}`,
+                    metadata: { taskId: task.id, pluginId: task.plugin_id, error: error.message }
+                });
             }
         } else {
             await supabase
@@ -63,6 +80,14 @@ export async function processQueue() {
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', task.id);
+            
+            await emitSystemEvent({
+                category: "AUTOMATION",
+                severity: "CRITICAL",
+                event: "PLUGIN_NOT_FOUND",
+                message: `Automation plugin not found: ${task.plugin_id}`,
+                metadata: { taskId: task.id, pluginId: task.plugin_id }
+            });
         }
     }
 }
