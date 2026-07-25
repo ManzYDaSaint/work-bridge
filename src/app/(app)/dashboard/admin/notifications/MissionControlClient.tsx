@@ -92,7 +92,12 @@ export default function MissionControlClient({ initialEvents }: { initialEvents:
         if (filterSeverity !== "ALL" && e.severity !== filterSeverity) return false;
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
-            if (!e.event.toLowerCase().includes(query) && !e.message.toLowerCase().includes(query)) {
+            const eventMatch = e.event?.toLowerCase().includes(query);
+            const messageMatch = e.message?.toLowerCase().includes(query);
+            const correlationMatch = e.correlation_id?.toLowerCase().includes(query);
+            const metadataMatch = e.metadata ? JSON.stringify(e.metadata).toLowerCase().includes(query) : false;
+            
+            if (!eventMatch && !messageMatch && !correlationMatch && !metadataMatch) {
                 return false;
             }
         }
