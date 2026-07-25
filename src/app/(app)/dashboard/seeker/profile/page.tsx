@@ -42,3 +42,6 @@ export default async function SeekerProfilePage() {
         );
     }
 }
+
+
+export const dynamic = "force-dynamic";

@@ -64,3 +64,6 @@ export default async function EmployerVerificationPage({
         />
     );
 }
+
+
+export const dynamic = "force-dynamic";

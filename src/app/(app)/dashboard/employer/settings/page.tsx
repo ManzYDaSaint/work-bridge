@@ -40,3 +40,6 @@ export default async function EmployerSettingsPage() {
         />
     );
 }
+
+
+export const dynamic = "force-dynamic";

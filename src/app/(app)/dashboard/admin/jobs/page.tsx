@@ -65,3 +65,6 @@ export default async function AdminJobsPage({
         />
     );
 }
+
+
+export const dynamic = "force-dynamic";

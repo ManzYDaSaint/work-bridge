@@ -9,3 +9,6 @@ export default async function DashboardRedirect() {
 
     redirect(`/dashboard/${auth.role === "ADMIN" ? "admin" : auth.role === "EMPLOYER" ? "employer" : "seeker"}`);
 }
+
+
+export const dynamic = "force-dynamic";

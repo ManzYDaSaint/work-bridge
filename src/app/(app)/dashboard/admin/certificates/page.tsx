@@ -25,3 +25,6 @@ export default async function CertificateVerificationPage() {
 
     return <CertificateVerificationClient initialCertificates={certificates || []} />;
 }
+
+
+export const dynamic = "force-dynamic";

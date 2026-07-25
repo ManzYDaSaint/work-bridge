@@ -75,3 +75,6 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ error: "Failed to remove subscription" }, { status: 500 });
     }
 }
+
+
+export const dynamic = "force-dynamic";

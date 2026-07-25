@@ -49,3 +49,6 @@ export async function PUT(request: Request) {
         return NextResponse.json({ error: error.message || "Failed to update preferences" }, { status: 500 });
     }
 }
+
+
+export const dynamic = "force-dynamic";

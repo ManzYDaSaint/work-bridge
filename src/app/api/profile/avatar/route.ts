@@ -66,3 +66,6 @@ export const POST = withAuth(async (request, auth) => {
         return NextResponse.json({ error: error.message || "Upload failed" }, { status: 500 });
     }
 }, undefined, false, false);
+
+
+export const dynamic = "force-dynamic";

@@ -82,3 +82,6 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ error: "Delete failed", details: (error as any)?.message }, { status: 500 });
     }
 }
+
+
+export const dynamic = "force-dynamic";

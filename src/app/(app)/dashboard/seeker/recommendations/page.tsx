@@ -111,3 +111,6 @@ export default async function RecommendedJobsPage() {
         />
     );
 }
+
+
+export const dynamic = "force-dynamic";

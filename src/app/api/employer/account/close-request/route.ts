@@ -58,3 +58,6 @@ export const POST = withAudit(async (request: Request) => {
         return NextResponse.json({ error: "Failed to submit request." }, { status: 500 });
     }
 }, "EMPLOYER_CLOSE_REQUEST");
+
+
+export const dynamic = "force-dynamic";

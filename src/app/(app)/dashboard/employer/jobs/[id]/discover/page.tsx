@@ -113,3 +113,6 @@ export default async function JobDiscoveryPage({
         />
     );
 }
+
+
+export const dynamic = "force-dynamic";

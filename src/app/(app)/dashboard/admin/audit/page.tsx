@@ -62,3 +62,6 @@ export default async function AdminAuditPage({
         />
     );
 }
+
+
+export const dynamic = "force-dynamic";

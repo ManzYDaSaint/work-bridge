@@ -82,3 +82,6 @@ export const GET = withAuth(async (request, auth) => {
         totalPages: Math.ceil((count || 0) / limit),
     });
 });
+
+
+export const dynamic = "force-dynamic";

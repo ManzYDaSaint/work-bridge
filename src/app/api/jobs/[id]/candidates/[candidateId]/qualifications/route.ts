@@ -42,3 +42,6 @@ export const GET = withAuth(async (_request, auth, { params }) => {
 
     return NextResponse.json(mapped);
 }, ["EMPLOYER"], false, true);
+
+
+export const dynamic = "force-dynamic";

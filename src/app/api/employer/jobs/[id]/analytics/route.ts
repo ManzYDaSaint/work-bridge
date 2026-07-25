@@ -91,3 +91,6 @@ export const GET = withAuth(async (request, auth, context: { params: Promise<{ i
         return NextResponse.json({ error: "Failed to fetch analytics" }, { status: 500 });
     }
 }, ["EMPLOYER"]);
+
+
+export const dynamic = "force-dynamic";

@@ -106,3 +106,6 @@ export async function GET(
         return new Response(`Failed to generate image`, { status: 500 });
     }
 }
+
+
+export const dynamic = "force-dynamic";

@@ -36,3 +36,6 @@ export default async function SavedJobsPage() {
         />
     );
 }
+
+
+export const dynamic = "force-dynamic";

@@ -237,3 +237,6 @@ export async function POST(
         screening: screeningResult,
     });
 }
+
+
+export const dynamic = "force-dynamic";

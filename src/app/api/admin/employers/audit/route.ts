@@ -46,3 +46,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Audit failed", details: error.message }, { status: 500 });
     }
 }
+
+
+export const dynamic = "force-dynamic";

@@ -83,3 +83,6 @@ export async function GET() {
         variants,
     });
 }
+
+
+export const dynamic = "force-dynamic";

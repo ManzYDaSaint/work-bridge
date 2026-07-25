@@ -45,3 +45,6 @@ export default async function CandidatesPage({
     );
 }
 
+
+
+export const dynamic = "force-dynamic";

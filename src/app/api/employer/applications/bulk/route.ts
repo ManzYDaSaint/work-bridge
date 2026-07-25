@@ -93,3 +93,6 @@ export const PATCH = withAuth(async (request, auth) => {
         return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 }, ["EMPLOYER"], false, true);
+
+
+export const dynamic = "force-dynamic";

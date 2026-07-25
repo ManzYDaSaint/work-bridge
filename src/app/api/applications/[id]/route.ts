@@ -41,3 +41,6 @@ export async function PATCH(
 
     return NextResponse.json({ success: true });
 }
+
+
+export const dynamic = "force-dynamic";

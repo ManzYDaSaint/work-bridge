@@ -30,3 +30,6 @@ export default async function ApplicationsPage() {
         job: (app.job ?? null) as ExtendedJob | null,
     }))} />;
 }
+
+
+export const dynamic = "force-dynamic";

@@ -289,3 +289,6 @@ export async function PATCH(
         return NextResponse.json({ error: error.message || "Failed to partial update job" }, { status: 500 });
     }
 }
+
+
+export const dynamic = "force-dynamic";

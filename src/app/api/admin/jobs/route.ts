@@ -103,3 +103,6 @@ export const DELETE = withAudit(async (request: Request) => {
         return NextResponse.json({ error: "Delete failed", details: (error as any)?.message }, { status: 500 });
     }
 }, "ADMIN_JOB_DELETION");
+
+
+export const dynamic = "force-dynamic";

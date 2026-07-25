@@ -40,3 +40,6 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Failed to fetch audit logs" }, { status: 500 });
     }
 }
+
+
+export const dynamic = "force-dynamic";

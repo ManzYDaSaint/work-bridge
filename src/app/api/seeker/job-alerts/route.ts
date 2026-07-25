@@ -93,3 +93,6 @@ export const DELETE = withAuth(async (request, auth) => {
         return NextResponse.json({ error: "Failed to delete alert" }, { status: 500 });
     }
 }, ["JOB_SEEKER"]);
+
+
+export const dynamic = "force-dynamic";

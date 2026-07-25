@@ -55,3 +55,6 @@ export async function POST(request: Request) {
     // Logic to handle RESCAN, REBUILD_ALL, etc.
     return NextResponse.json({ success: true, action });
 }
+
+
+export const dynamic = "force-dynamic";

@@ -50,3 +50,6 @@ export default async function SeekerDashboardPage() {
         </>
     );
 }
+
+
+export const dynamic = "force-dynamic";

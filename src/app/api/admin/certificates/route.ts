@@ -63,3 +63,6 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "Update failed" }, { status: 500 });
     }
 }
+
+
+export const dynamic = "force-dynamic";

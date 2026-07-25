@@ -63,3 +63,6 @@ export default async function UserManagementPage({
         />
     );
 }
+
+
+export const dynamic = "force-dynamic";

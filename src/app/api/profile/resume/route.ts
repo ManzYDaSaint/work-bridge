@@ -94,3 +94,6 @@ export const DELETE = withAuth(async (_request, auth) => {
         return NextResponse.json({ error: error.message || "Failed to delete resume" }, { status: 500 });
     }
 }, undefined, false, false);
+
+
+export const dynamic = "force-dynamic";
