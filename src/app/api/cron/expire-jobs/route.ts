@@ -57,9 +57,13 @@ export async function GET(req: Request) {
             }
         }
 
+        // 2. Expire opportunities where the deadline has passed
+        const { sweepExpiredOpportunities } = await import("@/services/opportunityService");
+        const opportunitySweep = await sweepExpiredOpportunities();
+
         return NextResponse.json({ 
             success: true, 
-            message: `Successfully expired ${expiredJobs?.length || 0} jobs.`,
+            message: `Successfully expired ${expiredJobs?.length || 0} jobs and ${opportunitySweep.processed} opportunities.`,
         });
 
     } catch (err: any) {

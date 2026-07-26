@@ -11,7 +11,8 @@ export type NotificationType =
   | "WARNING"
   | "PROFILE_VIEW"
   | "JOB_MATCH"
-  | "INVITE_TO_APPLY";
+  | "INVITE_TO_APPLY"
+  | "OPPORTUNITY_MATCH";
 
 const TYPE_TO_PREFERENCE_MAP: Record<NotificationType, string> = {
   APPLICATION_UPDATE: "application_updates",
@@ -24,6 +25,7 @@ const TYPE_TO_PREFERENCE_MAP: Record<NotificationType, string> = {
   PROFILE_VIEW: "profile_view_notifications",
   JOB_MATCH: "job_match_notifications",
   INVITE_TO_APPLY: "application_updates",
+  OPPORTUNITY_MATCH: "job_match_notifications", // reuse existing preference key for Phase 1
 };
 
 /**
@@ -79,6 +81,11 @@ const NOTIFICATION_TEMPLATES: Record<NotificationType, { title: string; message:
     title: "Exclusive Invite",
     message: ({ companyName, jobTitle }) => 
       `${companyName} has personally invited you to apply for the ${jobTitle} role!`,
+  },
+  OPPORTUNITY_MATCH: {
+    title: "New Opportunity Matches Your Profile!",
+    message: ({ opportunityTitle, organization, matchScore }) =>
+      `${organization} — ${opportunityTitle} is a ${matchScore}% match with your profile. Check it out before the deadline!`,
   },
 };
 

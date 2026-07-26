@@ -18,6 +18,7 @@ export function EmailPreferences() {
     const [preferences, setPreferences] = useState({
         marketing: true,
         job_alerts: true,
+        opportunity_alerts: true,
         application_updates: true,
         weekly_digest: true,
         payment_notifications: true,
@@ -35,6 +36,7 @@ export function EmailPreferences() {
                     setPreferences({
                         marketing: data.marketing ?? true,
                         job_alerts: data.job_alerts ?? true,
+                        opportunity_alerts: data.opportunity_alerts ?? true,
                         application_updates: data.application_updates ?? true,
                         weekly_digest: data.weekly_digest ?? true,
                         payment_notifications: data.payment_notifications ?? true,
@@ -92,6 +94,14 @@ export function EmailPreferences() {
                                 <p className="text-xs text-slate-500 dark:text-slate-400">Get notified when new jobs match your saved search criteria.</p>
                             </div>
                             <Toggle checked={preferences.job_alerts} onChange={(val) => handleToggle("job_alerts", val)} disabled={saving} />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">Scholarships & Opportunity Alerts</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">Receive AI-matched scholarships, grants, fellowships, and training programs.</p>
+                            </div>
+                            <Toggle checked={preferences.opportunity_alerts} onChange={(val) => handleToggle("opportunity_alerts", val)} disabled={saving} />
                         </div>
 
                         <div className="flex items-center justify-between">

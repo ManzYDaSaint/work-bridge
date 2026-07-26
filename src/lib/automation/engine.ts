@@ -4,6 +4,7 @@ import { emitSystemEvent } from "@/lib/mission-control";
 import "./workers/crm-worker";
 import "./workers/email-worker";
 import "./workers/buffer-worker";
+import "./workers/opportunity-worker";
 
 export async function processQueue() {
     const supabase = getSupabaseAdminClient();

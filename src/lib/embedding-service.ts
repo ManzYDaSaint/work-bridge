@@ -70,3 +70,26 @@ Must-have Skills: ${mustHaves}
 Nice-to-have Skills: ${niceToHaves}
 Description: ${description}`;
 }
+
+/**
+ * Constructs an "Opportunity DNA" string from opportunity data.
+ * Used to generate the vector embedding that powers AI candidate matching.
+ */
+export function constructOpportunityDNA(opportunity: any): string {
+    const skills = (opportunity.required_skills || []).join(", ");
+    const certs = (opportunity.required_certifications || []).join(", ");
+    const description = opportunity.description || "";
+    const eligibility = opportunity.eligibility_requirements || "";
+    const education = opportunity.education_requirements || "";
+
+    return `Opportunity:
+Category: ${opportunity.category || ""}
+Title: ${opportunity.title}
+Organization: ${opportunity.organization_name || ""}
+Description: ${description}
+Eligibility: ${eligibility}
+Education Requirements: ${education}
+Required Skills: ${skills}
+Required Certifications: ${certs}
+Funding: ${opportunity.funding_type || ""} ${opportunity.funding_amount || ""}`;
+}

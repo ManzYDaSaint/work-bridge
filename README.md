@@ -198,6 +198,12 @@ psql -h <host> -U postgres -d postgres -f supabase/schema.sql
 | Feature | Status |
 |---|---|
 | AI Semantic Matchmaking (HuggingFace + pgvector) | Working |
+| Opportunities Module (Scholarships, Grants, Fellowships, Training) | Working |
+| Opportunity AI Matchmaking & Candidate Notifications | Working |
+| Automated Social Media Sharing (LinkedIn & Facebook via Buffer API) | Working |
+| Mission Control & System Event Observability Dashboard | Working |
+| Employer CRM & Automation Queue Engine (`automation_tasks`) | Working |
+| Multi-Channel Job Posting (One-tap, External URL, Email, WhatsApp) | Working |
 | Verified Employer Badges | Working |
 | Admin Certificate Verification Pipeline | Working |
 | Profile Strength Gamification (Actionable suggestions) | Working |
@@ -209,8 +215,6 @@ psql -h <host> -U postgres -d postgres -f supabase/schema.sql
 | Employer Discover page with semantic filters | Working |
 | Payments & subscriptions (PayChangu) | Working |
 | Admin dashboard & Audit logging | Working |
-| Employer CRM pipeline | In progress |
-| AI health and automation monitoring | In progress |
 | Mobile responsive UI | Working |
 
 ### Engineering Health
@@ -221,7 +225,7 @@ npm run type-check
 npm run build
 ```
 
-The CRM and automation tables live in migrations and should be applied before enabling the admin CRM and AI health dashboards in production.
+The database schema is consolidated in `supabase/schema.sql` (and `supabase/migrations/20260726_master_canonical_schema.sql`). All production build checks (`npm run build`) pass cleanly.
 
 ---
 

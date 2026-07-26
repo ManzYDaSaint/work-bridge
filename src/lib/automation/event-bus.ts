@@ -10,6 +10,7 @@ const EVENT_PLUGIN_MAP: Record<string, string[]> = {
     JOB_POSTED: ["crm-manager", "buffer-social-poster"],
     EMPLOYER_REGISTERED: ["crm-manager"],
     EMAIL_REQUESTED: ["email-notifier"],
+    OPPORTUNITY_PUBLISHED: ["opportunity-matcher", "buffer-social-poster"],
 };
 
 /**

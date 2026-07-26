@@ -10,7 +10,8 @@ export type EventCategory =
     | "AUTOMATION" 
     | "PAYMENT" 
     | "SYSTEM" 
-    | "SECURITY";
+    | "SECURITY"
+    | "OPPORTUNITY_MANAGEMENT";
 
 export type EventSeverity = "INFO" | "SUCCESS" | "WARNING" | "CRITICAL";
 

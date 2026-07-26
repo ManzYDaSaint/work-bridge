@@ -226,3 +226,92 @@ export async function postJobToBuffer(job: {
 
     return results;
 }
+
+/**
+ * Posts a FEATURED opportunity to all configured Buffer channels (LinkedIn + Facebook Pages).
+ * Uses the same channel env vars as postJobToBuffer — no extra configuration needed.
+ */
+export async function postOpportunityToBuffer(opportunity: {
+    id: string;
+    title: string;
+    organization_name: string;
+    category: string;
+    slug: string | null;
+    deadline?: string | null;
+    funding_amount?: string | null;
+    country?: string | null;
+}): Promise<{ linkedin?: BufferPostResult; facebook?: BufferPostResult }> {
+    const APP_URL = (
+        process.env.NEXT_PUBLIC_APP_URL ||
+        process.env.NEXT_PUBLIC_URL ||
+        "https://aganyu.com"
+    ).replace(/\/$/, "");
+
+    const opportunityPath = opportunity.slug || opportunity.id;
+    const opportunityUrl = `${APP_URL}/opportunities/${opportunityPath}?utm_source=buffer&utm_medium=social&utm_campaign=opportunity_share`;
+
+    const categoryEmoji: Record<string, string> = {
+        SCHOLARSHIP: "🎓",
+        GRANT: "💰",
+        FUNDING: "💸",
+        TRAINING: "📚",
+        CERTIFICATION: "🏆",
+        FELLOWSHIP: "🌍",
+        INTERNSHIP: "🏢",
+        CAREER_PROGRAM: "🚀",
+    };
+
+    const emoji = categoryEmoji[opportunity.category] || "✨";
+    const categoryLabel = opportunity.category.replace(/_/g, " ");
+
+    const deadlineText = opportunity.deadline
+        ? `\n⏰ Deadline: ${new Date(opportunity.deadline).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`
+        : "";
+
+    const fundingText = opportunity.funding_amount
+        ? `\n💰 Funding: ${opportunity.funding_amount}`
+        : "";
+
+    const locationText = opportunity.country ? `\n📍 ${opportunity.country}` : "";
+
+    const lines = [
+        `${emoji} New ${categoryLabel}: ${opportunity.title}`,
+        `🏛 ${opportunity.organization_name}`,
+        locationText,
+        fundingText,
+        deadlineText,
+        ``,
+        `Discover & apply via Aganyu 👇`,
+        opportunityUrl,
+        ``,
+        `#${categoryLabel.replace(/\s+/g, "")} #CareerGrowth #Aganyu #Opportunities`,
+    ]
+        .filter((l) => l !== null)
+        .join("\n");
+
+    const results: { linkedin?: BufferPostResult; facebook?: BufferPostResult } = {};
+
+    const linkedInChannelId = process.env.BUFFER_LINKEDIN_CHANNEL_ID;
+    const facebookChannelId = process.env.BUFFER_FACEBOOK_CHANNEL_ID;
+
+    if (linkedInChannelId) {
+        try {
+            results.linkedin = await createBufferPost(linkedInChannelId, lines);
+        } catch (err: any) {
+            results.linkedin = { success: false, errorMessage: err.message };
+        }
+    }
+
+    if (facebookChannelId) {
+        try {
+            results.facebook = await createBufferPost(facebookChannelId, lines, {
+                facebook: { type: "post" },
+            });
+        } catch (err: any) {
+            results.facebook = { success: false, errorMessage: err.message };
+        }
+    }
+
+    return results;
+}
+
