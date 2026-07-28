@@ -3,8 +3,8 @@ import { EyeOff, Database, Bot, RefreshCw, Key, ShieldCheck, Chrome, Sparkles } 
 import React from 'react';
 
 export const metadata: Metadata = {
-    title: 'Privacy Policy | Aganyu',
-    description: 'Learn how Aganyu protects your data, handles Google Sign-In, and ensures privacy-first hiring flows.',
+    title: 'Privacy Policy | Aganyu Technologies LTD',
+    description: 'Learn how Aganyu Technologies LTD protects your data, handles Google Sign-In, and ensures privacy-first hiring flows.',
 };
 
 const principles = [
@@ -179,7 +179,7 @@ export default function PrivacyPage() {
                     <div className="relative z-10 space-y-4">
                         <h4 className="text-2xl font-semibold text-white">Your Consent</h4>
                         <p className="text-blue-100/80 font-medium max-w-2xl mx-auto leading-relaxed italic">
-                            By interacting with the Aganyu platform, authenticating via Supabase or Google Sign-In, and uploading academic credentials, you consent to this privacy policy. For questions, contact{' '}
+                            By interacting with the Aganyu platform (operated by Aganyu Technologies LTD), authenticating via Supabase or Google Sign-In, and uploading academic credentials, you consent to this privacy policy. For questions, contact{' '}
                             <a href="mailto:sensei@aganyu.com" className="underline text-blue-200 hover:text-white">
                                 sensei@aganyu.com
                             </a>.

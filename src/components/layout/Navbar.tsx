@@ -75,10 +75,21 @@ export default function Navbar() {
                     >
                         Jobs
                     </Link>
+                    <Link
+                        href="/opportunities"
+                        className="md:hidden text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                    >
+                        Opportunities
+                    </Link>
                     <ul className="hidden md:flex items-center gap-8 list-none m-0 p-0 text-sm font-medium text-slate-600 dark:text-slate-400">
                         <li>
                             <Link href="/jobs" className="hover:text-slate-900 dark:hover:text-white transition-colors no-underline">
                                 Jobs
+                            </Link>
+                        </li>
+                        <li>
+                            <Link href="/opportunities" className="hover:text-slate-900 dark:hover:text-white transition-colors no-underline">
+                                Opportunities
                             </Link>
                         </li>
                         <li>

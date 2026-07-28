@@ -98,6 +98,9 @@ export default function MarketingNavbar() {
                         <Link href="/jobs" className="hover:text-slate-900 dark:hover:text-white whitespace-nowrap">
                             Jobs
                         </Link>
+                        <Link href="/opportunities" className="hover:text-slate-900 dark:hover:text-white whitespace-nowrap">
+                            Opportunities
+                        </Link>
                         <Link href={postJobHref} className="hover:text-slate-900 dark:hover:text-white whitespace-nowrap">
                             Post a job
                         </Link>
@@ -156,6 +159,14 @@ export default function MarketingNavbar() {
                                     className="flex items-center justify-between text-lg font-semibold text-slate-900 dark:text-white px-2 py-1"
                                 >
                                     Browse Jobs
+                                    <ChevronRight size={18} className="text-slate-400" />
+                                </Link>
+                                <Link
+                                    href="/opportunities"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="flex items-center justify-between text-lg font-semibold text-slate-900 dark:text-white px-2 py-1"
+                                >
+                                    Opportunities
                                     <ChevronRight size={18} className="text-slate-400" />
                                 </Link>
                                 <Link

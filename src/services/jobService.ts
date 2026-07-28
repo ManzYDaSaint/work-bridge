@@ -409,13 +409,12 @@ export const jobService = {
 
         if (error) throw error;
 
-        // Sync embedding so that AI matching can find it immediately
-        try {
-            const { syncJobEmbedding } = await import("@/lib/sync-embeddings");
-            await syncJobEmbedding(data.id, data);
-        } catch (e) {
-            console.error("[JOB_SERVICE] Failed to sync embedding during job creation:", e);
-        }
+        // Sync embedding fire-and-forget — must not block job creation response
+        import("@/lib/sync-embeddings").then(({ syncJobEmbedding }) => {
+            syncJobEmbedding(data.id, data).catch((err) =>
+                console.error("[JOB_SERVICE] Background embedding sync failed:", err)
+            );
+        }).catch((err) => console.error("[JOB_SERVICE] Failed to import sync-embeddings:", err));
 
         // Fire-and-forget: do NOT await — this runs in the background.
         triggerMatchNotifications(data.id).catch((err) =>

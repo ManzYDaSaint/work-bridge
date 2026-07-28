@@ -3,15 +3,15 @@ import { Shield, BookOpen, AlertCircle, Briefcase, FileText, CheckCircle } from 
 import React from 'react';
 
 export const metadata: Metadata = {
-    title: 'Terms of Service | Aganyu',
-    description: 'Detailed Terms of Service and Operational agreements for using the Aganyu platform.',
+    title: 'Terms of Service | Aganyu Technologies LTD',
+    description: 'Detailed Terms of Service and Operational agreements for using the Aganyu platform operated by Aganyu Technologies LTD.',
 };
 
 const sections = [
     {
         title: "1. Platform Architecture & User Integrity",
         icon: <Shield className="text-blue-500" size={24} />,
-        content: `Aganyu operates a dual-sided marketplace consisting of "Job Seekers" and "Employers". By registering for either account type, you agree to provide completely accurate, current, and verifiable information. Employers are subject to manual administrative verification and may remain in a "PENDING" status until approved by our compliance team. Job Seekers must ensure maintaining accurate profiles. Fake or completely misrepresented profiles will trigger immediate administrative suspension.`
+        content: `Aganyu is operated by Aganyu Technologies LTD. The platform functions as a dual-sided marketplace connecting "Job Seekers" and "Employers". By registering for either account type, you agree to provide completely accurate, current, and verifiable information. Employers are subject to manual administrative verification and may remain in a "PENDING" status until approved by our compliance team. Job Seekers must maintain accurate profiles. Fake or misrepresented profiles will trigger immediate administrative suspension.`
     },
     {
         title: "2. Verifiable Credentials & Document Parsing",
@@ -51,7 +51,7 @@ export default function TermsPage() {
                         Terms of Service
                     </h1>
                     <p className="text-lg text-slate-600 dark:text-slate-400 font-medium max-w-2xl mx-auto leading-relaxed">
-                        Effective Date: February 2026. Governing the digital operational standards of the Aganyu platform.
+                        Effective Date: February 2026. Governing the digital operational standards of the Aganyu platform operated by Aganyu Technologies LTD.
                     </p>
                 </div>
 

@@ -276,9 +276,10 @@ export default function PublicJobBoard({
     const authUserIdRef = useRef<string | null>(authUser?.id ?? null);
 
     useEffect(() => {
-        if (authUser?.id === authUserIdRef.current) return;
+        const currentAuthId = authUser?.id ?? null;
+        if (currentAuthId === authUserIdRef.current) return;
 
-        authUserIdRef.current = authUser?.id ?? null;
+        authUserIdRef.current = currentAuthId;
         refreshUser();
         const q = searchParams.get("query") || "";
         fetchData(pageRef.current, q || undefined, selectedWorkMode, selectedType);

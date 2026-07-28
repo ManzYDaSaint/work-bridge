@@ -127,7 +127,7 @@ const PremiumLayout = ({ previewText, title, children }: LayoutProps) => (
         </Section>
         <Section style={footer}>
           <Text style={footerText}>
-            © {new Date().getFullYear()} {BRAND_NAME}. All rights reserved.
+            © {new Date().getFullYear()} Aganyu Technologies LTD. All rights reserved.
           </Text>
         </Section>
       </Container>

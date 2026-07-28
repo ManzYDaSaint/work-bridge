@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useDeferredValue, useMemo } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import { 
     AlertCircle, AlertTriangle, CheckCircle2, Info, 
@@ -62,6 +62,7 @@ export default function MissionControlClient({ initialEvents }: { initialEvents:
     const [filterCategory, setFilterCategory] = useState<EventCategory | "ALL">("ALL");
     const [filterSeverity, setFilterSeverity] = useState<EventSeverity | "ALL">("ALL");
     const [searchQuery, setSearchQuery] = useState("");
+    const deferredSearchQuery = useDeferredValue(searchQuery);
     const [filterDays, setFilterDays] = useState<number | "ALL">(7);
     useEffect(() => {
         const supabase = createBrowserSupabaseClient();
@@ -77,7 +78,7 @@ export default function MissionControlClient({ initialEvents }: { initialEvents:
                 },
                 (payload: any) => {
                     const newEvent = payload.new as SystemEvent;
-                    setEvents((prev) => [newEvent, ...prev].slice(0, 1000)); // Keep max 1000 in memory
+                    setEvents((prev) => [newEvent, ...prev].slice(0, 200)); // Keep max 200 in memory
                 }
             )
             .subscribe();
@@ -87,28 +88,30 @@ export default function MissionControlClient({ initialEvents }: { initialEvents:
         };
     }, []);
 
-    const filteredEvents = events.filter(e => {
-        if (filterCategory !== "ALL" && e.category !== filterCategory) return false;
-        if (filterSeverity !== "ALL" && e.severity !== filterSeverity) return false;
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            const eventMatch = e.event?.toLowerCase().includes(query);
-            const messageMatch = e.message?.toLowerCase().includes(query);
-            const correlationMatch = e.correlation_id?.toLowerCase().includes(query);
-            const metadataMatch = e.metadata ? JSON.stringify(e.metadata).toLowerCase().includes(query) : false;
-            
-            if (!eventMatch && !messageMatch && !correlationMatch && !metadataMatch) {
-                return false;
+    const filteredEvents = useMemo(() => {
+        return events.filter(e => {
+            if (filterCategory !== "ALL" && e.category !== filterCategory) return false;
+            if (filterSeverity !== "ALL" && e.severity !== filterSeverity) return false;
+            if (deferredSearchQuery) {
+                const query = deferredSearchQuery.toLowerCase();
+                const eventMatch = e.event?.toLowerCase().includes(query);
+                const messageMatch = e.message?.toLowerCase().includes(query);
+                const correlationMatch = e.correlation_id?.toLowerCase().includes(query);
+                const metadataMatch = e.metadata ? JSON.stringify(e.metadata).toLowerCase().includes(query) : false;
+                
+                if (!eventMatch && !messageMatch && !correlationMatch && !metadataMatch) {
+                    return false;
+                }
             }
-        }
-        if (filterDays !== "ALL") {
-            const date = new Date(e.created_at);
-            const cutoff = new Date();
-            cutoff.setDate(cutoff.getDate() - filterDays);
-            if (date < cutoff) return false;
-        }
-        return true;
-    });
+            if (filterDays !== "ALL") {
+                const date = new Date(e.created_at);
+                const cutoff = new Date();
+                cutoff.setDate(cutoff.getDate() - filterDays);
+                if (date < cutoff) return false;
+            }
+            return true;
+        });
+    }, [events, filterCategory, filterSeverity, deferredSearchQuery, filterDays]);
 
     const criticalCount = events.filter(e => e.severity === "CRITICAL").length;
     const warningCount = events.filter(e => e.severity === "WARNING").length;

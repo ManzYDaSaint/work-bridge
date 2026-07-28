@@ -193,8 +193,10 @@ export async function POST(request: Request) {
 
         if (error) throw error;
 
-        // Sync semantic embedding for intelligent matchmaking
-        await syncJobEmbedding(data.id, data);
+        // Sync semantic embedding for intelligent matchmaking (fire-and-forget — must not block the response)
+        syncJobEmbedding(data.id, data).catch((err) =>
+            console.error("[jobs/POST] Background embedding sync failed:", err)
+        );
 
 
         // Fire-and-forget Buffer social share

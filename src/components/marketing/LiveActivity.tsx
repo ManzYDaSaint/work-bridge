@@ -52,7 +52,10 @@ export default function LiveActivity() {
             setIsLoaded(true);
         };
         fetchMetrics();
+    }, []);
 
+    useEffect(() => {
+        if (displayActivities.length === 0) return;
         const timer = setInterval(() => {
             setIndex((prev) => (prev + 1) % displayActivities.length);
         }, 4000);

@@ -160,18 +160,58 @@ export default function AdminOverviewClient({
     }, []);
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            fetchActivity();
-            fetchStats();
-            fetchCloseRequests();
-        }, 30000);
-
-        // Initial load
+        // Run once on mount
         fetchActivity();
         fetchStats();
         fetchCloseRequests();
 
-        return () => clearInterval(interval);
+        // Polling interval: 5 min in dev to avoid hammering the server during hot-reload;
+        // 30 s in production where instances are stable and requests are cheap.
+        const POLL_MS = process.env.NODE_ENV === "development" ? 5 * 60 * 1000 : 30_000;
+
+        let interval: ReturnType<typeof setInterval> | null = null;
+
+        const startPolling = () => {
+            if (interval) return;
+            interval = setInterval(() => {
+                fetchActivity();
+                fetchStats();
+                fetchCloseRequests();
+            }, POLL_MS);
+        };
+
+        const stopPolling = () => {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+        };
+
+        // Pause polling while the tab is not visible — this eliminates the majority of
+        // idle API load since the admin dashboard is frequently left open in the background.
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                // Refresh immediately when the user comes back, then resume polling
+                fetchActivity();
+                fetchStats();
+                fetchCloseRequests();
+                startPolling();
+            } else {
+                stopPolling();
+            }
+        };
+
+        // Only start polling if the tab is currently visible
+        if (document.visibilityState === "visible") {
+            startPolling();
+        }
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        return () => {
+            stopPolling();
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+        };
     }, [fetchActivity, fetchCloseRequests]);
 
     const handleCloseRequest = async (id: string, status: "REVIEWED" | "ACTIONED") => {

@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api";
 import { cn, timeAgo } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
+import { useAuth } from "@/context/AuthContext";
 
 interface Notification {
     id: string;
@@ -24,6 +25,7 @@ export default function NotificationCenter() {
     const [loading, setLoading] = useState(true);
     const containerRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
+    const { user } = useAuth();
 
     const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -52,9 +54,10 @@ export default function NotificationCenter() {
             .on(
                 'postgres_changes',
                 { 
-                    event: '*', 
+                    event: 'INSERT', 
                     schema: 'public', 
-                    table: 'notifications' 
+                    table: 'notifications',
+                    filter: user?.id ? `user_id=eq.${user.id}` : undefined
                 },
                 (payload: any) => {
                     console.log('[NOTIFICATION_REALTIME] Payload received:', payload);
@@ -67,7 +70,7 @@ export default function NotificationCenter() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [user?.id]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

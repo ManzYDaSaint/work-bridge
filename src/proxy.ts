@@ -1,24 +1,20 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-// AuthError type removed — helper function was removed and import is unused
 import { rateLimit, getIP, rateLimitResponse } from "@/lib/rate-limit";
 import { isOnboardingComplete } from "@/lib/onboarding";
 
 export async function proxy(request: NextRequest) {
     const { pathname, searchParams, origin } = request.nextUrl;
 
-    // 0. Auth code rescue (from original middleware.ts)
-    // Only intercept paths that are NOT already the auth callback
+    // 0. Auth code rescue
     const isAuthPath = pathname.startsWith("/auth/");
     const hasCode = searchParams.has("code");
 
     if (hasCode && !isAuthPath) {
-        // Build the correct callback URL preserving all search params
         const callbackUrl = new URL("/auth/callback", origin);
         searchParams.forEach((value, key) => {
             callbackUrl.searchParams.set(key, value);
         });
-        // Default next destination for recovery tokens
         if (!callbackUrl.searchParams.has("next")) {
             const type = searchParams.get("type");
             callbackUrl.searchParams.set(
@@ -33,11 +29,11 @@ export async function proxy(request: NextRequest) {
     const path = request.nextUrl.pathname;
 
     // 1. Apply Rate Limiting to sensitive paths
-    if (path.startsWith("/api") || path === "/login" || path === "/register") {
+    if ((path.startsWith("/api") || path === "/login" || path === "/register") && process.env.NODE_ENV !== "development") {
         const ip = await getIP(request);
         const limit = path.startsWith("/api") ? 60 : 20;
         const bucket = path.startsWith("/api") ? "api" : path;
-        const { success } = await rateLimit(`proxy:${bucket}:${ip}`, { limit, window: 60 * 1000 });
+        const { success } = await rateLimit(`middleware:${bucket}:${ip}`, { limit, window: 60 * 1000 });
 
         if (!success) {
             return rateLimitResponse(request);
@@ -75,19 +71,15 @@ export async function proxy(request: NextRequest) {
         }
     );
 
-    // Do not call `getUser()` for `/api/*`: route handlers already resolve the session (via
-    // `validateAuth` / `getSession`), and duplicating it here doubled Supabase Auth traffic and
-    // triggered `over_request_rate_limit` (429) on parallel dashboard fetches.
-    const isProtectedRoute = path.startsWith("/dashboard") || path === "/onboarding" || path.startsWith("/api");
+    // API routes handle their own auth via validateAuth() — never run the onboarding gate for them.
+    // Only dashboard pages and onboarding need the full session + DB check.
+    const isProtectedRoute = path.startsWith("/dashboard") || path === "/onboarding";
     const isAuthGate = path === "/login" || path === "/register";
     const shouldCallGetUser =
         isAuthGate || path.startsWith("/dashboard") || path === "/onboarding";
 
     let user = null;
     if (shouldCallGetUser) {
-        // MUST use the middleware's supabase client to trigger token refreshes.
-        // If we use getAuthOptional() here, it creates a Server Component client
-        // which cannot save rotated tokens to cookies, causing infinite refresh loops.
         const { data: { user: authUser } } = await supabase.auth.getUser();
         user = authUser;
     }
@@ -176,8 +168,7 @@ export async function proxy(request: NextRequest) {
     if (isAuthGate && user) {
         return withCookies(NextResponse.redirect(new URL("/dashboard", request.url)), response);
     }
-    
-    // Clear `last-active` cookie on /login page to prevent immediate timeout upon logging in after a long time
+
     if (path === "/login" && !user) {
         response.cookies.delete("last-active");
     }
@@ -202,9 +193,6 @@ export async function proxy(request: NextRequest) {
     return response;
 }
 
-/**
- * Helper to preserve cookies (including Supabase session and last-active) when redirecting
- */
 function withCookies(to: NextResponse, from: NextResponse) {
     from.cookies.getAll().forEach((c) => to.cookies.set(c.name, c.value, c));
     return to;
@@ -212,6 +200,15 @@ function withCookies(to: NextResponse, from: NextResponse) {
 
 export const config = {
     matcher: [
-        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+        /*
+         * Match all routes EXCEPT:
+         * - _next/static  (static assets)
+         * - _next/image   (Next.js image optimisation)
+         * - _next/data    (RSC server-component data fetches — these are internal and
+         *                  do not need middleware auth; each page's Server Component
+         *                  already validates the session independently)
+         * - favicon.ico and common static media extensions
+         */
+        "/((?!_next/static|_next/image|_next/data|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
     ],
 };

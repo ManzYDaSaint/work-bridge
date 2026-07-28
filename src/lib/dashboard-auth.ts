@@ -20,7 +20,7 @@ export async function requireDashboardProfile(expectedRole: UserRole): Promise<{
         redirect("/login");
     }
 
-    console.log("[DEBUG auth] Role:", profile.role, "Employer status:", profile.employer?.status);
+
 
     if (profile.role !== expectedRole) {
         redirect("/dashboard");

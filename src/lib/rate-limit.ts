@@ -26,10 +26,16 @@ export async function rateLimit(identifier: string, config: RateLimitConfig) {
     validTokens.push(now);
     tokenCache.set(identifier, validTokens);
 
-    // Basic cleanup: if the cache gets too large, clear it. 
-    // In Edge functions this is less critical as instances are short-lived.
+    // Targeted eviction: only remove entries whose entire window has expired.
+    // The previous tokenCache.clear() would reset ALL rate limits simultaneously,
+    // causing a request burst immediately after the clear.
     if (tokenCache.size > 1000) {
-        tokenCache.clear();
+        for (const [key, timestamps] of tokenCache.entries()) {
+            const stillValid = (timestamps as number[]).some(t => t > windowStart);
+            if (!stillValid) {
+                tokenCache.delete(key);
+            }
+        }
     }
 
     return {

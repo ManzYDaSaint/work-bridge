@@ -25,10 +25,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Do NOT use Promise.all here! Supabase locks the local storage token.
         // Firing them concurrently causes the "Lock stole it" error.
         const { data: sessionData } = await supabase.auth.getSession();
-        const { data: userData } = await supabase.auth.getUser();
-        
         setSession(sessionData.session ?? null);
-        setUser(userData.user ?? null);
+        setUser(sessionData.session?.user ?? null);
         setLoading(false);
     }, [supabase]);
 
@@ -37,11 +35,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const initialize = async () => {
             const { data: sessionData } = await supabase.auth.getSession();
-            const { data: userData } = await supabase.auth.getUser();
-
             if (!isMounted) return;
             setSession(sessionData.session ?? null);
-            setUser(userData.user ?? null);
+            setUser(sessionData.session?.user ?? null);
             setLoading(false);
         };
 

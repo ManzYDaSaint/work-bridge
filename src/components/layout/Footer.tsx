@@ -70,7 +70,7 @@ export default function Footer() {
                 </div>
 
                 <div className="mt-10 pt-8 border-t border-slate-300 dark:border-slate-800 text-center sm:text-left text-xs text-slate-400">
-                    &copy; {new Date().getFullYear()} Aganyu · Built for Malawi, open to remote, hybrid, and on-site work
+                    &copy; {new Date().getFullYear()} Aganyu Technologies LTD · Built for Malawi, open to remote, hybrid, and on-site work
                 </div>
             </div>
         </footer>

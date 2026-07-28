@@ -2,17 +2,11 @@ import AdminOverviewClient from "./AdminOverviewClient";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { adminService } from "@/services/adminService";
 import { userService } from "@/services/userService";
-import { validateAuth } from "@/lib/auth-guard";
-import { redirect } from "next/navigation";
+
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminOverviewPage() {
-    // Auth check directly in the server component — no internal HTTP round-trip needed.
-    const auth = await validateAuth(["ADMIN"], false);
-    if (auth.error || !auth.user) {
-        redirect("/login");
-    }
 
     // Fetch all data directly from services using the cookie-based Supabase client.
     const [stats, closeRequestsResult, activity] = await Promise.all([

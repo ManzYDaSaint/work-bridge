@@ -1,34 +1,34 @@
-import { Sparkles, Search, Bookmark, Send, Shield, Award, BarChart2, Bell } from "lucide-react";
+import { Sparkles, Search, Bookmark, Send, Shield, Award, BarChart2, Share2 } from "lucide-react";
 
 const features = [
     {
         title: "Intelligent Talent Sourcing",
-        description: "We don't just match keywords. We understand the context of experience to connect employers with the most compatible talent.",
+        description: "Semantic skill parsing matches candidate capability (e.g. understanding Frontend Developer = React Engineer), not just exact keyword strings.",
         icon: Search,
         accent: "bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400",
     },
     {
-        title: "Intuitive Smart-Matching",
-        description: "Our system understands that a 'React Developer' is also a 'Frontend Engineer,' ensuring no great opportunity is missed.",
-        icon: Sparkles,
+        title: "Opportunities Hub",
+        description: "Access non-traditional career growth paths including verified grants, scholarships, fellowships, and open calls alongside job postings.",
+        icon: Award,
         accent: "bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400",
+    },
+    {
+        title: "Automated Social Amplification",
+        description: "Post a job once and our background engine automatically broadcasts your listing across LinkedIn & Facebook Pages for maximum reach.",
+        icon: Share2,
+        accent: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400",
     },
     {
         title: "Invite to Apply",
         description: "Employers can send a direct in-platform message to any candidate, inviting them to apply for a specific role — no external contact needed.",
         icon: Send,
-        accent: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400",
+        accent: "bg-purple-50 text-purple-600 dark:bg-purple-950/30 dark:text-purple-400",
     },
     {
         title: "Saved Talent Pools",
         description: "Bookmark promising candidates and revisit them anytime from your Saved Talent page — build your own private talent pool.",
         icon: Bookmark,
-        accent: "bg-purple-50 text-purple-600 dark:bg-purple-950/30 dark:text-purple-400",
-    },
-    {
-        title: "Certifications & Portfolio",
-        description: "Seekers can add verified certifications and portfolio links, giving employers a complete picture of their capabilities beyond a CV.",
-        icon: Award,
         accent: "bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400",
     },
     {
@@ -44,9 +44,9 @@ const features = [
         accent: "bg-cyan-50 text-cyan-600 dark:bg-cyan-950/30 dark:text-cyan-400",
     },
     {
-        title: "Real-time Notifications",
-        description: "Candidates get instant notifications when an employer invites them to apply. Employers are alerted when top-match applications arrive.",
-        icon: Bell,
+        title: "Intuitive Smart-Matching",
+        description: "Our algorithms evaluate skill compatibility and work mode intent to deliver instantaneous 'Perfect Fit' matches the moment a role goes live.",
+        icon: Sparkles,
         accent: "bg-orange-50 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400",
     },
 ];

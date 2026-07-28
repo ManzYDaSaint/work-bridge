@@ -153,8 +153,10 @@ export async function PUT(request: Request) {
 
         if (error) throw error;
 
-        // Sync semantic embedding for intelligent matchmaking
-        await syncSeekerEmbedding(auth.userId, data);
+        // Sync embedding fire-and-forget — must not block the profile save response
+        syncSeekerEmbedding(auth.userId, data).catch((err) =>
+            console.error("[profile/PUT] Background embedding sync failed:", err)
+        );
 
         // Fix: atomically try to grant the early-adopter badge via Postgres function.
         // This replaces the previous read-count-then-write pattern which had a race condition

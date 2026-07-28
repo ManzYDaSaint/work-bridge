@@ -120,8 +120,10 @@ export async function PUT(
 
         if (error) throw error;
 
-        // Sync semantic embedding for intelligent matchmaking
-        await syncJobEmbedding(id, data);
+        // Sync embedding fire-and-forget — must not block the employer edit response
+        syncJobEmbedding(id, data).catch((err) =>
+            console.error("[jobs/[id] PUT] Background embedding sync failed:", err)
+        );
 
         return NextResponse.json({ success: true, job: data });
     } catch (error: any) {
@@ -240,8 +242,10 @@ export async function POST(
 
         if (slugError) throw slugError;
 
-        // Sync semantic embedding for the new reposted job
-        await syncJobEmbedding(newJob.id, newJob);
+        // Sync embedding fire-and-forget — must not block the repost response
+        syncJobEmbedding(newJob.id, newJob).catch((err) =>
+            console.error("[jobs/[id] POST] Background embedding sync failed:", err)
+        );
 
         return NextResponse.json({ success: true, job: newJob });
     } catch (error: any) {
