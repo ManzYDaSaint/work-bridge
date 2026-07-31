@@ -122,6 +122,24 @@ export default function RootLayout({
             data-domain={plausibleDomain}
           />
         )}
+        {/* Google Analytics (gtag.js) */}
+        <Script
+          id="google-analytics"
+          src="https://www.googletagmanager.com/gtag/js?id=G-MX0DH8CGG7"
+          strategy="afterInteractive"
+        />
+        <Script
+          id="google-analytics-config"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-MX0DH8CGG7');
+            `,
+          }}
+        />
       </head>
       <body className={`${jakarta.className} antialiased min-h-screen flex flex-col`}>
         <Toaster position="top-right" richColors />
