@@ -15,23 +15,8 @@ export default async function RecommendedJobsPage() {
     const supabase = await createSupabaseServerClient();
     const user = auth.user;
 
-    // 2. Check Quota (recommendation_count)
-    // We only increment quota when they explicitly use discovery, 
-    // or maybe simply viewing this page costs a quota? 
-    // Let's implement the quota check:
-    const { data: quota } = await supabase
-        .from("user_quotas")
-        .select("recommendation_count")
-        .eq("user_id", user.id)
-        .single();
-    
-    const usage = quota?.recommendation_count || 0;
-    const FREE_LIMIT = 10;
-    
-    // We could restrict viewing if usage >= FREE_LIMIT
-    // For now, let's just pass this down or log it
-    
-    // 3. Fetch user embedding
+    // Seeker AI recommendations are unlimited — no quota gate
+
     const { data: seekerData } = await supabase
         .from("job_seekers")
         .select("embedding")
@@ -99,15 +84,11 @@ export default async function RecommendedJobsPage() {
     }).sort((a, b) => b.similarity - a.similarity);
 
     // Increment quota via RPC since they viewed recommendations
-    if (usage < FREE_LIMIT) {
-       await supabase.rpc('consume_quota', { p_user_id: user.id, p_quota_type: 'recommendation', p_limit: FREE_LIMIT });
-    }
+    // REMOVED: Seekers have unlimited recommendations
 
     return (
         <RecommendedJobsClient 
-            jobs={jobsWithScores} 
-            usage={usage} 
-            limit={FREE_LIMIT} 
+            jobs={jobsWithScores}
         />
     );
 }

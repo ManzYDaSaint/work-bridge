@@ -28,6 +28,7 @@ interface DashboardLayoutProps {
     userRoleLabel: string;
     onLogout: () => void;
     topBarChildren?: React.ReactNode;
+    sidebarFooter?: React.ReactNode;
     brandLogo?: string;
     brandName?: string;
     userAvatar?: string;
@@ -51,6 +52,7 @@ export default function DashboardLayout({
     brandName,
     onLogout,
     topBarChildren,
+    sidebarFooter,
     showUpgradeCTA,
     upgradeLink = "/upgrade",
 }: DashboardLayoutProps) {
@@ -140,6 +142,9 @@ export default function DashboardLayout({
                         </div>
                     </div>
                 )}
+
+                {/* Sidebar Footer Slot (e.g. QuotaStatusBar) */}
+                {sidebarFooter}
 
                 {/* User Footer */}
                 <div className="flex flex-shrink-0 items-center gap-3 border-t border-stone-200/70 px-4 py-3 dark:border-slate-800">

@@ -37,11 +37,8 @@ export class RecommendationService {
   static async getRecommendedJobs(userId: string, options: RecommendationOptions = {}) {
     const { limit = 10, threshold = 0.3 } = options;
 
-    // 1. Quota Check (Free users limit: 5 per day/session - using 5 as placeholder)
-    const isAllowed = await this.checkAndConsumeQuota(userId, 'recommendation', 5);
-    if (!isAllowed) {
-      throw new Error("Daily recommendation limit reached. Upgrade to Premium for unlimited access.");
-    }
+    // 1. No quota gate for seekers — recommendations are always unlimited
+    // (Seekers are the product; gating them hurts the talent pool)
 
     // 2. Get Seeker's embedding
     const supabase = await this.getSupabase();
@@ -73,8 +70,8 @@ export class RecommendationService {
   static async discoverTalent(jobId: string, employerId: string, options: RecommendationOptions = {}) {
     const { limit = 10, threshold = 0.3 } = options;
 
-    // 1. Quota Check (Free users limit: 5 discoveries)
-    const isAllowed = await this.checkAndConsumeQuota(employerId, 'discovery', 5);
+    // 1. Quota Check (Free users: 30 candidate profile views/month)
+    const isAllowed = await this.checkAndConsumeQuota(employerId, 'discovery', 30);
     if (!isAllowed) {
       throw new Error("Talent discovery limit reached. Upgrade to Premium to find more candidates.");
     }

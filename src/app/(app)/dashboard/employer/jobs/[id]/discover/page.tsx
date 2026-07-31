@@ -42,7 +42,7 @@ export default async function JobDiscoveryPage({
         .single();
     
     const usage = quota?.discovery_count || 0;
-    const FREE_LIMIT = 5;
+    const FREE_LIMIT = 30;
 
     // 3. Call the RPC to get recommended candidates (Minimum 50% match similarity threshold)
     const { data: matches, error: rpcError } = await supabase.rpc("match_candidates", {

@@ -199,7 +199,7 @@ export async function POST(
 
             if ((activeJobCount || 0) >= 2) {
                 return NextResponse.json({
-                    error: "You've reached the 2 active job limit. Close or fill an existing job before reposting."
+                    error: "You have 2 active listings — the free plan maximum. Archive or fill an existing role before reposting, or upgrade for unlimited listings."
                 }, { status: 403 });
             }
         }

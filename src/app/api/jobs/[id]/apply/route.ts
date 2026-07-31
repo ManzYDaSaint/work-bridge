@@ -84,7 +84,8 @@ export async function POST(
         );
     }
 
-    // --- Application Limit: 10 per calendar month ---
+
+    // --- Application Limit: 25 per calendar month ---
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
     const { count: monthlyAppCount } = await supabase
         .from("applications")
@@ -92,17 +93,15 @@ export async function POST(
         .eq("user_id", auth.userId)
         .gte("created_at", startOfMonth);
 
-    const baseLimit = 10;
+    const baseLimit = 25;
     const totalLimit = baseLimit + (seekerProfile?.application_limit_bonus || 0);
 
     if ((monthlyAppCount || 0) >= totalLimit) {
         return NextResponse.json(
-            { error: `You've reached your ${totalLimit} applications/month limit. Want more? Share your referral link with a friend and earn 5 bonus applications when they sign up!` },
+            { error: `You've reached your ${totalLimit} applications this month. Share your referral link with a friend to earn 5 bonus applications when they sign up!` },
             { status: 403 }
         );
     }
-
-
 
     const screeningResult = evaluateCandidateMatch(
         {
@@ -113,6 +112,7 @@ export async function POST(
         job,
         body.screeningAnswers || {}
     );
+
 
     // --- Calculate AI Match Score ---
     const { data: seekerEmbeddingData } = await supabase

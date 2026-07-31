@@ -39,6 +39,15 @@ export async function GET(
         .update({ profile_views: (seeker.profile_views || 0) + 1 })
         .eq("id", seeker.id);
 
+    // Increment employer's discovery quota — tracks all candidate profile opens across all surfaces
+    if (auth.role === "EMPLOYER") {
+        await supabase.rpc('consume_quota', {
+            p_user_id: auth.userId,
+            p_quota_type: 'discovery',
+            p_limit: 30
+        });
+    }
+
     // Fetch their certificates
     const { data: certificates } = await supabase
         .from("certificates")

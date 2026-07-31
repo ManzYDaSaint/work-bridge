@@ -9,6 +9,7 @@ import { UserProvider, useUser } from "@/context/UserContext";
 import { useEffect } from "react";
 import { signOutAndRedirect } from "@/lib/auth-utils";
 import { PendingBanner } from "@/components/dashboard/employer/PendingBanner";
+import QuotaStatusBar from "@/components/dashboard/employer/QuotaStatusBar";
 
 const employerNavGroups: NavGroup[] = [
     {
@@ -84,6 +85,7 @@ function EmployerLayoutInner({ children }: { children: React.ReactNode }) {
             userAvatar={employerProfile?.logoUrl}
             showUpgradeCTA={false}
             onLogout={handleLogout}
+            sidebarFooter={isApproved ? <QuotaStatusBar /> : undefined}
             topBarChildren={
                 <>
                     <div className="hidden h-6 w-px bg-stone-200 dark:bg-slate-800 md:block"></div>

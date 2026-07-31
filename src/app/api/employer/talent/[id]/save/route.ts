@@ -15,15 +15,15 @@ export async function POST(
     const supabase = await createSupabaseServerClient();
     
     try {
-        // --- Saved Candidates Limit: 15 max ---
+        // --- Saved Candidates Limit: 25 max ---
         const { count: savedCount } = await supabase
             .from("employer_saved_candidates")
             .select("id", { count: "exact", head: true })
             .eq("employer_id", auth.userId);
 
-        if ((savedCount || 0) >= 15) {
+        if ((savedCount || 0) >= 25) {
             return NextResponse.json({
-                error: "You've reached the 15 saved candidates limit. We're working on higher plans — want early access?"
+                error: "You've reached your 25 saved candidates limit. Upgrade to save unlimited candidates and build your full talent pipeline."
             }, { status: 403 });
         }
 
