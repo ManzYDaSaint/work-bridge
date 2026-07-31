@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { syncSeekerEmbedding, syncJobEmbedding } from "@/lib/sync-embeddings";
 import { sendAdminSecurityAlert } from "@/lib/resend";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 // Vercel Cron routes can be triggered by sending an authorization header
 // or simply allowing public execution with a secret. For security:
@@ -72,18 +73,29 @@ export async function GET(request: Request) {
             }
         }
 
-        // 3. Notify Admin if anything was synced or if there were errors
-        if (syncedSeekersCount > 0 || syncedJobsCount > 0 || errors.length > 0) {
-            const details = `Automated Resync Report:
-            - Seekers Synced: ${syncedSeekersCount}
-            - Jobs Synced: ${syncedJobsCount}
-            - Errors: ${errors.length > 0 ? errors.join(" | ") : "None"}`;
+        // 3. Log event to Mission Control with appropriate severity
+        const hasErrors = errors.length > 0;
+        const totalSynced = syncedSeekersCount + syncedJobsCount;
 
-            await sendAdminSecurityAlert({
-                event: "Embedding Resync Cron Executed",
-                details: details,
+        if (totalSynced > 0 || hasErrors) {
+            const details = `Automated Resync Report: Seekers Synced: ${syncedSeekersCount}, Jobs Synced: ${syncedJobsCount}${hasErrors ? `, Errors: ${errors.join(" | ")}` : ""}`;
+            
+            await emitSystemEvent({
+                category: "AUTOMATION",
+                severity: hasErrors ? "WARNING" : "SUCCESS",
+                event: "EMBEDDING_RESYNC_COMPLETED",
+                message: details,
+                metadata: { syncedSeekersCount, syncedJobsCount, errors }
             });
-            console.log("[CRON] Admin notified of embedding resync.");
+
+            // If there were item-level errors during execution, alert admin via email
+            if (hasErrors) {
+                await sendAdminSecurityAlert({
+                    event: "Embedding Resync Partial Errors",
+                    details: details,
+                });
+            }
+            console.log("[CRON] Mission Control updated for embedding resync.");
         }
 
         return NextResponse.json({
@@ -96,6 +108,14 @@ export async function GET(request: Request) {
     } catch (error: any) {
         console.error("[CRON] Automated Resync Error:", error);
         
+        await emitSystemEvent({
+            category: "AUTOMATION",
+            severity: "CRITICAL",
+            event: "EMBEDDING_RESYNC_FAILED",
+            message: `Fatal Error: ${error.message}`,
+            metadata: { error: error.message }
+        });
+
         await sendAdminSecurityAlert({
             event: "Embedding Resync Cron Failed",
             details: `Fatal Error: ${error.message}`,
