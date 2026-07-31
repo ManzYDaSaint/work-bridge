@@ -184,17 +184,24 @@ export async function POST(
             return NextResponse.json({ error: "Original job not found" }, { status: 404 });
         }
 
-        // --- Enforce active job limit on repost ---
-        const { count: activeJobCount } = await supabase
-            .from("jobs")
-            .select("id", { count: "exact", head: true })
-            .eq("employer_id", auth.userId)
-            .eq("status", "ACTIVE");
+        // --- Enforce active job limit on repost for standard accounts ---
+        const systemRecruiterEmails = (process.env.SYSTEM_RECRUITER_EMAILS || "jobs@aganyu.com")
+            .split(",")
+            .map((e) => e.trim().toLowerCase());
+        const isSystemRecruiter = !!auth.email && systemRecruiterEmails.includes(auth.email.toLowerCase());
 
-        if ((activeJobCount || 0) >= 2) {
-            return NextResponse.json({
-                error: "You've reached the 2 active job limit. Close or fill an existing job before reposting."
-            }, { status: 403 });
+        if (!isSystemRecruiter) {
+            const { count: activeJobCount } = await supabase
+                .from("jobs")
+                .select("id", { count: "exact", head: true })
+                .eq("employer_id", auth.userId)
+                .eq("status", "ACTIVE");
+
+            if ((activeJobCount || 0) >= 2) {
+                return NextResponse.json({
+                    error: "You've reached the 2 active job limit. Close or fill an existing job before reposting."
+                }, { status: 403 });
+            }
         }
 
         const { data: createdJob, error: insertError } = await supabase

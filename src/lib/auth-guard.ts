@@ -9,6 +9,7 @@ import { UserRole } from "@/types";
  */
 export interface AuthValidationResult {
     userId: string;
+    email?: string;
     role: UserRole;
     user: any; // The full user object from Supabase
     error?: NextResponse;
@@ -67,6 +68,7 @@ export async function validateAuth(
         if (aalError || aal.currentLevel !== 'aal2') {
             return {
                 userId: user.id,
+                email: user.email,
                 role: "JOB_SEEKER",
                 user,
                 error: NextResponse.json({
@@ -92,6 +94,7 @@ export async function validateAuth(
         console.error("[AUTH_GUARD] Profile lookup failed for user", user.id, profileError?.message);
         return {
             userId: user.id,
+            email: user.email,
             role: "JOB_SEEKER",
             user,
             error: NextResponse.json({ error: "User identity verification failed. Profile not found." }, { status: 403 })
@@ -104,6 +107,7 @@ export async function validateAuth(
     if (allowedRoles && !allowedRoles.includes(role)) {
         return {
             userId: user.id,
+            email: user.email,
             role,
             user,
             error: NextResponse.json({
@@ -123,6 +127,7 @@ export async function validateAuth(
         if (employerError || employer?.status !== 'APPROVED') {
             return {
                 userId: user.id,
+                email: user.email,
                 role,
                 user,
                 error: NextResponse.json({
@@ -135,6 +140,7 @@ export async function validateAuth(
 
     return {
         userId: user.id,
+        email: user.email,
         role,
         user
     };

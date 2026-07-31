@@ -105,17 +105,24 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
 
-        // --- Active Job Limit (2 active jobs max) ---
-        const { count: activeJobCount } = await supabase
-            .from("jobs")
-            .select("id", { count: "exact", head: true })
-            .eq("employer_id", auth.userId)
-            .eq("status", "ACTIVE");
+        // --- Active Job Limit (2 active jobs max for standard accounts) ---
+        const systemRecruiterEmails = (process.env.SYSTEM_RECRUITER_EMAILS || "jobs@aganyu.com")
+            .split(",")
+            .map((e) => e.trim().toLowerCase());
+        const isSystemRecruiter = !!auth.email && systemRecruiterEmails.includes(auth.email.toLowerCase());
 
-        if ((activeJobCount || 0) >= 2) {
-            return NextResponse.json({
-                error: "You've reached the 2 active job limit. We're working on higher plans — want early access?"
-            }, { status: 403 });
+        if (!isSystemRecruiter) {
+            const { count: activeJobCount } = await supabase
+                .from("jobs")
+                .select("id", { count: "exact", head: true })
+                .eq("employer_id", auth.userId)
+                .eq("status", "ACTIVE");
+
+            if ((activeJobCount || 0) >= 2) {
+                return NextResponse.json({
+                    error: "You've reached the 2 active job limit. We're working on higher plans — want early access?"
+                }, { status: 403 });
+            }
         }
 
         // --- Duplicate Prevention Logic ---
