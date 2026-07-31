@@ -16,7 +16,7 @@ export default async function JobDiscoveryPage({
     // 1. Fetch the Job to ensure it belongs to the employer and has an embedding
     const { data: job } = await supabase
         .from("jobs")
-        .select("id, title, embedding")
+        .select("id, title, embedding, skills, must_have_skills, nice_to_have_skills, location, qualification")
         .eq("id", jobId)
         .eq("employer_id", user.id)
         .single();
@@ -44,11 +44,11 @@ export default async function JobDiscoveryPage({
     const usage = quota?.discovery_count || 0;
     const FREE_LIMIT = 5;
 
-    // 3. Call the RPC to get recommended candidates
+    // 3. Call the RPC to get recommended candidates (Minimum 50% match similarity threshold)
     const { data: matches, error: rpcError } = await supabase.rpc("match_candidates", {
         query_embedding: job.embedding,
-        match_threshold: 0.15,
-        match_count: 10
+        match_threshold: 0.50,
+        match_count: 20
     });
 
     if (rpcError) {
@@ -67,7 +67,13 @@ export default async function JobDiscoveryPage({
             .in("id", candidateIds)
             .neq("profile_visibility", "HIDDEN");
             
-        let validSeekers = seekers || [];
+        let validSeekers = (seekers || []).filter(s => {
+            // Require minimum completeness: completion >= 25% OR has skills / bio
+            const hasSkills = s.skills && s.skills.length > 0;
+            const hasBio = s.bio && s.bio.trim().length > 10;
+            const isCompleteEnough = (s.completion ?? 0) >= 25;
+            return isCompleteEnough || hasSkills || hasBio;
+        });
         
         if (validSeekers.length > 0) {
             const { getSupabaseAdminClient } = await import("@/lib/supabase-admin");

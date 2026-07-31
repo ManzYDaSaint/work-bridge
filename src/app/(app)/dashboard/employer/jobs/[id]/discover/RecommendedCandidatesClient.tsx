@@ -54,21 +54,51 @@ export default function RecommendedCandidatesClient({
                         </p>
                     )}
 
-                    <div className="mt-4 flex flex-wrap gap-1.5">
-                        {candidate.skills?.slice(0, 4).map((skill: string, i: number) => (
-                            <span key={i} className="rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                {skill}
-                            </span>
-                        ))}
-                    </div>
+                    {/* Matching Skills Breakdown */}
+                    {candidate.skills && candidate.skills.length > 0 && (
+                        <div className="mt-4 space-y-1.5">
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Skills & Expertise</p>
+                            <div className="flex flex-wrap gap-1.5">
+                                {candidate.skills.slice(0, 6).map((skill: string, i: number) => {
+                                    const jobSkills = [
+                                        ...(job.skills || []),
+                                        ...(job.must_have_skills || []),
+                                        ...(job.nice_to_have_skills || [])
+                                    ].map((s: string) => s.toLowerCase());
+                                    
+                                    const isMatching = jobSkills.some((js: string) => 
+                                        js.includes(skill.toLowerCase()) || skill.toLowerCase().includes(js)
+                                    );
+
+                                    return (
+                                        <span 
+                                            key={i} 
+                                            className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
+                                                isMatching 
+                                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800" 
+                                                    : "bg-stone-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                            }`}
+                                        >
+                                            {isMatching && "✓ "}
+                                            {skill}
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
 
                     {!shouldBlur && (
-                        <div className="mt-5 border-t border-stone-100 pt-4 dark:border-slate-800 flex justify-end">
-                            <button 
-                                className="text-sm font-semibold text-[#16324f] hover:underline dark:text-slate-200"
+                        <div className="mt-5 border-t border-stone-100 pt-4 dark:border-slate-800 flex justify-between items-center">
+                            <span className="text-xs text-slate-400">
+                                {candidate.completion ? `Profile ${candidate.completion}% complete` : ''}
+                            </span>
+                            <Link 
+                                href={`/dashboard/employer/talent/${candidate.id}`}
+                                className="inline-flex items-center text-sm font-semibold text-[#16324f] hover:underline dark:text-slate-200"
                             >
-                                View Full Profile
-                            </button>
+                                View Full Profile &rarr;
+                            </Link>
                         </div>
                     )}
                 </div>
