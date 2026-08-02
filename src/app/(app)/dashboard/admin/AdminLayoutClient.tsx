@@ -3,6 +3,7 @@
 import { User } from "@/types";
 import { BrainCircuit, Briefcase, ClipboardList, LayoutDashboard, ShieldCheck, Users, Activity, Sparkles } from "lucide-react";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
+import { UserProvider } from "@/context/UserContext";
 import { signOutAndRedirect } from "@/lib/auth-utils";
 
 const adminNavGroups: NavGroup[] = [
@@ -38,14 +39,16 @@ export default function AdminLayoutClient({
     const initials = adminName.slice(0, 2).toUpperCase();
 
     return (
-        <DashboardLayout
-            navGroups={adminNavGroups}
-            userFullName={adminName}
-            userInitials={initials}
-            userRoleLabel="System Administrator"
-            onLogout={handleLogout}
-        >
-            {children}
-        </DashboardLayout>
+        <UserProvider initialUser={initialUser}>
+            <DashboardLayout
+                navGroups={adminNavGroups}
+                userFullName={adminName}
+                userInitials={initials}
+                userRoleLabel="System Administrator"
+                onLogout={handleLogout}
+            >
+                {children}
+            </DashboardLayout>
+        </UserProvider>
     );
 }
