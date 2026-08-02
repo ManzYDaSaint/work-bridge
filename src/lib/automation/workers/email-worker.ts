@@ -34,6 +34,15 @@ export const EmailNotificationWorker = {
                 case 'NEW_APPLICATION':
                     result = await emailUtils.sendNewApplicationEmail(to, context);
                     break;
+                case 'INCOMPLETE_PROFILE':
+                    result = await emailUtils.sendIncompleteProfileReminderEmail(to, context);
+                    break;
+                case 'SEEKER_COME_BACK':
+                    result = await emailUtils.sendSeekerComeBackEmail(to, context);
+                    break;
+                case 'EMPLOYER_COME_BACK':
+                    result = await emailUtils.sendEmployerComeBackEmail(to, context);
+                    break;
                 // Add more mappings as needed
                 default:
                     throw new Error(`Template not implemented: ${templateId}`);

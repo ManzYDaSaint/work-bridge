@@ -399,6 +399,57 @@ export const JobAlertEmail = ({ seekerName, matchedJobs }: { seekerName: string;
   </PremiumLayout>
 );
 
+export const IncompleteProfileEmail = ({ seekerName, completion }: { seekerName: string; completion: number }) => (
+  <PremiumLayout previewText="Complete your profile to get noticed by employers" title="Action Required: Complete Your Profile">
+    <Text style={text}>Hello {seekerName},</Text>
+    <Text style={text}>Your Aganyu profile is currently <strong>{completion}% complete</strong>.</Text>
+    
+    <Section style={{ ...cardAlert, backgroundColor: "#fffbeb", borderLeftColor: "#f59e0b" }}>
+      <Text style={{ margin: 0, color: "#92400e", fontWeight: "700" }}>Employers are looking for you!</Text>
+      <Text style={{ margin: "8px 0 0 0", fontSize: "14px", color: "#b45309" }}>Candidates with 100% complete profiles are 4x more likely to be shortlisted for interviews.</Text>
+    </Section>
+
+    <Text style={text}>Take 5 minutes to add your latest experience and skills to stand out in the talent pool.</Text>
+    <Section style={btnContainer}>
+      <Link href={`${APP_URL}/dashboard/seeker/profile`} style={btn}>Complete Profile</Link>
+    </Section>
+  </PremiumLayout>
+);
+
+export const SeekerComeBackEmail = ({ seekerName }: { seekerName: string }) => (
+  <PremiumLayout previewText="We've missed you! New jobs are waiting." title="New Opportunities Waiting">
+    <Text style={text}>Hello {seekerName},</Text>
+    <Text style={text}>It's been a while since you checked in! We've added hundreds of new jobs that match your skills.</Text>
+    
+    <Section style={{ ...cardAlert, backgroundColor: "#eff6ff", borderLeftColor: "#3b82f6" }}>
+      <Text style={{ margin: 0, color: "#1e40af", fontWeight: "700" }}>Your Next Role is Here</Text>
+      <Text style={{ margin: "8px 0 0 0", fontSize: "14px", color: "#1e3a8a" }}>Top employers are actively hiring on Aganyu right now.</Text>
+    </Section>
+
+    <Text style={text}>Don't miss out on these new opportunities. Log in to see your personalized recommendations.</Text>
+    <Section style={btnContainer}>
+      <Link href={`${APP_URL}/dashboard/seeker/recommendations`} style={btn}>View New Jobs</Link>
+    </Section>
+  </PremiumLayout>
+);
+
+export const EmployerComeBackEmail = ({ companyName }: { companyName: string }) => (
+  <PremiumLayout previewText="Ready to make your next great hire?" title="Find Your Next Hire">
+    <Text style={text}>Hello {companyName} Team,</Text>
+    <Text style={text}>The Aganyu talent pool has been growing! We now have thousands of verified, highly-skilled candidates ready to work.</Text>
+    
+    <Section style={{ ...cardAlert, backgroundColor: "#ecfdf5", borderLeftColor: "#10b981" }}>
+      <Text style={{ margin: 0, color: "#065f46", fontWeight: "700" }}>Access Top Talent</Text>
+      <Text style={{ margin: "8px 0 0 0", fontSize: "14px", color: "#064e3b" }}>Post your open roles and let our AI matching engine find the perfect candidates for you.</Text>
+    </Section>
+
+    <Text style={text}>Log in today to post a new job and start receiving structured, high-quality applications.</Text>
+    <Section style={btnContainer}>
+      <Link href={`${APP_URL}/dashboard/employer/jobs/new`} style={btn}>Post a Job</Link>
+    </Section>
+  </PremiumLayout>
+);
+
 export const renderEmail = (Component: React.ReactElement) => {
     return render(Component);
 };

@@ -11,7 +11,10 @@ import {
   EmployerDigestEmail,
   NewApplicationEmail,
   PaymentConfirmationEmail,
-  JobAlertEmail
+  JobAlertEmail,
+  IncompleteProfileEmail,
+  SeekerComeBackEmail,
+  EmployerComeBackEmail
 } from "../emails/templates";
 import { getSupabaseAdminClient } from "./supabase-admin";
 import { emitSystemEvent } from "./mission-control";
@@ -435,6 +438,108 @@ export async function sendJobAlertEmail(to: string, payload: {
       event: "EMAIL_FAILED",
       message: `Job alert email failed to ${to}`,
       metadata: { to, type: "job_alert", error }
+    });
+    return { success: false, error };
+  }
+}
+
+export async function sendIncompleteProfileReminderEmail(to: string, payload: { seekerName: string; completion: number }) {
+  try {
+    const canSend = await shouldSendEmail(to, 'marketing');
+    if (!canSend) return { success: true, skipped: true };
+
+    const html = await renderEmail(<IncompleteProfileEmail {...payload} />);
+    const data = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: [to],
+      subject: `Complete your profile to stand out to employers`,
+      html,
+    });
+    if (data.error) throw data.error;
+    
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "SUCCESS",
+      event: "EMAIL_SENT",
+      message: `Incomplete profile reminder sent to ${to} (${payload.completion}% complete)`,
+      metadata: { to, type: "incomplete_profile", completion: payload.completion, data }
+    });
+    return { success: true, data };
+  } catch (error) {
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "WARNING",
+      event: "EMAIL_FAILED",
+      message: `Incomplete profile reminder failed to ${to}`,
+      metadata: { to, type: "incomplete_profile", error }
+    });
+    return { success: false, error };
+  }
+}
+
+export async function sendSeekerComeBackEmail(to: string, payload: { seekerName: string }) {
+  try {
+    const canSend = await shouldSendEmail(to, 'marketing');
+    if (!canSend) return { success: true, skipped: true };
+
+    const html = await renderEmail(<SeekerComeBackEmail {...payload} />);
+    const data = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: [to],
+      subject: `We've missed you! New jobs are waiting`,
+      html,
+    });
+    if (data.error) throw data.error;
+    
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "SUCCESS",
+      event: "EMAIL_SENT",
+      message: `Seeker come back email sent to ${to}`,
+      metadata: { to, type: "seeker_come_back", data }
+    });
+    return { success: true, data };
+  } catch (error) {
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "WARNING",
+      event: "EMAIL_FAILED",
+      message: `Seeker come back email failed to ${to}`,
+      metadata: { to, type: "seeker_come_back", error }
+    });
+    return { success: false, error };
+  }
+}
+
+export async function sendEmployerComeBackEmail(to: string, payload: { companyName: string }) {
+  try {
+    const canSend = await shouldSendEmail(to, 'marketing');
+    if (!canSend) return { success: true, skipped: true };
+
+    const html = await renderEmail(<EmployerComeBackEmail {...payload} />);
+    const data = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: [to],
+      subject: `Ready to make your next great hire?`,
+      html,
+    });
+    if (data.error) throw data.error;
+    
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "SUCCESS",
+      event: "EMAIL_SENT",
+      message: `Employer come back email sent to ${to}`,
+      metadata: { to, type: "employer_come_back", data }
+    });
+    return { success: true, data };
+  } catch (error) {
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "WARNING",
+      event: "EMAIL_FAILED",
+      message: `Employer come back email failed to ${to}`,
+      metadata: { to, type: "employer_come_back", error }
     });
     return { success: false, error };
   }
