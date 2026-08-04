@@ -375,7 +375,7 @@ export default function AdminOverviewClient({
                                 </div>
                                 <div className="flex shrink-0 items-center gap-3">
                                     <div className="text-xs text-slate-400">
-                                        {new Date(log.created_at).toLocaleString()}
+                                        {new Date(log.createdAt).toLocaleString()}
                                     </div>
                                     {log.user?.id && (
                                         <Link

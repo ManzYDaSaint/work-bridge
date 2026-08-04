@@ -405,8 +405,8 @@ export const IncompleteProfileEmail = ({ seekerName, completion }: { seekerName:
     <Text style={text}>Your Aganyu profile is currently <strong>{completion}% complete</strong>.</Text>
     
     <Section style={{ ...cardAlert, backgroundColor: "#fffbeb", borderLeftColor: "#f59e0b" }}>
-      <Text style={{ margin: 0, color: "#92400e", fontWeight: "700" }}>Employers are looking for you!</Text>
-      <Text style={{ margin: "8px 0 0 0", fontSize: "14px", color: "#b45309" }}>Candidates with 100% complete profiles are 4x more likely to be shortlisted for interviews.</Text>
+      <Text style={{ margin: 0, color: "#92400e", fontWeight: "700" }}>Employers can't find you yet!</Text>
+      <Text style={{ margin: "8px 0 0 0", fontSize: "14px", color: "#b45309" }}>Add your skills so our AI can match you. Candidates with 80%+ complete profiles are 3x more likely to be contacted by employers.</Text>
     </Section>
 
     <Text style={text}>Take 5 minutes to add your latest experience and skills to stand out in the talent pool.</Text>

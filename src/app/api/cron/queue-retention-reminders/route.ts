@@ -22,8 +22,9 @@ export async function GET(req: Request) {
         const now = new Date();
 
         // 1. Incomplete Profile Reminders for Seekers
-        // Seekers with completion < 80, created > 2 days ago, and haven't received reminder in last 30 days
+        // Seekers with completion < 80, created > 2 days ago, and haven't received reminder in last 7 days
         const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
         
         const { data: seekersForProfile } = await supabase
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
             .select('id, full_name, completion, users!inner(email, last_profile_reminder_at, created_at)')
             .lt('completion', 80)
             .lt('users.created_at', twoDaysAgo)
-            .or(`last_profile_reminder_at.is.null,last_profile_reminder_at.lt.${thirtyDaysAgo}`, { foreignTable: 'users' });
+            .or(`last_profile_reminder_at.is.null,last_profile_reminder_at.lt.${sevenDaysAgo}`, { foreignTable: 'users' });
 
         if (seekersForProfile) {
             for (const seeker of seekersForProfile) {
