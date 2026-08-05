@@ -39,36 +39,71 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     }
 }
 
+import { normalizeSkills, extractMinimumExperienceYears } from "./skill-normalizer";
+import { extractCVContentSnippet } from "./cv-extractor";
+
 /**
  * Constructs a "Professional DNA" string from seeker data to be embedded.
+ * Enhanced with normalized skills, CV context, and section-weighted ordering.
  */
 export function constructSeekerDNA(profile: any): string {
-    const skills = (profile.skills || []).join(", ");
+    const rawSkills = Array.isArray(profile.skills) ? profile.skills : (profile.skills || "").split(",");
+    const normalized = normalizeSkills(rawSkills);
+    const skills = normalized.length > 0 ? normalized.join(", ") : (profile.skills || []).join(", ");
+    
+    const certs = Array.isArray(profile.certifications) ? profile.certifications.join(", ") : (profile.certifications || "");
     const bio = profile.bio || "";
+    const cvSnippet = extractCVContentSnippet(profile.resume_url, bio);
+    
     const experience = (profile.experience || [])
-        .map((exp: any) => `${exp.role} at ${exp.company}: ${exp.description}`)
+        .map((exp: any) => `${exp.role || exp.title || "Role"} at ${exp.company || exp.employer || "Organization"}: ${exp.description || ""}`)
         .join(". ");
 
-    return `Professional Profile:
-Bio: ${bio}
-Skills: ${skills}
-Experience: ${experience}
-Qualification: ${profile.qualification || "N/A"}`;
+    return `PRIMARY PROFESSIONAL QUALIFICATIONS:
+Role Title / Seniority: ${profile.seniority_level || profile.qualification || "Professional"}
+Highest Qualification: ${profile.qualification || "N/A"}
+Certifications & Professional Memberships: ${certs}
+
+CORE WORK HISTORY & RESPONSIBILITIES:
+${experience}
+${cvSnippet}
+
+TECHNICAL & SOFT SKILLS:
+Canonical Skills: ${skills}
+Professional Bio: ${bio}`;
 }
 
 /**
  * Constructs a "Job Requirement DNA" string from job data.
+ * Formatted specifically to optimize semantic vector embeddings for job posts in Malawi.
+ * Uses Skill Normalization and Section-Weighted Ordering.
  */
 export function constructJobDNA(job: any): string {
-    const mustHaves = (job.must_have_skills || []).join(", ");
-    const niceToHaves = (job.nice_to_have_skills || []).join(", ");
+    const rawMustHaves = job.must_have_skills || [];
+    const normalizedMustHaves = normalizeSkills(rawMustHaves);
+    const mustHaves = normalizedMustHaves.length > 0 ? normalizedMustHaves.join("; ") : (Array.isArray(rawMustHaves) ? rawMustHaves.join("; ") : rawMustHaves);
+    
+    const niceToHaves = Array.isArray(job.nice_to_have_skills) ? job.nice_to_have_skills.join("; ") : (job.nice_to_have_skills || "");
+    const skills = Array.isArray(job.skills) ? job.skills.join(", ") : (job.skills || "");
+    
+    const expFromText = extractMinimumExperienceYears(mustHaves || job.description || "");
+    const minExpYears = job.minimum_years_experience || expFromText || 0;
+    const minExpStr = minExpYears > 0 ? `${minExpYears}+ years of required professional experience.` : "";
+    
     const description = job.description || "";
+    const qualification = job.qualification ? `Required Qualification: ${job.qualification}.` : "";
 
-    return `Job Requirements:
-Title: ${job.title}
-Must-have Skills: ${mustHaves}
-Nice-to-have Skills: ${niceToHaves}
-Description: ${description}`;
+    return `PRIMARY JOB REQUIREMENTS & TITLE:
+Role Title: ${job.title}
+Mandatory Qualifications & Experience: ${minExpStr} ${qualification}
+Key Must-Have Skills & Requirements: ${mustHaves}
+
+JOB RESPONSIBILITIES & DUTIES:
+${description}
+
+ADDITIONAL & PREFERRED SKILLS:
+General Skills: ${skills}
+Nice-To-Have Skills: ${niceToHaves}`;
 }
 
 /**

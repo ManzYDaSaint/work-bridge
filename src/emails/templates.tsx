@@ -433,6 +433,23 @@ export const SeekerComeBackEmail = ({ seekerName }: { seekerName: string }) => (
   </PremiumLayout>
 );
 
+export const UploadResumeEmail = ({ seekerName }: { seekerName: string }) => (
+  <PremiumLayout previewText="Upload your CV to boost your AI match score" title="Action Required: Upload Your Resume / CV">
+    <Text style={text}>Hello {seekerName},</Text>
+    <Text style={text}>Our AI matching engine relies on your resume to pair you with the highest paying jobs that fit your background.</Text>
+    
+    <Section style={{ ...cardAlert, backgroundColor: "#eff6ff", borderLeftColor: "#3b82f6" }}>
+      <Text style={{ margin: 0, color: "#1e40af", fontWeight: "700" }}>Missing Resume / CV Attachment!</Text>
+      <Text style={{ margin: "8px 0 0 0", fontSize: "14px", color: "#1e3a8a" }}>Uploading your CV takes under 1 minute and automatically boosts your AI match rate for top roles by up to 40%.</Text>
+    </Section>
+
+    <Text style={text}>Upload your PDF or Word document now to ensure recruiters can view your complete work history.</Text>
+    <Section style={btnContainer}>
+      <Link href={`${APP_URL}/dashboard/seeker/profile`} style={{ ...btn, backgroundColor: "#2563eb" }}>Upload Resume / CV</Link>
+    </Section>
+  </PremiumLayout>
+);
+
 export const EmployerComeBackEmail = ({ companyName }: { companyName: string }) => (
   <PremiumLayout previewText="Ready to make your next great hire?" title="Find Your Next Hire">
     <Text style={text}>Hello {companyName} Team,</Text>

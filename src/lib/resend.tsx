@@ -14,7 +14,8 @@ import {
   JobAlertEmail,
   IncompleteProfileEmail,
   SeekerComeBackEmail,
-  EmployerComeBackEmail
+  EmployerComeBackEmail,
+  UploadResumeEmail
 } from "../emails/templates";
 import { getSupabaseAdminClient } from "./supabase-admin";
 import { emitSystemEvent } from "./mission-control";
@@ -540,6 +541,40 @@ export async function sendEmployerComeBackEmail(to: string, payload: { companyNa
       event: "EMAIL_FAILED",
       message: `Employer come back email failed to ${to}`,
       metadata: { to, type: "employer_come_back", error }
+    });
+    return { success: false, error };
+  }
+}
+
+export async function sendUploadResumeReminderEmail(to: string, payload: { seekerName: string }) {
+  try {
+    const canSend = await shouldSendEmail(to, 'marketing');
+    if (!canSend) return { success: true, skipped: true };
+
+    const html = await renderEmail(<UploadResumeEmail {...payload} />);
+    const data = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: [to],
+      subject: `Boost your AI Job Match rate — Upload your Resume / CV`,
+      html,
+    });
+    if (data.error) throw data.error;
+    
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "SUCCESS",
+      event: "EMAIL_SENT",
+      message: `Upload resume reminder email sent to ${to}`,
+      metadata: { to, type: "upload_resume_reminder", data }
+    });
+    return { success: true, data };
+  } catch (error) {
+    await emitSystemEvent({
+      category: "NOTIFICATION",
+      severity: "WARNING",
+      event: "EMAIL_FAILED",
+      message: `Upload resume reminder email failed to ${to}`,
+      metadata: { to, type: "upload_resume_reminder", error }
     });
     return { success: false, error };
   }

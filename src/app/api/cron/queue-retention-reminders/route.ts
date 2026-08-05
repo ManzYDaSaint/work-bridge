@@ -54,6 +54,37 @@ export async function GET(req: Request) {
             }
         }
 
+        // 1b. Missing Resume / CV Reminders for Seekers
+        // Seekers with no resume_url, created > 3 days ago, and haven't received resume reminder in last 7 days
+        const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
+        
+        const { data: seekersForResume } = await supabase
+            .from('job_seekers')
+            .select('id, full_name, resume_url, users!inner(email, last_resume_reminder_at, created_at)')
+            .or('resume_url.is.null,resume_url.eq.""')
+            .lt('users.created_at', threeDaysAgo)
+            .or(`last_resume_reminder_at.is.null,last_resume_reminder_at.lt.${sevenDaysAgo}`, { foreignTable: 'users' });
+
+        if (seekersForResume) {
+            for (const seeker of seekersForResume) {
+                const user = (seeker.users as any);
+                if (!user.email) continue;
+                
+                await supabase.from('automation_tasks').insert({
+                    plugin_id: 'email-notifier',
+                    payload: {
+                        templateId: 'UPLOAD_RESUME',
+                        to: user.email,
+                        context: { seekerName: seeker.full_name || 'Candidate' }
+                    },
+                    priority: 'MEDIUM',
+                });
+                
+                await supabase.from('users').update({ last_resume_reminder_at: now.toISOString() }).eq('id', seeker.id);
+                queuedCount++;
+            }
+        }
+
         // 2. Seeker Come Back Reminders
         // Seekers inactive for 14 days, haven't received reminder in 30 days
         const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
