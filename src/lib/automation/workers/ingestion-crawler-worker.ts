@@ -49,34 +49,58 @@ export const JobIngestionCrawlerWorker = {
 
                 let newPayloadsCount = 0;
 
-                for (const ref of discovered) {
-                    const fetched = await connector.fetchJob(ref, source);
+                // CHUNKING (Parallel Processing) - Process 5 jobs at a time
+                const chunkSize = 5;
+                for (let i = 0; i < discovered.length; i += chunkSize) {
+                    const chunk = discovered.slice(i, i + chunkSize);
 
-                    // Insert raw payload (skip if checksum duplicate)
-                    const { data: rawPayload, error: insertError } = await supabase
-                        .from('ingested_raw_payloads')
-                        .insert({
-                            source_id: source.id,
-                            external_id: ref.externalId,
-                            url: fetched.url,
-                            payload: fetched.rawContent,
-                            content_type: fetched.contentType,
-                            checksum: fetched.checksum,
-                            processing_status: 'PENDING'
-                        })
-                        .select('id')
-                        .maybeSingle();
+                    await Promise.allSettled(chunk.map(async (ref) => {
+                        // OPTIMIZATION: Check if we already have this URL in raw_payloads (avoid re-fetching)
+                        const { data: existing } = await supabase
+                            .from('ingested_raw_payloads')
+                            .select('id')
+                            .eq('external_id', ref.externalId)
+                            .maybeSingle();
 
-                    if (!insertError && rawPayload) {
-                        newPayloadsCount++;
-                        // Run parser synchronously for instant results
+                        if (existing) return;
+
+                        // Smart Retry / Rate Limit Avoidance
+                        await new Promise(res => setTimeout(res, Math.random() * 500)); 
+
                         try {
-                            const { JobIngestionParserWorker } = await import("./ingestion-parser-worker");
-                            await JobIngestionParserWorker.run({ rawPayloadId: rawPayload.id, sourceId: source.id });
-                        } catch (parseErr: any) {
-                            console.error(`[CrawlerWorker] Failed to parse payload ${rawPayload.id}:`, parseErr);
+                            const fetched = await connector.fetchJob(ref, source);
+
+                            // OPTIMIZATION: Skip expired jobs — don't store them at all
+                            if (fetched.checksum === 'EXPIRED_SKIP' || !fetched.rawContent) {
+                                console.log(`[CrawlerWorker] Skipped expired job: ${ref.title}`);
+                                return;
+                            }
+
+                            // Insert raw payload (skip if checksum duplicate)
+                            const { data: rawPayload, error: insertError } = await supabase
+                                .from('ingested_raw_payloads')
+                                .insert({
+                                    source_id: source.id,
+                                    external_id: ref.externalId,
+                                    url: fetched.url,
+                                    payload: fetched.rawContent,
+                                    content_type: fetched.contentType,
+                                    checksum: fetched.checksum,
+                                    processing_status: 'PENDING'
+                                })
+                                .select('id')
+                                .maybeSingle();
+
+                            if (!insertError && rawPayload) {
+                                newPayloadsCount++;
+                                // Run parser synchronously for instant results
+                                const { JobIngestionParserWorker } = await import("./ingestion-parser-worker");
+                                await JobIngestionParserWorker.run({ rawPayloadId: rawPayload.id, sourceId: source.id });
+                            }
+                        } catch (err: any) {
+                            console.error(`[CrawlerWorker] Failed processing ${ref.url}:`, err.message);
                         }
-                    }
+                    }));
                 }
 
                 // Update source crawl metrics
@@ -97,11 +121,23 @@ export const JobIngestionCrawlerWorker = {
 
             } catch (err: any) {
                 console.error(`[CrawlerWorker] Source ${source.name} crawl failed:`, err.message);
+                if (source.consecutive_errors >= 2) { // will become 3 after this update
+                    try {
+                        const { sendAdminSecurityAlert } = await import("@/lib/resend");
+                        await sendAdminSecurityAlert({
+                            event: `Job Ingestion Source Failing: ${source.name}`,
+                            details: `The crawler has failed 3 consecutive times for ${source.name}.\n\nLast Error: ${err.message}\n\nPlease check the source website to see if their layout or RSS feed has changed.`
+                        });
+                    } catch (emailErr) {
+                        console.error("[CrawlerWorker] Failed to send alert email:", emailErr);
+                    }
+                }
+
                 await supabase.from('job_ingestion_sources').update({
                     last_crawl_at: new Date().toISOString(),
                     consecutive_errors: source.consecutive_errors + 1,
                     last_error_message: err.message,
-                    health_status: source.consecutive_errors >= 3 ? 'DEGRADED' : 'HEALTHY'
+                    health_status: source.consecutive_errors >= 2 ? 'DEGRADED' : 'HEALTHY'
                 }).eq('id', source.id);
 
                 await emitSystemEvent({

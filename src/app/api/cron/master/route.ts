@@ -24,7 +24,8 @@ export async function GET(req: Request) {
         'process-automation',
         'queue-retention-reminders',
         'prune-notifications',
-        'process-ingestion'
+        'process-ingestion',
+        'cleanup-system'
     ];
 
     const results: any[] = [];

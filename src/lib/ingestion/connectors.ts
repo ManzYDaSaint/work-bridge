@@ -40,23 +40,13 @@ export class RSSConnector implements JobSourceConnector {
         const xmlText = await res.text();
         const items = extractRssItems(xmlText);
         const discoveredRefs: DiscoveredJobRef[] = [];
+        const seenUrls = new Set<string>(); // Deduplicate URLs across digest pages
+        let digestProcessed = false; // Only process the MOST RECENT digest post
 
         for (const item of items) {
             const rawTitle = item.title || '';
             const cleanTitle = rawTitle.replace(/<[^>]*>/g, '').trim();
             const itemUrl = item.link || source.base_url;
-
-            // Check publication date — skip items older than 7 days (168 hours)
-            if (item.pubDate) {
-                const itemDate = new Date(item.pubDate).getTime();
-                if (!isNaN(itemDate)) {
-                    // Hard limit: Skip items older than 7 days (168 hours)
-                    const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
-                    if (Date.now() - itemDate > maxAgeMs) {
-                        continue;
-                    }
-                }
-            }
 
             // Check if item title or content looks like a daily digest / list post
             const isDigestPost = /posts\s+for\s+\d+/i.test(cleanTitle) 
@@ -66,7 +56,14 @@ export class RSSConnector implements JobSourceConnector {
                 || (item.description && (item.description.includes('/job/') || item.description.includes('/vacancy/')));
 
             if (isDigestPost && itemUrl) {
-                // Fetch digest page HTML and extract child job links dynamically
+                // OPTIMIZATION: Only process the FIRST (most recent) digest post
+                if (digestProcessed) {
+                    console.log(`[RSSConnector] Skipping older digest: "${cleanTitle}"`);
+                    continue;
+                }
+                digestProcessed = true;
+
+                // Fetch the latest digest page HTML and extract child job links
                 try {
                     const pageRes = await fetch(itemUrl, {
                         headers: {
@@ -75,34 +72,46 @@ export class RSSConnector implements JobSourceConnector {
                     });
                     if (pageRes.ok) {
                         const html = await pageRes.text();
-                        // Extract job links matching standard vacancy path patterns (/job/, /vacancy/, /positions/, /careers/)
+
+                        // Only extract from the JOB VACANCIES table, skip CONSULTANCIES/TENDERS/BIDS sections
+                        const jobSectionMatch = html.match(/<td[^>]*>\s*<strong>\s*JOB VACANCIES\s*<\/strong>\s*<\/td>[\s\S]*?(?=<td[^>]*>\s*<strong>\s*(?:CONSULTANCIES|TENDERS|OTHER|FUNDING|SCHOLARSHIPS))/i);
+                        const searchHtml = jobSectionMatch ? jobSectionMatch[0] : html;
+
+                        // Extract job links matching standard vacancy path patterns
                         const jobLinkRegex = /<a[^>]+href=["']([^"']*\/(?:job|vacancy|position|career|post)\/[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
                         let match;
-                        while ((match = jobLinkRegex.exec(html)) !== null) {
+                        while ((match = jobLinkRegex.exec(searchHtml)) !== null) {
                             const jobUrl = match[1];
                             const jobTitle = match[2].replace(/<[^>]*>/g, '').trim();
-                            if (jobTitle && jobUrl && jobTitle.length > 2 && !jobTitle.toLowerCase().includes('rss')) {
-                                discoveredRefs.push({
-                                    externalId: crypto.createHash('md5').update(jobUrl).digest('hex'),
-                                    url: jobUrl,
-                                    title: jobTitle,
-                                    lastModified: item.pubDate,
-                                    metadata: { isSubJobPage: true, rawTitle: jobTitle },
-                                });
-                            }
+
+                            // Skip duplicates, empty titles, and RSS links
+                            if (!jobTitle || !jobUrl || jobTitle.length <= 2 || jobTitle.toLowerCase().includes('rss')) continue;
+                            if (seenUrls.has(jobUrl)) continue;
+                            seenUrls.add(jobUrl);
+
+                            discoveredRefs.push({
+                                externalId: crypto.createHash('md5').update(jobUrl).digest('hex'),
+                                url: jobUrl,
+                                title: jobTitle,
+                                lastModified: item.pubDate,
+                                metadata: { isSubJobPage: true, rawTitle: jobTitle },
+                            });
                         }
                     }
                 } catch (e) {
                     console.error(`[RSSConnector] Failed to extract digest sub-links from ${itemUrl}:`, e);
                 }
             } else {
-                discoveredRefs.push({
-                    externalId: item.link || item.guid || crypto.createHash('md5').update(cleanTitle).digest('hex'),
-                    url: itemUrl,
-                    title: cleanTitle,
-                    lastModified: item.pubDate,
-                    metadata: { rawItem: item },
-                });
+                if (!seenUrls.has(itemUrl)) {
+                    seenUrls.add(itemUrl);
+                    discoveredRefs.push({
+                        externalId: item.link || item.guid || crypto.createHash('md5').update(cleanTitle).digest('hex'),
+                        url: itemUrl,
+                        title: cleanTitle,
+                        lastModified: item.pubDate,
+                        metadata: { rawItem: item },
+                    });
+                }
             }
         }
 
@@ -121,8 +130,19 @@ export class RSSConnector implements JobSourceConnector {
                 });
                 if (res.ok) {
                     let html = await res.text();
-                    // Isolate main article/entry content container if available to strip site nav & header/footer
-                    const entryMatch = /<div[^>]*class="[^"]*(?:entry-content|post-content|job-description|job-details)[^"]*"[^>]*>([\s\S]*?)<\/div>/i.exec(html)
+
+                    // EARLY EXIT: Skip jobs marked as expired on the source website itself
+                    if (html.includes('listing-expired') || html.includes('Applications have closed')) {
+                        return {
+                            rawContent: '',
+                            contentType: 'TEXT',
+                            url: ref.url,
+                            checksum: 'EXPIRED_SKIP',
+                        };
+                    }
+
+                    // Isolate main article/entry content container to strip site nav & boilerplate
+                    const entryMatch = /<div[^>]*class="[^"]*(?:single_job_listing|entry-content|post-content|job-description|job-details)[^"]*"[^>]*>([\s\S]*?)<\/div>\s*(?:<\/div>|<div)/i.exec(html)
                                     || /<article[\s\S]*?>([\s\S]*?)<\/article>/i.exec(html);
 
                     if (entryMatch && entryMatch[1]) {
