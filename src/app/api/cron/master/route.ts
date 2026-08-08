@@ -23,7 +23,8 @@ export async function GET(req: Request) {
         'process-delayed-matches',
         'process-automation',
         'queue-retention-reminders',
-        'prune-notifications'
+        'prune-notifications',
+        'process-ingestion'
     ];
 
     const results: any[] = [];

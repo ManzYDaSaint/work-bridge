@@ -5,6 +5,9 @@ import "./workers/crm-worker";
 import "./workers/email-worker";
 import "./workers/buffer-worker";
 import "./workers/opportunity-worker";
+import "./workers/ingestion-crawler-worker";
+import "./workers/ingestion-parser-worker";
+import "./workers/ingestion-publisher-worker";
 
 export async function processQueue() {
     const supabase = getSupabaseAdminClient();
