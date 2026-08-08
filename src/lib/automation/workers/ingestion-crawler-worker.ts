@@ -69,12 +69,13 @@ export const JobIngestionCrawlerWorker = {
 
                     if (!insertError && rawPayload) {
                         newPayloadsCount++;
-                        // Queue parser task
-                        await supabase.from('automation_tasks').insert({
-                            plugin_id: 'job-ingestion-parser',
-                            payload: { rawPayloadId: rawPayload.id, sourceId: source.id },
-                            priority: 'HIGH'
-                        });
+                        // Run parser synchronously for instant results
+                        try {
+                            const { JobIngestionParserWorker } = await import("./ingestion-parser-worker");
+                            await JobIngestionParserWorker.run({ rawPayloadId: rawPayload.id, sourceId: source.id });
+                        } catch (parseErr: any) {
+                            console.error(`[CrawlerWorker] Failed to parse payload ${rawPayload.id}:`, parseErr);
+                        }
                     }
                 }
 
