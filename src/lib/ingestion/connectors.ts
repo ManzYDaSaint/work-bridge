@@ -46,19 +46,12 @@ export class RSSConnector implements JobSourceConnector {
             const cleanTitle = rawTitle.replace(/<[^>]*>/g, '').trim();
             const itemUrl = item.link || source.base_url;
 
-            // Check publication date — skip items published before last_crawl_at or older than 48 hours
+            // Check publication date — skip items older than 7 days (168 hours)
             if (item.pubDate) {
                 const itemDate = new Date(item.pubDate).getTime();
                 if (!isNaN(itemDate)) {
-                    // 1. If source was crawled previously, skip items published before last_crawl_at
-                    if (source.last_crawl_at) {
-                        const lastCrawlTime = new Date(source.last_crawl_at).getTime();
-                        if (itemDate < lastCrawlTime) {
-                            continue;
-                        }
-                    }
-                    // 2. Hard limit: Skip items older than 48 hours
-                    const maxAgeMs = 48 * 60 * 60 * 1000;
+                    // Hard limit: Skip items older than 7 days (168 hours)
+                    const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
                     if (Date.now() - itemDate > maxAgeMs) {
                         continue;
                     }
