@@ -52,7 +52,24 @@ export const JobIngestionParserWorker = {
         let aiModelUsed: string | null = null;
         let aiTokensUsed = 0;
 
-        // 3. Gemini Enrichment (if needed and enabled)
+        // 3. Non-Job Website Info Filter — skip promotional/info/blog pages BEFORE calling Gemini
+        if (overallConfidence < 25) {
+            await supabase
+                .from('ingested_raw_payloads')
+                .update({ processing_status: 'SKIPPED_UNCHANGED', error_message: 'Payload identified as non-vacancy website content' })
+                .eq('id', rawPayload.id);
+
+            await emitSystemEvent({
+                category: 'AUTOMATION',
+                severity: 'INFO',
+                event: 'INGESTION_NON_JOB_SKIPPED',
+                message: `Skipped non-job article/info page "${finalJobFields.title || rawPayload.url}"`,
+                metadata: { rawPayloadId: rawPayload.id, overallConfidence }
+            });
+            return;
+        }
+
+        // 4. Gemini Enrichment (if needed and enabled)
         if (shouldCallGemini(ruleResult)) {
             const missingFields = getFieldsForGemini(ruleResult);
             if (missingFields.length > 0) {
@@ -83,23 +100,6 @@ export const JobIngestionParserWorker = {
                     overallConfidence = Math.max(overallConfidence, enriched.confidence_score || overallConfidence);
                 }
             }
-        }
-
-        // 4. Non-Job Website Info Filter — skip promotional/info pages
-        if (overallConfidence < 25) {
-            await supabase
-                .from('ingested_raw_payloads')
-                .update({ processing_status: 'SKIPPED_UNCHANGED', error_message: 'Payload identified as non-vacancy website content' })
-                .eq('id', rawPayload.id);
-
-            await emitSystemEvent({
-                category: 'AUTOMATION',
-                severity: 'INFO',
-                event: 'INGESTION_NON_JOB_SKIPPED',
-                message: `Skipped non-job article/info page "${finalJobFields.title || rawPayload.url}"`,
-                metadata: { rawPayloadId: rawPayload.id, overallConfidence }
-            });
-            return;
         }
 
         // 5. Deadline check — skip expired jobs

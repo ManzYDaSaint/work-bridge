@@ -280,8 +280,8 @@ GRANT EXECUTE ON FUNCTION increment_source_jobs_ingested TO service_role;
 -- Seed default starter job sources for Malawi
 INSERT INTO public.job_ingestion_sources (name, slug, connector_type, base_url, feed_url, default_location, is_enabled, auto_publish, crawl_frequency_minutes)
 VALUES
-    ('Careers Malawi (RSS)', 'careers-malawi-rss', 'RSS', 'https://careersmw.com', 'https://careersmw.com/feed', 'Malawi', true, false, 360),
-    ('JobSearch MW (RSS)', 'jobsearch-mw-rss', 'RSS', 'https://jobsearchmalawi.com', 'https://jobsearchmalawi.com/feed', 'Malawi', true, false, 360),
+    ('Careers Malawi (RSS)', 'careers-malawi-rss', 'RSS', 'https://careersmw.com', 'https://careersmw.com/feed/?post_type=job_listing', 'Malawi', true, false, 360),
+    ('JobSearch MW (RSS)', 'jobsearch-mw-rss', 'RSS', 'https://jobsearchmalawi.com', 'https://jobsearchmalawi.com/feed/?post_type=job_listing', 'Malawi', true, false, 360),
     ('Online Jobs MW (API)', 'online-jobs-mw-api', 'REST_API', 'https://onlinejobsmalawi.com', 'https://onlinejobsmalawi.com/api/v1/vacancies', 'Malawi', false, false, 720)
 ON CONFLICT (slug) DO NOTHING;
 

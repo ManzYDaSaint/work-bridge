@@ -45,7 +45,11 @@ export class RSSConnector implements JobSourceConnector {
 
         for (const item of items) {
             const rawTitle = item.title || '';
-            const cleanTitle = rawTitle.replace(/<[^>]*>/g, '').trim();
+            // Strip WP RSS boilerplate suffixes like "appeared first on Site Name."
+            const cleanTitle = rawTitle
+                .replace(/<[^>]*>/g, '')
+                .replace(/\s+appeared\s+first\s+on\s+.+?\.?$/i, '')
+                .trim();
             const itemUrl = item.link || source.base_url;
 
             // Check if item title or content looks like a daily digest / list post
@@ -131,8 +135,16 @@ export class RSSConnector implements JobSourceConnector {
                 if (res.ok) {
                     let html = await res.text();
 
-                    // EARLY EXIT: Skip jobs marked as expired on the source website itself
-                    if (html.includes('listing-expired') || html.includes('Applications have closed')) {
+                    // EARLY EXIT: Skip jobs marked as expired on the source website itself.
+                    // Strip <style> blocks first so CSS rules like ".listing-expired { color:red }"
+                    // don't false-positive as expiry signals.
+                    const bodyHtml = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+                    const isExpired =
+                        /class="[^"]*listing-expired[^"]*"/.test(bodyHtml) ||
+                        bodyHtml.includes('Applications have closed') ||
+                        bodyHtml.includes('This listing has expired') ||
+                        bodyHtml.includes('listing has expired');
+                    if (isExpired) {
                         return {
                             rawContent: '',
                             contentType: 'TEXT',
