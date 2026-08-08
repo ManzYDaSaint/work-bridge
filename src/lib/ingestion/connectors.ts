@@ -133,7 +133,7 @@ export class RSSConnector implements JobSourceConnector {
                     }
                 });
                 if (res.ok) {
-                    let html = await res.text();
+                    const html = await res.text();
 
                     // EARLY EXIT: Skip jobs marked as expired on the source website itself.
                     // Strip <style> blocks first so CSS rules like ".listing-expired { color:red }"
@@ -153,22 +153,58 @@ export class RSSConnector implements JobSourceConnector {
                         };
                     }
 
-                    // Isolate main article/entry content container to strip site nav & boilerplate
-                    const entryMatch = /<div[^>]*class="[^"]*(?:single_job_listing|entry-content|post-content|job-description|job-details)[^"]*"[^>]*>([\s\S]*?)<\/div>\s*(?:<\/div>|<div)/i.exec(html)
-                                    || /<article[\s\S]*?>([\s\S]*?)<\/article>/i.exec(html);
+                    // ── STRATEGY 1: JSON-LD JobPosting Schema (Preferred) ──
+                    // WP Job Manager embeds a complete JobPosting schema with title,
+                    // description, deadline, company, location, and employment type.
+                    // This is far more reliable than fragile CSS class parsing.
+                    const jsonLdMatch = /<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?JobPosting[\s\S]*?)<\/script>/i.exec(html);
+                    if (jsonLdMatch) {
+                        try {
+                            const schema = JSON.parse(jsonLdMatch[1]);
+                            const posting = schema['@type'] === 'JobPosting' ? schema : null;
+                            if (posting) {
+                                // Decode HTML entities in the description
+                                const rawDesc = (posting.description || '')
+                                    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"');
+                                // Strip HTML tags to get clean readable text
+                                const cleanDesc = rawDesc.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
-                    if (entryMatch && entryMatch[1]) {
-                        html = entryMatch[1];
+                                const locationStr = posting.jobLocation?.address
+                                    ? (typeof posting.jobLocation.address === 'string'
+                                        ? posting.jobLocation.address
+                                        : posting.jobLocation.address.addressLocality || JSON.stringify(posting.jobLocation.address))
+                                    : '';
+
+                                // Build a structured text payload the extraction engine can parse reliably
+                                const structuredContent = [
+                                    `<h1>${posting.title || ref.title || ''}</h1>`,
+                                    posting.hiringOrganization?.name ? `<p>Organization: ${posting.hiringOrganization.name}</p>` : '',
+                                    locationStr ? `<p>Location: ${locationStr}</p>` : '',
+                                    posting.employmentType ? `<p>Type: ${Array.isArray(posting.employmentType) ? posting.employmentType.join(', ') : posting.employmentType}</p>` : '',
+                                    posting.validThrough ? `<p>Closing Date: ${posting.validThrough}</p>` : '',
+                                    posting.identifier?.value ? `<p>Apply URL: ${posting.identifier.value}</p>` : '',
+                                    `<div class="job-description">${cleanDesc}</div>`,
+                                ].filter(Boolean).join('\n');
+
+                                const checksum = crypto.createHash('sha256').update(structuredContent).digest('hex');
+                                return {
+                                    rawContent: structuredContent,
+                                    contentType: 'HTML',
+                                    url: ref.url,
+                                    checksum,
+                                };
+                            }
+                        } catch (_parseErr) {
+                            console.warn(`[RSSConnector] JSON-LD parse failed for ${ref.url}, falling back to HTML`);
+                        }
                     }
 
-                    // Prepend ref title if present to preserve exact title
-                    if (ref.title) {
-                        html = `<h1>${ref.title}</h1>\n` + html;
-                    }
-
-                    const checksum = crypto.createHash('sha256').update(html).digest('hex');
+                    // ── STRATEGY 2: Full HTML Fallback ──
+                    // Prepend ref title to preserve the exact job title from RSS feed
+                    const fullContent = ref.title ? `<h1>${ref.title}</h1>\n${html}` : html;
+                    const checksum = crypto.createHash('sha256').update(fullContent).digest('hex');
                     return {
-                        rawContent: html,
+                        rawContent: fullContent,
                         contentType: 'HTML',
                         url: ref.url,
                         checksum,
