@@ -39,22 +39,122 @@ export class RSSConnector implements JobSourceConnector {
 
         const xmlText = await res.text();
         const items = extractRssItems(xmlText);
+        const discoveredRefs: DiscoveredJobRef[] = [];
 
-        return items.map(item => {
+        for (const item of items) {
             const rawTitle = item.title || '';
             const cleanTitle = rawTitle.replace(/<[^>]*>/g, '').trim();
-            return {
-                externalId: item.link || item.guid || crypto.createHash('md5').update(cleanTitle).digest('hex'),
-                url: item.link || source.base_url,
-                title: cleanTitle,
-                lastModified: item.pubDate,
-                metadata: { rawItem: item },
-            };
-        });
+            const itemUrl = item.link || source.base_url;
+
+            // Check publication date — skip items published before last_crawl_at or older than 48 hours
+            if (item.pubDate) {
+                const itemDate = new Date(item.pubDate).getTime();
+                if (!isNaN(itemDate)) {
+                    // 1. If source was crawled previously, skip items published before last_crawl_at
+                    if (source.last_crawl_at) {
+                        const lastCrawlTime = new Date(source.last_crawl_at).getTime();
+                        if (itemDate < lastCrawlTime) {
+                            continue;
+                        }
+                    }
+                    // 2. Hard limit: Skip items older than 48 hours
+                    const maxAgeMs = 48 * 60 * 60 * 1000;
+                    if (Date.now() - itemDate > maxAgeMs) {
+                        continue;
+                    }
+                }
+            }
+
+            // Check if item title or content looks like a daily digest / list post
+            const isDigestPost = /posts\s+for\s+\d+/i.test(cleanTitle) 
+                || /job\s+vacancies\s+for/i.test(cleanTitle)
+                || /vacancies\s+for/i.test(cleanTitle)
+                || /latest\s+jobs/i.test(cleanTitle)
+                || (item.description && (item.description.includes('/job/') || item.description.includes('/vacancy/')));
+
+            if (isDigestPost && itemUrl) {
+                // Fetch digest page HTML and extract child job links dynamically
+                try {
+                    const pageRes = await fetch(itemUrl, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        }
+                    });
+                    if (pageRes.ok) {
+                        const html = await pageRes.text();
+                        // Extract job links matching standard vacancy path patterns (/job/, /vacancy/, /positions/, /careers/)
+                        const jobLinkRegex = /<a[^>]+href=["']([^"']*\/(?:job|vacancy|position|career|post)\/[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+                        let match;
+                        while ((match = jobLinkRegex.exec(html)) !== null) {
+                            const jobUrl = match[1];
+                            const jobTitle = match[2].replace(/<[^>]*>/g, '').trim();
+                            if (jobTitle && jobUrl && jobTitle.length > 2 && !jobTitle.toLowerCase().includes('rss')) {
+                                discoveredRefs.push({
+                                    externalId: crypto.createHash('md5').update(jobUrl).digest('hex'),
+                                    url: jobUrl,
+                                    title: jobTitle,
+                                    lastModified: item.pubDate,
+                                    metadata: { isSubJobPage: true, rawTitle: jobTitle },
+                                });
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error(`[RSSConnector] Failed to extract digest sub-links from ${itemUrl}:`, e);
+                }
+            } else {
+                discoveredRefs.push({
+                    externalId: item.link || item.guid || crypto.createHash('md5').update(cleanTitle).digest('hex'),
+                    url: itemUrl,
+                    title: cleanTitle,
+                    lastModified: item.pubDate,
+                    metadata: { rawItem: item },
+                });
+            }
+        }
+
+        return discoveredRefs;
     }
 
-    async fetchJob(ref: DiscoveredJobRef, _source: IngestionSource): Promise<FetchedPayload> {
-        // If content encoded in RSS metadata, use it directly
+    async fetchJob(ref: DiscoveredJobRef, source: IngestionSource): Promise<FetchedPayload> {
+        // If it's a direct sub-job page URL or target HTML link, fetch the full HTML
+        if (ref.metadata?.isSubJobPage || ref.url.includes('/job/')) {
+            try {
+                const res = await fetch(ref.url, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        ...source.custom_headers,
+                    }
+                });
+                if (res.ok) {
+                    let html = await res.text();
+                    // Isolate main article/entry content container if available to strip site nav & header/footer
+                    const entryMatch = /<div[^>]*class="[^"]*(?:entry-content|post-content|job-description|job-details)[^"]*"[^>]*>([\s\S]*?)<\/div>/i.exec(html)
+                                    || /<article[\s\S]*?>([\s\S]*?)<\/article>/i.exec(html);
+
+                    if (entryMatch && entryMatch[1]) {
+                        html = entryMatch[1];
+                    }
+
+                    // Prepend ref title if present to preserve exact title
+                    if (ref.title) {
+                        html = `<h1>${ref.title}</h1>\n` + html;
+                    }
+
+                    const checksum = crypto.createHash('sha256').update(html).digest('hex');
+                    return {
+                        rawContent: html,
+                        contentType: 'HTML',
+                        url: ref.url,
+                        checksum,
+                    };
+                }
+            } catch (err) {
+                console.error(`[RSSConnector] Failed to fetch sub-page ${ref.url}:`, err);
+            }
+        }
+
+        // Fallback to RSS item metadata content
         const rawContent = ref.metadata?.rawItem?.description || ref.metadata?.rawItem?.content || ref.title || "";
         const checksum = crypto.createHash('sha256').update(rawContent).digest('hex');
 

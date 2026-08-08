@@ -121,11 +121,23 @@ export function extractJobFields(
     }
 
     // ── Title ──────────────────────────────────────────────────
-    const titleMatch = matchLabelPattern(text, TITLE_LABEL_PATTERNS);
-    if (titleMatch) {
-        data.title = cleanText(titleMatch);
-        confidence.title = 90;
+    const h1Match = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(text);
+    if (h1Match && h1Match[1]) {
+        const cleanH1 = h1Match[1].replace(/<[^>]*>/g, '').trim();
+        if (cleanH1.length > 2 && cleanH1.length < 120 && !cleanH1.includes('{') && !cleanH1.includes('width:')) {
+            data.title = cleanText(cleanH1);
+            confidence.title = 95;
+        }
     }
+
+    if (!data.title) {
+        const titleMatch = matchLabelPattern(text, TITLE_LABEL_PATTERNS);
+        if (titleMatch && !titleMatch.includes('{') && !titleMatch.includes('width:')) {
+            data.title = cleanText(titleMatch);
+            confidence.title = 90;
+        }
+    }
+
     if (!data.title) {
         confidence.title = 0;
     }
