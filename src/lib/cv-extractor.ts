@@ -3,7 +3,7 @@
  * Safely handles text formats and fallbacks for PDF/DOCX file attachments.
  */
 
-export function extractCVContentSnippet(resumeUrl?: string, bio?: string): string {
+export function extractCVContentSnippet(resumeUrl?: string): string {
   if (!resumeUrl) return "";
 
   // Extract clean filename / title context if resume URL is available

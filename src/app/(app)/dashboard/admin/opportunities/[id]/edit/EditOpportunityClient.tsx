@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { PageHeader } from "@/components/dashboard/ui";
-import { ArrowLeft, Sparkles, Info, Send, Star, Archive } from "lucide-react";
+import { ArrowLeft, Sparkles, Info, Send, Star } from "lucide-react";
 import Link from "next/link";
 
 const CATEGORIES = [
@@ -87,7 +87,7 @@ function WeightSlider({ label, name, value, onChange }: { label: string; name: s
     );
 }
 
-export default function EditOpportunityClient({ opportunity, adminId }: { opportunity: any; adminId: string }) {
+export default function EditOpportunityClient({ opportunity }: { opportunity: any }) {
     const router = useRouter();
     const [saving, setSaving] = useState(false);
 

@@ -4,7 +4,7 @@ import { recordOpportunityView } from "@/services/opportunityService";
 
 // ── POST /api/opportunities/[slug]/view ──────────────────────────────────────
 // Tracks a page view or apply-click. Safe for anonymous users.
-export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
+export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const { opportunityId, applyClicked } = body;

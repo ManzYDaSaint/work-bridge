@@ -338,7 +338,7 @@ export function extractJobFields(
     // ── Overall Confidence ────────────────────────────────────
     const overallConfidence = calculateOverallConfidence(confidence);
     const missingFields = Object.entries(confidence)
-        .filter(([_, conf]) => (conf as number) < 70)
+        .filter(([, conf]) => (conf as number) < 70)
         .map(([field]) => field);
 
     return {

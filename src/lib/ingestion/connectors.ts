@@ -194,7 +194,7 @@ export class RSSConnector implements JobSourceConnector {
                                     checksum,
                                 };
                             }
-                        } catch (_parseErr) {
+                        } catch {
                             console.warn(`[RSSConnector] JSON-LD parse failed for ${ref.url}, falling back to HTML`);
                         }
                     }
@@ -267,6 +267,7 @@ export class RestApiConnector implements JobSourceConnector {
         });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async fetchJob(ref: DiscoveredJobRef, _source: IngestionSource): Promise<FetchedPayload> {
         const rawContent = JSON.stringify(ref.metadata?.rawJson || {});
         const checksum = crypto.createHash('sha256').update(rawContent).digest('hex');

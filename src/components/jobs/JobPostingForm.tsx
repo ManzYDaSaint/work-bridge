@@ -6,7 +6,7 @@ import {
     jobQuickFormSchema,
     JobQuickFormValues,
 } from "@/lib/validations/job";
-import { ChevronDown, ChevronUp, DollarSign, Globe2, Link2, Mail, MapPin, MessageCircle, Calendar } from "lucide-react";
+import { ChevronDown, ChevronUp, Globe2, MapPin, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 

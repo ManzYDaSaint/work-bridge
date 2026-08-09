@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
     Activity, CheckCircle2, Clock, Database, RefreshCw,
-    XCircle, Zap, Building2, MapPin, Power, ShieldCheck, ShieldAlert
+    Zap, Building2, MapPin, Power, ShieldCheck, ShieldAlert
 } from "lucide-react";
 import { JobPostingForm } from "@/components/jobs/JobPostingForm";
 
@@ -30,10 +30,6 @@ export default function IngestionAdminClient() {
     const selectItem = (item: any) => {
         setSelectedItem(item);
         setEditedItem({ ...item });
-    };
-
-    const updateField = (field: string, value: any) => {
-        setEditedItem((prev: any) => ({ ...prev, [field]: value }));
     };
 
     const fetchData = async () => {

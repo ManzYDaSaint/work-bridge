@@ -21,7 +21,6 @@ import {
     HelpCircle,
     Clock,
     UserCheck,
-    Send,
     Check,
 } from "lucide-react";
 

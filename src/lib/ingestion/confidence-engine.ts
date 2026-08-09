@@ -51,6 +51,6 @@ export function shouldCallGemini(result: RuleExtractionResult): boolean {
  */
 export function getFieldsForGemini(result: RuleExtractionResult): string[] {
     return Object.entries(result.confidence)
-        .filter(([_, conf]) => (conf as number) < CRITICAL_FIELD_THRESHOLD)
+        .filter(([, conf]) => (conf as number) < CRITICAL_FIELD_THRESHOLD)
         .map(([field]) => field);
 }

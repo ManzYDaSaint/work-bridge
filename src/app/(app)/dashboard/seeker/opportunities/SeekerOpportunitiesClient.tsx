@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { PageHeader, Badge, EmptyState } from "@/components/dashboard/ui";
-import { Sparkles, ExternalLink, Calendar, MapPin, DollarSign, GraduationCap, Building2 } from "lucide-react";
+import { Sparkles, ExternalLink, Calendar, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 
