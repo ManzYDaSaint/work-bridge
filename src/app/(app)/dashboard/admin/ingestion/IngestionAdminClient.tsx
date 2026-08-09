@@ -24,6 +24,16 @@ export default function IngestionAdminClient() {
     });
     const [selectedTab, setSelectedTab] = useState<"queue" | "sources">("queue");
     const [selectedItem, setSelectedItem] = useState<any | null>(null);
+    const [editedItem, setEditedItem] = useState<any | null>(null);
+
+    const selectItem = (item: any) => {
+        setSelectedItem(item);
+        setEditedItem({ ...item });
+    };
+
+    const updateField = (field: string, value: any) => {
+        setEditedItem((prev: any) => ({ ...prev, [field]: value }));
+    };
 
     const fetchData = async () => {
         setLoading(true);
@@ -49,7 +59,7 @@ export default function IngestionAdminClient() {
                 body: JSON.stringify({ action, queueItemId, ...extraData }),
             });
             if (res.ok) {
-                if (selectedItem?.id === queueItemId) setSelectedItem(null);
+                if (selectedItem?.id === queueItemId) { setSelectedItem(null); setEditedItem(null); }
                 await fetchData();
             }
         } catch (err) {
@@ -244,7 +254,7 @@ export default function IngestionAdminClient() {
                             data.queueItems.map((item) => (
                                 <div
                                     key={item.id}
-                                    onClick={() => setSelectedItem(item)}
+                                    onClick={() => selectItem(item)}
                                     className={`p-4 bg-white dark:bg-gray-900 border rounded-xl cursor-pointer transition shadow-sm hover:border-emerald-500 ${
                                         selectedItem?.id === item.id
                                             ? "border-emerald-500 ring-2 ring-emerald-500/20"
@@ -270,54 +280,158 @@ export default function IngestionAdminClient() {
                         )}
                     </div>
 
-                    {selectedItem && (
-                        <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-5">
-                            <div className="flex justify-between items-start border-b border-gray-200 dark:border-gray-800 pb-4">
+                    {selectedItem && editedItem && (
+                        <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+                            {/* Panel header */}
+                            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                                 <div>
-                                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Inspect Scraped Listing</span>
-                                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-1">{selectedItem.title}</h2>
-                                    <p className="text-sm text-gray-500 mt-1">{selectedItem.display_company_name} • {selectedItem.location}</p>
+                                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Review &amp; Edit Before Publishing</span>
+                                    <p className="text-xs text-gray-500 mt-0.5">All fields are editable. Correct any errors then Approve &amp; Publish.</p>
                                 </div>
-                                <button onClick={() => setSelectedItem(null)} className="text-gray-400 hover:text-gray-600 text-sm">Close</button>
+                                <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition">✕ Close</button>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                {[
-                                    { label: "Employment Type", val: selectedItem.type },
-                                    { label: "Work Mode", val: selectedItem.work_mode },
-                                    { label: "Min. Experience", val: `${selectedItem.minimum_years_experience} yrs` },
-                                    { label: "Deadline", val: selectedItem.deadline || "Not specified" },
-                                    { label: "Qualification", val: selectedItem.qualification || "Not specified" },
-                                    { label: "Apply Email", val: selectedItem.apply_email || "—" },
-                                ].map(({ label, val }) => (
-                                    <div key={label}>
-                                        <p className="text-xs text-gray-500">{label}</p>
-                                        <p className="font-medium text-gray-900 dark:text-white">{val}</p>
+                            <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+                                {/* Row 1 – Title */}
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Job Title *</label>
+                                    <input
+                                        value={editedItem.title || ""}
+                                        onChange={(e) => updateField("title", e.target.value)}
+                                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                        placeholder="e.g. Finance Officer"
+                                    />
+                                </div>
+
+                                {/* Row 2 – Company + Location */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Company / Organisation *</label>
+                                        <input
+                                            value={editedItem.display_company_name || ""}
+                                            onChange={(e) => updateField("display_company_name", e.target.value)}
+                                            className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                            placeholder="Company name"
+                                        />
                                     </div>
-                                ))}
-                            </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Location *</label>
+                                        <input
+                                            value={editedItem.location || ""}
+                                            onChange={(e) => updateField("location", e.target.value)}
+                                            className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                            placeholder="e.g. Lilongwe"
+                                        />
+                                    </div>
+                                </div>
 
-                            <div>
-                                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Description</p>
-                                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-xs text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto font-mono">
-                                    {selectedItem.description}
+                                {/* Row 3 – Type + Work Mode + Deadline */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Job Type</label>
+                                        <select
+                                            value={editedItem.type || "Full-time"}
+                                            onChange={(e) => updateField("type", e.target.value)}
+                                            className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                        >
+                                            {["Full-time","Part-time","Contract","Internship","Volunteer","Temporary"].map(t => <option key={t}>{t}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Work Mode</label>
+                                        <select
+                                            value={editedItem.work_mode || "ON_SITE"}
+                                            onChange={(e) => updateField("work_mode", e.target.value)}
+                                            className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                        >
+                                            <option value="ON_SITE">On-site</option>
+                                            <option value="REMOTE">Remote</option>
+                                            <option value="HYBRID">Hybrid</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Deadline</label>
+                                        <input
+                                            type="date"
+                                            value={editedItem.deadline || ""}
+                                            onChange={(e) => updateField("deadline", e.target.value)}
+                                            className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Row 4 – Apply Email + Apply URL */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Apply Email</label>
+                                        <input
+                                            type="email"
+                                            value={editedItem.apply_email || ""}
+                                            onChange={(e) => updateField("apply_email", e.target.value)}
+                                            className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                            placeholder="jobs@company.com"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">External Apply URL</label>
+                                        <input
+                                            type="url"
+                                            value={editedItem.external_apply_url || ""}
+                                            onChange={(e) => updateField("external_apply_url", e.target.value)}
+                                            className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                            placeholder="https://"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Row 5 – Qualification */}
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Qualification</label>
+                                    <input
+                                        value={editedItem.qualification || ""}
+                                        onChange={(e) => updateField("qualification", e.target.value)}
+                                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                        placeholder="e.g. Bachelor's Degree in Accounting"
+                                    />
+                                </div>
+
+                                {/* Row 6 – Description */}
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Job Description *</label>
+                                    <textarea
+                                        value={editedItem.description || ""}
+                                        onChange={(e) => updateField("description", e.target.value)}
+                                        rows={10}
+                                        className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-y leading-relaxed"
+                                        placeholder="Full job description..."
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-1">Tip: Add blank lines between paragraphs for clean formatting on the live listing.</p>
+                                </div>
+
+                                {/* AI Confidence badge */}
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <span className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-bold">{selectedItem.overall_confidence}% Confidence</span>
+                                    <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">{selectedItem.extraction_method}</span>
+                                    <span className="text-gray-400">Source: {selectedItem.source?.name || "Scraper"}</span>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
+                            {/* Action bar */}
+                            <div className="flex items-center gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                                 <button
                                     id={`approve-job-${selectedItem.id}`}
-                                    onClick={() => handleAction("APPROVE", selectedItem.id)}
+                                    onClick={() => handleAction("UPDATE_AND_APPROVE", selectedItem.id, { updatedFields: editedItem })}
                                     disabled={!!actionLoading}
-                                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-sm transition flex items-center justify-center gap-2 disabled:opacity-60"
+                                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-sm transition flex items-center justify-center gap-2 disabled:opacity-60"
                                 >
-                                    <CheckCircle2 className="w-4 h-4" /> Approve &amp; Publish
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    {actionLoading === selectedItem.id ? "Publishing..." : "Save &amp; Publish"}
                                 </button>
                                 <button
                                     id={`reject-job-${selectedItem.id}`}
                                     onClick={() => handleAction("REJECT", selectedItem.id)}
                                     disabled={!!actionLoading}
-                                    className="py-2.5 px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 font-medium rounded-lg text-sm transition flex items-center gap-1.5 disabled:opacity-60"
+                                    className="py-2.5 px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 font-semibold rounded-lg text-sm transition flex items-center gap-1.5 disabled:opacity-60"
                                 >
                                     <XCircle className="w-4 h-4" /> Reject
                                 </button>

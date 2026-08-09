@@ -17,7 +17,7 @@
     "@napi-rs/canvas": "^0.1.97",
     "@react-email/components": "^1.0.12",
     "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.97.0",
+    "@supabase/supabase-js": "^2.112.2",
     "braces": "^3.0.3",
     "clsx": "^2.1.1",
     "framer-motion": "^12.34.3",

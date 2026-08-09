@@ -11,9 +11,9 @@ const adminNavGroups: NavGroup[] = [
         title: "Command Center",
         items: [
             { label: "Metrics Overview", href: "/dashboard/admin", icon: LayoutDashboard },
-            { label: "User Management", href: "/dashboard/admin/users", icon: Users },
-            { label: "Market Moderation", href: "/dashboard/admin/jobs", icon: Briefcase },
             { label: "Job Ingestion", href: "/dashboard/admin/ingestion", icon: Zap },
+            { label: "Market Moderation", href: "/dashboard/admin/jobs", icon: Briefcase },
+            { label: "User Management", href: "/dashboard/admin/users", icon: Users },
             { label: "Employer Verification", href: "/dashboard/admin/employers", icon: ShieldCheck },
             { label: "Employer CRM", href: "/dashboard/admin/crm", icon: ClipboardList },
             { label: "Opportunities", href: "/dashboard/admin/opportunities", icon: Sparkles },

@@ -43,7 +43,7 @@ function buildPrompt(
     missingFields: string[]
 ): string {
     const existingStr = Object.entries(existingFields)
-        .filter(([_, v]) => v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0))
+        .filter(([, v]) => v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0))
         .map(([k, v]) => `  ${k}: ${JSON.stringify(v)}`)
         .join('\n');
 
@@ -213,8 +213,11 @@ export async function enrichWithGemini(
 
             if (!response.ok) {
                 if (response.status === 429) {
-                    usageState.circuitOpen = true;
-                    throw new Error('RATE_LIMITED');
+                    // Exponential backoff
+                    const delay = Math.pow(2, attempt + 1) * 1000;
+                    console.warn(`[GeminiService] Rate limited, retrying in ${delay}ms...`);
+                    await new Promise(res => setTimeout(res, delay));
+                    continue; 
                 }
                 throw new Error(`Gemini API error: ${response.status}`);
             }

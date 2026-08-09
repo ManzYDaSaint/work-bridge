@@ -5,6 +5,7 @@
  * -> duplicate detection -> inserts into ingested_jobs_queue -> triggers publisher if auto_publish.
  */
 
+import { formatDescription } from "@/lib/ingestion/utils/formatDescription";
 import { registerPlugin } from "../registry";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { extractJobFields } from "@/lib/ingestion/rule-extraction";
@@ -20,30 +21,42 @@ export const JobIngestionParserWorker = {
     run: async (payload: { rawPayloadId: string; sourceId: string; taskId?: string }): Promise<void> => {
         const supabase = getSupabaseAdminClient();
         if (!supabase) throw new Error("[ParserWorker] Supabase admin client unavailable.");
+        let ruleResult;
 
-        // 1. Fetch raw payload and source
-        const { data: rawPayload, error: payloadErr } = await supabase
-            .from('ingested_raw_payloads')
-            .select('*')
-            .eq('id', payload.rawPayloadId)
-            .single();
+        try {
+            // 1. Fetch raw payload and source
+            const { data: rawPayload, error: payloadErr } = await supabase
+                .from('ingested_raw_payloads')
+                .select('*')
+                .eq('id', payload.rawPayloadId)
+                .single();
 
-        if (payloadErr || !rawPayload) {
-            throw new Error(`[ParserWorker] Raw payload not found: ${payload.rawPayloadId}`);
+            if (payloadErr || !rawPayload) {
+                throw new Error(`[ParserWorker] Raw payload not found: ${payload.rawPayloadId}`);
+            }
+
+            const { data: source } = await supabase
+                .from('job_ingestion_sources')
+                .select('*')
+                .eq('id', payload.sourceId)
+                .single();
+
+            ruleResult = await extractJobFields(
+                rawPayload.payload,
+                rawPayload.content_type,
+                { defaultLocation: source?.default_location }
+            );
+        } catch (err: any) {
+            console.error(`[ParserWorker] Failed parsing payload ${payload.rawPayloadId}:`, err.message);
+            // Log to DLQ
+            await supabase.from('ingested_dead_letter_queue').insert({
+                source_id: payload.sourceId,
+                payload: { rawPayloadId: payload.rawPayloadId },
+                error_message: err.message,
+                type: 'PARSER_ERROR'
+            });
+            throw err;
         }
-
-        const { data: source } = await supabase
-            .from('job_ingestion_sources')
-            .select('*')
-            .eq('id', payload.sourceId)
-            .single();
-
-        // 2. Rule Extraction
-        const ruleResult = extractJobFields(
-            rawPayload.payload,
-            rawPayload.content_type,
-            { defaultLocation: source?.default_location }
-        );
 
         let finalJobFields = { ...ruleResult.data };
         let finalConfidence = { ...ruleResult.confidence };
@@ -70,34 +83,52 @@ export const JobIngestionParserWorker = {
         }
 
         // 4. Gemini Enrichment (if needed and enabled)
+        // 5. Job Intelligence (Analyze early to use for prioritization)
+        const intel = analyzeJobIntelligence(finalJobFields);
+
         if (shouldCallGemini(ruleResult)) {
             const missingFields = getFieldsForGemini(ruleResult);
             if (missingFields.length > 0) {
-                const aiResult = await enrichWithGemini(
-                    rawPayload.payload,
-                    finalJobFields,
-                    missingFields,
-                    rawPayload.checksum
-                );
+                // Priority Check: Only enrich high-quality jobs, or sample low-quality ones
+                const isHighQuality = intel.quality_score >= 60;
+                const isSampled = Math.random() < 0.2; // Sample 20% of low-quality jobs
 
-                if (aiResult.result) {
-                    extractionMethod = 'RULE_PLUS_AI';
-                    aiModelUsed = 'gemini-2.0-flash';
-                    aiTokensUsed = aiResult.tokensUsed;
+                if (isHighQuality || isSampled) {
+                    // Normalize content for better cache hits
+                    const normalizedContent = rawPayload.payload
+                        .replace(/\s+/g, ' ')
+                        .replace(/<[^>]+>/g, '')
+                        .trim();
+                    
+                    const crypto = await import('crypto');
+                    const normalizedHash = crypto.createHash('sha256').update(normalizedContent).digest('hex');
 
-                    // Merge Gemini fields (prefer existing rule fields if set)
-                    const enriched = aiResult.result;
-                    for (const key of missingFields) {
-                        const val = (enriched as any)[key];
-                        if (val !== undefined && val !== null) {
-                            (finalJobFields as any)[key] = val;
-                            (finalConfidence as any)[key] = Math.max(
-                                (finalConfidence as any)[key] || 0,
-                                enriched.confidence_score || 80
-                            );
+                    const aiResult = await enrichWithGemini(
+                        rawPayload.payload,
+                        finalJobFields,
+                        missingFields,
+                        normalizedHash
+                    );
+
+                    if (aiResult.result) {
+                        extractionMethod = 'RULE_PLUS_AI';
+                        aiModelUsed = 'gemini-2.0-flash';
+                        aiTokensUsed = aiResult.tokensUsed;
+
+                        // Merge Gemini fields (prefer existing rule fields if set)
+                        const enriched = aiResult.result;
+                        for (const key of missingFields) {
+                            const val = (enriched as any)[key];
+                            if (val !== undefined && val !== null) {
+                                (finalJobFields as any)[key] = val;
+                                (finalConfidence as any)[key] = Math.max(
+                                    (finalConfidence as any)[key] || 0,
+                                    enriched.confidence_score || 80
+                                );
+                            }
                         }
+                        overallConfidence = Math.max(overallConfidence, enriched.confidence_score || overallConfidence);
                     }
-                    overallConfidence = Math.max(overallConfidence, enriched.confidence_score || overallConfidence);
                 }
             }
         }
@@ -124,9 +155,6 @@ export const JobIngestionParserWorker = {
                 return;
             }
         }
-
-        // 5. Job Intelligence
-        const intel = analyzeJobIntelligence(finalJobFields);
 
         // 6. Duplicate Detection
         const dupCheck = await checkForDuplicates(finalJobFields, rawPayload.url);
@@ -159,7 +187,7 @@ export const JobIngestionParserWorker = {
                 source_id: payload.sourceId,
                 title: finalJobFields.title || 'Untitled Vacancy',
                 display_company_name: finalJobFields.display_company_name || source?.name || 'Unknown Company',
-                description: finalJobFields.description || '',
+                description: formatDescription(finalJobFields.description || ''),
                 location: finalJobFields.location || source?.default_location || 'Malawi',
                 type: finalJobFields.type || 'Full-time',
                 work_mode: finalJobFields.work_mode || 'ON_SITE',

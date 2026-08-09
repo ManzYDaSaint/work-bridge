@@ -55,20 +55,34 @@ export const JobIngestionCrawlerWorker = {
                     const chunk = discovered.slice(i, i + chunkSize);
 
                     await Promise.allSettled(chunk.map(async (ref) => {
-                        // OPTIMIZATION: Check if we already have this URL in raw_payloads (avoid re-fetching)
-                        const { data: existing } = await supabase
-                            .from('ingested_raw_payloads')
-                            .select('id')
-                            .eq('external_id', ref.externalId)
-                            .maybeSingle();
-
-                        if (existing) return;
-
-                        // Smart Retry / Rate Limit Avoidance
-                        await new Promise(res => setTimeout(res, Math.random() * 500)); 
-
                         try {
-                            const fetched = await connector.fetchJob(ref, source);
+                            // OPTIMIZATION: Check if we already have this URL in raw_payloads (avoid re-fetching)
+                            const { data: existing } = await supabase
+                                .from('ingested_raw_payloads')
+                                .select('id')
+                                .eq('external_id', ref.externalId)
+                                .maybeSingle();
+
+                            if (existing) return;
+
+                            // Smart Retry / Rate Limit Avoidance
+                            await new Promise(res => setTimeout(res, Math.random() * 500)); 
+
+                            // Retry logic for fetching
+                            let fetched: any;
+                            let retries = 0;
+                            const maxRetries = 2;
+                            
+                            while (retries <= maxRetries) {
+                                try {
+                                    fetched = await connector.fetchJob(ref, source);
+                                    break;
+                                } catch (err: any) {
+                                    retries++;
+                                    if (retries > maxRetries) throw err;
+                                    await new Promise(res => setTimeout(res, 1000 * retries)); // Exponential backoff
+                                }
+                            }
 
                             // OPTIMIZATION: Skip expired jobs — don't store them at all
                             if (fetched.checksum === 'EXPIRED_SKIP' || !fetched.rawContent) {
@@ -99,15 +113,24 @@ export const JobIngestionCrawlerWorker = {
                             }
                         } catch (err: any) {
                             console.error(`[CrawlerWorker] Failed processing ${ref.url}:`, err.message);
+                            // Log to DLQ
+                            await supabase.from('ingested_dead_letter_queue').insert({
+                                source_id: source.id,
+                                payload: { url: ref.url, error: err.message },
+                                error_message: err.message,
+                                type: 'CRAWLER_FETCH_ERROR'
+                            });
                         }
                     }));
                 }
 
                 // Update source crawl metrics
+                const newConsecutiveErrors = 0;
+                
                 await supabase.from('job_ingestion_sources').update({
                     last_crawl_at: new Date().toISOString(),
                     last_success_at: new Date().toISOString(),
-                    consecutive_errors: 0,
+                    consecutive_errors: newConsecutiveErrors,
                     health_status: 'HEALTHY'
                 }).eq('id', source.id);
 
@@ -121,12 +144,16 @@ export const JobIngestionCrawlerWorker = {
 
             } catch (err: any) {
                 console.error(`[CrawlerWorker] Source ${source.name} crawl failed:`, err.message);
-                if (source.consecutive_errors >= 2) { // will become 3 after this update
+                
+                const newErrorCount = source.consecutive_errors + 1;
+                const shouldDisable = newErrorCount >= 5;
+
+                if (shouldDisable || newErrorCount === 3) { // Alert at 3, disable at 5
                     try {
                         const { sendAdminSecurityAlert } = await import("@/lib/resend");
                         await sendAdminSecurityAlert({
-                            event: `Job Ingestion Source Failing: ${source.name}`,
-                            details: `The crawler has failed 3 consecutive times for ${source.name}.\n\nLast Error: ${err.message}\n\nPlease check the source website to see if their layout or RSS feed has changed.`
+                            event: `Job Ingestion Source ${shouldDisable ? 'DISABLED' : 'Failing'}: ${source.name}`,
+                            details: `The crawler has failed ${newErrorCount} times for ${source.name}.\n\nLast Error: ${err.message}\n\n${shouldDisable ? 'The source has been automatically DISABLED.' : 'Please check the source website.'}`
                         });
                     } catch (emailErr) {
                         console.error("[CrawlerWorker] Failed to send alert email:", emailErr);
@@ -135,17 +162,18 @@ export const JobIngestionCrawlerWorker = {
 
                 await supabase.from('job_ingestion_sources').update({
                     last_crawl_at: new Date().toISOString(),
-                    consecutive_errors: source.consecutive_errors + 1,
+                    consecutive_errors: newErrorCount,
                     last_error_message: err.message,
-                    health_status: source.consecutive_errors >= 2 ? 'DEGRADED' : 'HEALTHY'
+                    health_status: shouldDisable ? 'DISABLED' : 'DEGRADED',
+                    is_enabled: !shouldDisable
                 }).eq('id', source.id);
 
                 await emitSystemEvent({
                     category: 'AUTOMATION',
-                    severity: 'WARNING',
+                    severity: shouldDisable ? 'CRITICAL' : 'WARNING',
                     event: 'INGESTION_CRAWL_FAILED',
-                    message: `Crawl failed for source ${source.name}: ${err.message}`,
-                    metadata: { sourceId: source.id, error: err.message }
+                    message: `Crawl ${shouldDisable ? 'disabled' : 'failed'} for source ${source.name}: ${err.message}`,
+                    metadata: { sourceId: source.id, error: err.message, consecutiveErrors: newErrorCount }
                 });
             }
         }

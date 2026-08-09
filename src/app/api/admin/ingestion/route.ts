@@ -177,11 +177,14 @@ export async function POST(req: Request) {
         }
 
         if (action === "FORCE_CRAWL") {
-            // Run crawler synchronously for instant admin feedback
-            const { JobIngestionCrawlerWorker } = await import("@/lib/automation/workers/ingestion-crawler-worker");
-            await JobIngestionCrawlerWorker.run({ sourceId });
+            // Queue crawler task for background execution
+            await supabase.from("automation_tasks").insert({
+                plugin_id: "job-ingestion-crawler",
+                payload: { sourceId },
+                priority: "HIGH"
+            });
 
-            return NextResponse.json({ success: true, message: "Force crawl completed." });
+            return NextResponse.json({ success: true, message: "Force crawl task queued." });
         }
 
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });
