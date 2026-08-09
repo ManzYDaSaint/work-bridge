@@ -119,11 +119,10 @@ export default function IngestionAdminClient() {
             {/* ── Master Control Banner ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Ingestion Engine Kill Switch */}
-                <div className={`rounded-xl border p-5 flex items-center justify-between gap-4 transition-all ${
-                    engineOn
+                <div className={`rounded-xl border p-5 flex items-center justify-between gap-4 transition-all ${engineOn
                         ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800"
                         : "bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800"
-                }`}>
+                    }`}>
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${engineOn ? "bg-emerald-100 dark:bg-emerald-900/40" : "bg-rose-100 dark:bg-rose-900/40"}`}>
                             <Power className={`w-5 h-5 ${engineOn ? "text-emerald-600" : "text-rose-500"}`} />
@@ -139,9 +138,8 @@ export default function IngestionAdminClient() {
                         id="toggle-scraping-engine"
                         onClick={() => toggleSetting("ingestion_service_enabled", engineOn)}
                         disabled={actionLoading === "ingestion_service_enabled"}
-                        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                            engineOn ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"
-                        } disabled:opacity-60`}
+                        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${engineOn ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"
+                            } disabled:opacity-60`}
                         role="switch"
                         aria-checked={engineOn}
                         title={engineOn ? "Disable Scraping Engine" : "Enable Scraping Engine"}
@@ -151,11 +149,10 @@ export default function IngestionAdminClient() {
                 </div>
 
                 {/* Admin Approval Gate */}
-                <div className={`rounded-xl border p-5 flex items-center justify-between gap-4 transition-all ${
-                    approvalOn
+                <div className={`rounded-xl border p-5 flex items-center justify-between gap-4 transition-all ${approvalOn
                         ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
                         : "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
-                }`}>
+                    }`}>
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${approvalOn ? "bg-amber-100 dark:bg-amber-900/40" : "bg-blue-100 dark:bg-blue-900/40"}`}>
                             {approvalOn
@@ -176,9 +173,8 @@ export default function IngestionAdminClient() {
                         id="toggle-admin-approval"
                         onClick={() => toggleSetting("ingestion_require_admin_approval", approvalOn)}
                         disabled={actionLoading === "ingestion_require_admin_approval"}
-                        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                            approvalOn ? "bg-amber-500" : "bg-gray-300 dark:bg-gray-600"
-                        } disabled:opacity-60`}
+                        className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${approvalOn ? "bg-amber-500" : "bg-gray-300 dark:bg-gray-600"
+                            } disabled:opacity-60`}
                         role="switch"
                         aria-checked={approvalOn}
                         title={approvalOn ? "Disable Admin Approval Requirement" : "Enable Admin Approval Requirement"}
@@ -225,11 +221,10 @@ export default function IngestionAdminClient() {
                     <button
                         key={tab}
                         onClick={() => setSelectedTab(tab)}
-                        className={`pb-3 px-4 text-sm font-medium border-b-2 transition capitalize ${
-                            selectedTab === tab
+                        className={`pb-3 px-4 text-sm font-medium border-b-2 transition capitalize ${selectedTab === tab
                                 ? "border-emerald-500 text-emerald-600 dark:text-emerald-400"
                                 : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                        }`}
+                            }`}
                     >
                         {tab === "queue" ? `Verification Queue (${data.queueItems.length})` : `Sources & Connectors (${data.sources.length})`}
                     </button>
@@ -256,11 +251,10 @@ export default function IngestionAdminClient() {
                                 <div
                                     key={item.id}
                                     onClick={() => selectItem(item)}
-                                    className={`p-4 bg-white dark:bg-gray-900 border rounded-xl cursor-pointer transition shadow-sm hover:border-emerald-500 ${
-                                        selectedItem?.id === item.id
+                                    className={`p-4 bg-white dark:bg-gray-900 border rounded-xl cursor-pointer transition shadow-sm hover:border-emerald-500 ${selectedItem?.id === item.id
                                             ? "border-emerald-500 ring-2 ring-emerald-500/20"
                                             : "border-gray-200 dark:border-gray-800"
-                                    }`}
+                                        }`}
                                 >
                                     <div className="flex justify-between items-start">
                                         <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1">{item.title}</h3>
@@ -281,8 +275,6 @@ export default function IngestionAdminClient() {
                         )}
                     </div>
 
-
-// ... (inside the component's return statement)
 
                     {selectedItem && editedItem && (
                         <div className="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
@@ -357,13 +349,12 @@ export default function IngestionAdminClient() {
                                         <td className="px-6 py-4"><span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-xs rounded">{src.connector_type}</span></td>
                                         <td className="px-6 py-4 font-bold text-emerald-600">{src.reputation_score}/100</td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                src.health_status === "HEALTHY"
+                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${src.health_status === "HEALTHY"
                                                     ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                                                     : src.health_status === "DEGRADED"
-                                                    ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                                    : "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
-                                            }`}>
+                                                        ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                                        : "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
+                                                }`}>
                                                 {src.health_status}
                                             </span>
                                         </td>
