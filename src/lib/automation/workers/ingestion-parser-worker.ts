@@ -22,24 +22,28 @@ export const JobIngestionParserWorker = {
         const supabase = getSupabaseAdminClient();
         if (!supabase) throw new Error("[ParserWorker] Supabase admin client unavailable.");
         let ruleResult;
+        let rawPayload;
+        let source;
 
         try {
             // 1. Fetch raw payload and source
-            const { data: rawPayload, error: payloadErr } = await supabase
+            const { data: rawPayloadData, error: payloadErr } = await supabase
                 .from('ingested_raw_payloads')
                 .select('*')
                 .eq('id', payload.rawPayloadId)
                 .single();
+            rawPayload = rawPayloadData;
 
             if (payloadErr || !rawPayload) {
                 throw new Error(`[ParserWorker] Raw payload not found: ${payload.rawPayloadId}`);
             }
 
-            const { data: source } = await supabase
+            const { data: sourceData } = await supabase
                 .from('job_ingestion_sources')
                 .select('*')
                 .eq('id', payload.sourceId)
                 .single();
+            source = sourceData;
 
             ruleResult = await extractJobFields(
                 rawPayload.payload,
