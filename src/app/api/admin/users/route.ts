@@ -3,17 +3,23 @@ import { adminService } from "@/services/adminService";
 import { userService } from "@/services/userService";
 import { NextResponse } from "next/server";
 import { recordAuditLog } from "@/lib/audit";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export async function GET(request: Request) {
     const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
 
+    let page = 1;
+    let limit = 50;
+    let search = "";
+    let role = "ALL";
+
     try {
         const { searchParams } = new URL(request.url);
-        const page = parseInt(searchParams.get("page") || "1");
-        const limit = parseInt(searchParams.get("limit") || "50");
-        const search = searchParams.get("search") || "";
-        const role = searchParams.get("role") || "ALL";
+        page = parseInt(searchParams.get("page") || "1");
+        limit = parseInt(searchParams.get("limit") || "50");
+        search = searchParams.get("search") || "";
+        role = searchParams.get("role") || "ALL";
 
         const { users, total } = await adminService.getSystemUsers({
             page,
@@ -50,6 +56,14 @@ export async function GET(request: Request) {
     } catch (error) {
         console.error("Admin user fetch error:", error);
         return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
+    } finally {
+        await emitSystemEvent({
+            category: "USER",
+            severity: "INFO",
+            event: "ADMIN_FETCH_USERS",
+            message: `Admin fetched users page ${page}`,
+            metadata: { page, limit, search, role }
+        });
     }
 }
 
@@ -73,6 +87,15 @@ export async function DELETE(request: Request) {
             method: "DELETE",
             statusCode: 200,
             userId: auth.user.id,
+            metadata: { deletedUserId: userId }
+        });
+
+        await emitSystemEvent({
+            category: "USER",
+            severity: "WARNING",
+            event: "ADMIN_USER_DELETED",
+            message: `Admin ${auth.user.id} deleted user ${userId}`,
+            actorId: auth.user.id,
             metadata: { deletedUserId: userId }
         });
 

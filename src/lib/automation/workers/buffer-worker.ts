@@ -11,6 +11,7 @@
 import { registerPlugin } from "../registry";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { postJobToBuffer } from "@/lib/buffer";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 const BufferSocialPoster = {
     id: "buffer-social-poster",
@@ -24,6 +25,13 @@ const BufferSocialPoster = {
 
         if (!jobId) {
             console.warn("[BufferWorker] No jobId in payload, skipping.");
+            await emitSystemEvent({
+                category: "AUTOMATION",
+                severity: "INFO",
+                event: "BUFFER_JOB_SKIPPED",
+                message: `BufferWorker skipped due to missing jobId`,
+                metadata: { payload }
+            });
             return;
         }
 
@@ -35,6 +43,13 @@ const BufferSocialPoster = {
             console.warn(
                 "[BufferWorker] BUFFER_API_KEY or at least one channel ID not set — skipping."
             );
+            await emitSystemEvent({
+                category: "AUTOMATION",
+                severity: "INFO",
+                event: "BUFFER_NOT_CONFIGURED",
+                message: `BufferWorker skipped due to missing configuration`,
+                metadata: {}
+            });
             return;
         }
 
@@ -91,6 +106,14 @@ const BufferSocialPoster = {
         console.log(
             `[BufferWorker] Job "${job.title}" (${jobId})\n  ${linkedInStatus}\n  ${facebookStatus}`
         );
+
+        await emitSystemEvent({
+            category: "AUTOMATION",
+            severity: "INFO",
+            event: "BUFFER_JOB_POST_RESULT",
+            message: `Buffer worker processed job ${jobId}`,
+            metadata: { jobId, linkedIn: results.linkedin, facebook: results.facebook }
+        });
     },
 };
 

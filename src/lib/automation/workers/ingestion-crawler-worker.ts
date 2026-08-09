@@ -60,10 +60,13 @@ export const JobIngestionCrawlerWorker = {
                             const { data: existing } = await supabase
                                 .from('ingested_raw_payloads')
                                 .select('id')
-                                .eq('external_id', ref.externalId)
+                                .or(`external_id.eq.${ref.externalId},url.eq.${ref.url}`)
                                 .maybeSingle();
 
-                            if (existing) return;
+                            if (existing) {
+                                console.log(`[CrawlerWorker] Skipping duplicate source payload for ${ref.url}`);
+                                return;
+                            }
 
                             // Smart Retry / Rate Limit Avoidance
                             await new Promise(res => setTimeout(res, Math.random() * 500)); 
@@ -90,7 +93,7 @@ export const JobIngestionCrawlerWorker = {
                                 return;
                             }
 
-                            // Insert raw payload (skip if checksum duplicate)
+                            // Insert raw payload (skip duplicate rows if race conditions occur)
                             const { data: rawPayload, error: insertError } = await supabase
                                 .from('ingested_raw_payloads')
                                 .insert({
@@ -104,6 +107,13 @@ export const JobIngestionCrawlerWorker = {
                                 })
                                 .select('id')
                                 .maybeSingle();
+                            if (insertError) {
+                                if (insertError.code === '23505' || insertError.message?.includes('duplicate key')) {
+                                    console.log(`[CrawlerWorker] Duplicate raw payload detected for ${ref.url}, skipping insert.`);
+                                    return;
+                                }
+                                throw insertError;
+                            }
 
                             if (!insertError && rawPayload) {
                                 newPayloadsCount++;

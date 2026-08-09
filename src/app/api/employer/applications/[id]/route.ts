@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { sendApplicationStatusEmail } from "@/lib/resend";
 import { NotificationService } from "@/services/notification.service";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export const PATCH = withAuth(async (request, auth, { params }) => {
     const supabase = await createSupabaseServerClient();
@@ -93,6 +94,14 @@ export const PATCH = withAuth(async (request, auth, { params }) => {
                 message: "Thanks for reporting your hire! You've been rewarded with +5 free candidate contact views.",
                 type: "SYSTEM",
             });
+            await emitSystemEvent({
+                category: "APPLICATION",
+                severity: "SUCCESS",
+                event: "HIRE_REPORTED",
+                message: `Employer ${userId} reported a hire for application ${applicationId}`,
+                actorId: userId,
+                metadata: { applicationId }
+            });
         }
         // If they undo the hire, we deduct the bonus atomically
         if (oldStatus === "ACCEPTED" && status !== "ACCEPTED") {
@@ -136,7 +145,23 @@ export const PATCH = withAuth(async (request, auth, { params }) => {
                 }
                 if (!notifResult) {
                     console.error(`[NOTIFICATION_DEBUG] Notification failed`);
+                    await emitSystemEvent({
+                        category: "NOTIFICATION",
+                        severity: "WARNING",
+                        event: "APPLICATION_NOTIFICATION_FAILED",
+                        message: `In-app notification for application ${applicationId} failed to create.`,
+                        metadata: { applicationId, seekerId: application.user_id }
+                    });
                 }
+                // Emit an application status updated event for Mission Control
+                await emitSystemEvent({
+                    category: "APPLICATION",
+                    severity: "INFO",
+                    event: "APPLICATION_STATUS_UPDATED",
+                    message: `Application ${applicationId} status changed to ${status}`,
+                    actorId: userId,
+                    metadata: { applicationId, oldStatus, newStatus: status }
+                });
             } catch (notifyError) {
                 console.error("Non-blocking notification error in Employer Status API:", notifyError);
             }

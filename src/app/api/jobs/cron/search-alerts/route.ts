@@ -2,6 +2,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
 import { sendJobAlertEmail } from "@/lib/resend";
 import { validateCronRequest } from "@/lib/cron-auth";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 /**
  * CRON JOB: Process Job Alerts
@@ -43,6 +44,13 @@ export async function GET(request: Request) {
         if (error) throw error;
         
         if (!alerts || alerts.length === 0) {
+            await emitSystemEvent({
+                category: "NOTIFICATION",
+                severity: "INFO",
+                event: "JOB_ALERT_CRON_NO_ALERTS",
+                message: "Job alert cron executed with no alerts due.",
+                metadata: { evaluatedAlerts: alerts?.length || 0 }
+            });
             return NextResponse.json({ success: true, message: "No alerts due for processing." });
         }
 
@@ -93,6 +101,14 @@ export async function GET(request: Request) {
             }
         }
 
+        await emitSystemEvent({
+            category: "NOTIFICATION",
+            severity: "SUCCESS",
+            event: "JOB_ALERT_CRON_SUCCESS",
+            message: `Job alert cron processed ${processedAlerts.length} alerts successfully.`,
+            metadata: { processedAlerts: processedAlerts.length, alertIds: processedAlerts }
+        });
+
         return NextResponse.json({
             success: true,
             message: `Processed ${processedAlerts.length} job alerts.`,
@@ -100,6 +116,13 @@ export async function GET(request: Request) {
         });
     } catch (error: any) {
         console.error("Cron Job alerts error:", error);
+        await emitSystemEvent({
+            category: "NOTIFICATION",
+            severity: "WARNING",
+            event: "JOB_ALERT_CRON_FAILED",
+            message: "Job alert cron failed.",
+            metadata: { error: error.message }
+        });
         return NextResponse.json({ error: "Failed to process search alerts" }, { status: 500 });
     }
 }

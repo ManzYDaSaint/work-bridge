@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { sendJobExpirationAlertEmail } from "@/lib/resend";
 import { validateCronRequest } from "@/lib/cron-auth";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 /**
  * CRON JOB: Send Job Expiration Alerts
@@ -65,6 +66,22 @@ export async function GET(request: Request) {
             }
         }
 
+        await emitSystemEvent({
+            category: "NOTIFICATION",
+            severity: "SUCCESS",
+            event: "JOB_EXPIRATION_ALERTS_SENT",
+            message: `Sent expiration alerts for ${sentAlerts.length} jobs.`,
+            metadata: { sentAlerts: sentAlerts.length, jobIds: sentAlerts }
+        });
+
+        await emitSystemEvent({
+            category: "NOTIFICATION",
+            severity: "SUCCESS",
+            event: "JOB_EXPIRATION_ALERTS_SENT",
+            message: `Sent expiration alerts for ${sentAlerts.length} jobs.`,
+            metadata: { sentAlerts: sentAlerts.length, jobIds: sentAlerts }
+        });
+
         return NextResponse.json({
             success: true,
             message: `Sent expiration alerts for ${sentAlerts.length} jobs.`,
@@ -72,6 +89,13 @@ export async function GET(request: Request) {
         });
     } catch (error: any) {
         console.error("Cron Job alerts error:", error);
+        await emitSystemEvent({
+            category: "NOTIFICATION",
+            severity: "WARNING",
+            event: "JOB_EXPIRATION_ALERTS_FAILED",
+            message: "Job expiration alert cron failed.",
+            metadata: { error: error.message }
+        });
         return NextResponse.json({ error: "Failed to send alerts" }, { status: 500 });
     }
 }

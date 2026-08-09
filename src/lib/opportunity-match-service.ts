@@ -2,6 +2,7 @@ import { createNotification } from "./notifications";
 import { getSupabaseAdminClient } from "./supabase-admin";
 import { emitSystemEvent } from "./mission-control";
 import { generateEmbedding, constructOpportunityDNA } from "./embedding-service";
+import { normalizeSkills } from "./skill-normalizer";
 
 /**
  * Generates an embedding for an opportunity and stores it in the DB.
@@ -266,15 +267,13 @@ function scoreOpportunityMatch(
 
     // ── Certification match ───────────────────────────────────────────────────
     let certScore = 0;
-    const requiredCerts: string[] = opportunity.required_certifications || [];
-    const seekerCerts: string[] = (seeker.certifications || []).map((c: string) => c.toLowerCase());
+    const requiredCerts: string[] = normalizeSkills(opportunity.required_certifications || []);
+    const seekerCerts: string[] = normalizeSkills(seeker.certifications || []);
 
     if (requiredCerts.length === 0) {
         certScore = 100;
     } else {
-        const matched = requiredCerts.filter(c =>
-            seekerCerts.some(sc => sc.includes(c.toLowerCase()))
-        );
+        const matched = requiredCerts.filter(c => seekerCerts.includes(c));
         certScore = Math.round((matched.length / requiredCerts.length) * 100);
         breakdown.certifications = { matched, required: requiredCerts, score: certScore };
     }
@@ -282,16 +281,14 @@ function scoreOpportunityMatch(
 
     // ── Skills match ──────────────────────────────────────────────────────────
     let skillScore = 0;
-    const requiredSkills: string[] = opportunity.required_skills || [];
-    const seekerSkills: string[] = (seeker.skills || []).map((s: string) => s.toLowerCase());
+    const requiredSkills: string[] = normalizeSkills(opportunity.required_skills || []);
+    const seekerSkills: string[] = normalizeSkills(seeker.skills || []);
 
     if (requiredSkills.length === 0) {
         // Fall back to semantic similarity for skills dimension
         skillScore = Math.round(semanticSimilarity * 100);
     } else {
-        const matched = requiredSkills.filter(s =>
-            seekerSkills.some(ss => ss.includes(s.toLowerCase()))
-        );
+        const matched = requiredSkills.filter(s => seekerSkills.includes(s));
         skillScore = Math.round((matched.length / requiredSkills.length) * 100);
         breakdown.skills = { matched, required: requiredSkills, score: skillScore };
     }

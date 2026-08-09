@@ -10,6 +10,7 @@
 
 import { NextResponse } from "next/server";
 import { processQueue } from "@/lib/automation/engine";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -24,10 +25,33 @@ export async function GET(req: Request) {
     }
 
     try {
+        await emitSystemEvent({
+            category: "AUTOMATION",
+            severity: "INFO",
+            event: "PROCESS_AUTOMATION_CRON_STARTED",
+            message: "Processing automation queue",
+            metadata: {}
+        });
         await processQueue();
+        await emitSystemEvent({
+            category: "AUTOMATION",
+            severity: "SUCCESS",
+            event: "PROCESS_AUTOMATION_CRON_COMPLETED",
+            message: "Automation queue processed successfully",
+            metadata: {}
+        });
+
         return NextResponse.json({ success: true, message: "Automation queue processed." });
     } catch (err: any) {
         console.error("[CRON] process-automation error:", err);
+        await emitSystemEvent({
+            category: "AUTOMATION",
+            severity: "CRITICAL",
+            event: "PROCESS_AUTOMATION_CRON_FAILED",
+            message: `Automation processing failed: ${err.message}`,
+            metadata: { error: err.message }
+        });
+
         return NextResponse.json(
             { success: false, error: err.message },
             { status: 500 }

@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { validateAuth } from "@/lib/auth-guard";
 import { NextResponse } from "next/server";
 import { recordAuditLog } from "@/lib/audit";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export async function GET() {
     const auth = await validateAuth(['ADMIN'], false);
@@ -54,6 +55,15 @@ export async function PATCH(request: Request) {
             method: "PATCH",
             statusCode: 200,
             userId: auth.user.id,
+            metadata: { certificateId, isVerified, verificationTier }
+        });
+
+        await emitSystemEvent({
+            category: "USER",
+            severity: isVerified ? "SUCCESS" : "WARNING",
+            event: `CERTIFICATE_VERIFICATION_${isVerified ? 'APPROVED' : 'REJECTED'}`,
+            message: `Certificate ${certificateId} verification ${isVerified ? 'approved' : 'rejected'}`,
+            actorId: auth.user.id,
             metadata: { certificateId, isVerified, verificationTier }
         });
 

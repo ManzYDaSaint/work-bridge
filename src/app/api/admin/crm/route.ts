@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { validateAuth } from "@/lib/auth-guard";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 const CRM_STATUSES = new Set(["LEAD", "REGISTERED", "VERIFICATION_PENDING", "VERIFIED", "ACTIVE", "INACTIVE", "CHURNED"]);
 
@@ -24,6 +25,14 @@ export async function PATCH(request: Request) {
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    await emitSystemEvent({
+        category: "EMPLOYER",
+        severity: "INFO",
+        event: "ADMIN_CRM_STATUS_UPDATED",
+        message: `CRM profile ${id} status set to ${status}`,
+        metadata: { id, status }
+    });
 
     return NextResponse.json({ success: true });
 }

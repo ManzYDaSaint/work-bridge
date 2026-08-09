@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { checkAiServerHealth, performIntegrityScan } from "@/lib/ai-health";
 import { validateAuth } from "@/lib/auth-guard";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export async function GET() {
     const auth = await validateAuth(["ADMIN"], false);
@@ -41,6 +42,13 @@ export async function GET() {
         },
         emailMetrics
     });
+    await emitSystemEvent({
+        category: "SYSTEM",
+        severity: "INFO",
+        event: "ADMIN_FETCH_AI_HEALTH",
+        message: `Admin fetched AI health and integrity scan`,
+        metadata: { pendingCount, emailMetrics }
+    });
 }
 
 export async function POST(request: Request) {
@@ -53,6 +61,13 @@ export async function POST(request: Request) {
     const { action } = await request.json();
     
     // Logic to handle RESCAN, REBUILD_ALL, etc.
+    await emitSystemEvent({
+        category: "SYSTEM",
+        severity: "INFO",
+        event: "ADMIN_AI_HEALTH_ACTION",
+        message: `Admin triggered AI health action: ${action}`,
+        metadata: { action }
+    });
     return NextResponse.json({ success: true, action });
 }
 

@@ -3,19 +3,24 @@ import { adminService } from "@/services/adminService";
 import { jobService } from "@/services/jobService";
 import { withAudit } from "@/lib/api-utils";
 import { NextResponse } from "next/server";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 const ALLOWED_JOB_STATUSES = new Set(["ACTIVE", "PENDING", "EXPIRED", "FILLED", "ARCHIVED"]);
 
 export const GET = withAudit(async (request: Request) => {
     const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
+    let page = 1;
+    let limit = 50;
+    let search = "";
+    let status = "ALL";
 
     try {
         const { searchParams } = new URL(request.url);
-        const page = parseInt(searchParams.get("page") || "1");
-        const limit = parseInt(searchParams.get("limit") || "50");
-        const search = searchParams.get("search") || "";
-        const status = searchParams.get("status") || "ALL";
+        page = parseInt(searchParams.get("page") || "1");
+        limit = parseInt(searchParams.get("limit") || "50");
+        search = searchParams.get("search") || "";
+        status = searchParams.get("status") || "ALL";
 
         const { jobs, total } = await adminService.getSystemJobs({
             page,
@@ -56,6 +61,15 @@ export const GET = withAudit(async (request: Request) => {
     } catch (error) {
         console.error("Admin jobs fetch error:", error);
         return NextResponse.json({ error: "Failed to fetch jobs" }, { status: 500 });
+    } finally {
+        // Emit an informational event for admin fetches
+        await emitSystemEvent({
+            category: "JOB",
+            severity: "INFO",
+            event: "ADMIN_FETCH_JOBS",
+            message: `Admin fetched jobs page ${page}`,
+            metadata: { page, limit, search, status }
+        });
     }
 }, "ADMIN_FETCH_JOBS");
 
@@ -75,6 +89,14 @@ export const PATCH = withAudit(async (request: Request) => {
         }
 
         await jobService.updateJob(jobId, { status });
+
+        await emitSystemEvent({
+            category: "JOB",
+            severity: "SUCCESS",
+            event: "ADMIN_JOB_STATUS_UPDATED",
+            message: `Job ${jobId} status set to ${status} by admin`,
+            metadata: { jobId, status }
+        });
 
         return NextResponse.json({ success: true, metadata: { jobId, status } });
     } catch (error) {
@@ -96,6 +118,14 @@ export const DELETE = withAudit(async (request: Request) => {
         }
 
         await jobService.deleteJob(jobId);
+
+        await emitSystemEvent({
+            category: "JOB",
+            severity: "WARNING",
+            event: "ADMIN_JOB_DELETED",
+            message: `Job ${jobId} deleted by admin`,
+            metadata: { jobId }
+        });
 
         return NextResponse.json({ success: true, metadata: { jobId } });
     } catch (error) {

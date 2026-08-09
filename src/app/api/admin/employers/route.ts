@@ -5,6 +5,7 @@ import { sendEmployerVerificationEmail } from "@/lib/resend";
 import { NotificationService } from "@/services/notification.service";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 const ALLOWED_EMPLOYER_STATUSES = new Set(["PENDING", "APPROVED", "REJECTED"]);
 
@@ -92,6 +93,14 @@ export async function PATCH(request: Request) {
                     : `Your employer verification for ${updatedEmployer?.company_name} was not successful.`,
                 type: "VERIFICATION_UPDATE",
                 link: `/dashboard/employer`
+            });
+            await emitSystemEvent({
+                category: "EMPLOYER",
+                severity: status === 'APPROVED' ? "SUCCESS" : "WARNING",
+                event: `EMPLOYER_VERIFICATION_${status}`,
+                message: `Employer ${employerId} verification status set to ${status}`,
+                actorId: user.id,
+                metadata: { employerId, status, notes }
             });
         }
 

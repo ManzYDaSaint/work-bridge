@@ -1,6 +1,7 @@
 import { validateAuth } from "@/lib/auth-guard";
 import { adminService } from "@/services/adminService";
 import { NextResponse } from "next/server";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,15 @@ export async function GET() {
         
         const response = NextResponse.json({ stats });
         response.headers.set("Cache-Control", "no-store, max-age=0");
+
+        await emitSystemEvent({
+            category: "SYSTEM",
+            severity: "INFO",
+            event: "ADMIN_FETCH_STATS",
+            message: `Admin fetched marketplace stats`,
+            metadata: { }
+        });
+
         return response;
     } catch (error) {
         console.error("Admin stats fetch error:", error);

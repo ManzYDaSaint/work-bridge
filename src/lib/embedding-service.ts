@@ -49,9 +49,11 @@ import { extractCVContentSnippet } from "./cv-extractor";
 export function constructSeekerDNA(profile: any): string {
     const rawSkills = Array.isArray(profile.skills) ? profile.skills : (profile.skills || "").split(",");
     const normalized = normalizeSkills(rawSkills);
-    const skills = normalized.length > 0 ? normalized.join(", ") : (profile.skills || []).join(", ");
+    const skills = normalized.length > 0 ? normalized.join(", ") : (Array.isArray(profile.skills) ? profile.skills.join(", ") : (profile.skills || ""));
     
-    const certs = Array.isArray(profile.certifications) ? profile.certifications.join(", ") : (profile.certifications || "");
+    const rawCerts = Array.isArray(profile.certifications) ? profile.certifications : (profile.certifications || "");
+    const normalizedCerts = normalizeSkills(rawCerts);
+    const certs = normalizedCerts.length > 0 ? normalizedCerts.join(", ") : (Array.isArray(profile.certifications) ? profile.certifications.join(", ") : (profile.certifications || ""));
     const bio = profile.bio || "";
     const cvSnippet = extractCVContentSnippet(profile.resume_url, bio);
     
@@ -83,8 +85,12 @@ export function constructJobDNA(job: any): string {
     const normalizedMustHaves = normalizeSkills(rawMustHaves);
     const mustHaves = normalizedMustHaves.length > 0 ? normalizedMustHaves.join("; ") : (Array.isArray(rawMustHaves) ? rawMustHaves.join("; ") : rawMustHaves);
     
-    const niceToHaves = Array.isArray(job.nice_to_have_skills) ? job.nice_to_have_skills.join("; ") : (job.nice_to_have_skills || "");
-    const skills = Array.isArray(job.skills) ? job.skills.join(", ") : (job.skills || "");
+    const rawNiceToHaves = job.nice_to_have_skills || [];
+    const normalizedNiceToHaves = normalizeSkills(rawNiceToHaves);
+    const niceToHaves = normalizedNiceToHaves.length > 0 ? normalizedNiceToHaves.join("; ") : (Array.isArray(rawNiceToHaves) ? rawNiceToHaves.join("; ") : rawNiceToHaves);
+    const rawSkills = Array.isArray(job.skills) ? job.skills : (job.skills || []);
+    const normalizedSkills = normalizeSkills(rawSkills);
+    const skills = normalizedSkills.length > 0 ? normalizedSkills.join(", ") : (Array.isArray(rawSkills) ? rawSkills.join(", ") : rawSkills);
     
     const expFromText = extractMinimumExperienceYears(mustHaves || job.description || "");
     const minExpYears = job.minimum_years_experience || expFromText || 0;

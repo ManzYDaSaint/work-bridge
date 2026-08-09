@@ -8,6 +8,7 @@ import {
     OpportunityUpdatePayload,
 } from "@/services/opportunityService";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 // Helper: enforce ADMIN role
 async function requireAdmin() {
@@ -35,6 +36,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     if (error || !data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+    await emitSystemEvent({
+        category: "OPPORTUNITY_MANAGEMENT",
+        severity: "INFO",
+        event: "ADMIN_FETCH_OPPORTUNITY",
+        message: `Admin fetched opportunity ${params.id}`,
+        metadata: { opportunityId: params.id }
+    });
+
     return NextResponse.json({ opportunity: data });
 }
 
@@ -51,17 +60,44 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         if (action === "publish") {
             const featured = body.featured ?? false;
             const data = await publishOpportunity(params.id, featured, admin.id);
+
+            await emitSystemEvent({
+                category: "OPPORTUNITY_MANAGEMENT",
+                severity: "SUCCESS",
+                event: "OPPORTUNITY_PUBLISHED",
+                message: `Opportunity ${params.id} published by admin ${admin.id}`,
+                actorId: admin.id,
+                metadata: { opportunityId: params.id, featured }
+            });
             return NextResponse.json({ opportunity: data });
         }
 
         if (action === "archive") {
             const data = await archiveOpportunity(params.id, admin.id);
+
+            await emitSystemEvent({
+                category: "OPPORTUNITY_MANAGEMENT",
+                severity: "INFO",
+                event: "OPPORTUNITY_ARCHIVED",
+                message: `Opportunity ${params.id} archived by admin ${admin.id}`,
+                actorId: admin.id,
+                metadata: { opportunityId: params.id }
+            });
             return NextResponse.json({ opportunity: data });
         }
 
         // Default: update fields
         const payload: OpportunityUpdatePayload = updateFields;
         const data = await updateOpportunity(params.id, payload, admin.id);
+
+        await emitSystemEvent({
+            category: "OPPORTUNITY_MANAGEMENT",
+            severity: "SUCCESS",
+            event: "OPPORTUNITY_UPDATED",
+            message: `Opportunity ${params.id} updated by admin ${admin.id}`,
+            actorId: admin.id,
+            metadata: { opportunityId: params.id }
+        });
         return NextResponse.json({ opportunity: data });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
@@ -75,6 +111,15 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     try {
         await deleteOpportunity(params.id, admin.id);
+
+        await emitSystemEvent({
+            category: "OPPORTUNITY_MANAGEMENT",
+            severity: "WARNING",
+            event: "OPPORTUNITY_DELETED",
+            message: `Opportunity ${params.id} deleted by admin ${admin.id}`,
+            actorId: admin.id,
+            metadata: { opportunityId: params.id }
+        });
         return NextResponse.json({ success: true });
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 400 });

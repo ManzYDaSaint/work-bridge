@@ -1,5 +1,6 @@
 import { requireDashboardProfile } from "@/lib/dashboard-auth";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { RecommendationService } from "@/services/recommendation.service";
 import RecommendedCandidatesClient from "./RecommendedCandidatesClient";
 
 export default async function JobDiscoveryPage({
@@ -44,75 +45,22 @@ export default async function JobDiscoveryPage({
     const usage = quota?.discovery_count || 0;
     const FREE_LIMIT = 30;
 
-    // 3. Call the RPC to get recommended candidates (Minimum 50% match similarity threshold)
-    const { data: matches, error: rpcError } = await supabase.rpc("match_candidates", {
-        query_embedding: job.embedding,
-        match_threshold: 0.50,
-        match_count: 20
-    });
-
-    if (rpcError) {
-        console.error("RPC Error:", rpcError);
-        return <div className="p-6 text-red-500">Failed to load recommendations.</div>;
-    }
-
-    const candidateIds = matches?.map((m: any) => m.id) || [];
-
-    // 4. Fetch full candidate details
-    let fullCandidates: any[] = [];
-    if (candidateIds.length > 0) {
-        const { data: seekers } = await supabase
-            .from("job_seekers")
-            .select("*")
-            .in("id", candidateIds)
-            .neq("profile_visibility", "HIDDEN");
-            
-        let validSeekers = (seekers || []).filter(s => {
-            // Require minimum completeness: completion >= 25% OR has skills / bio
-            const hasSkills = s.skills && s.skills.length > 0;
-            const hasBio = s.bio && s.bio.trim().length > 10;
-            const isCompleteEnough = (s.completion ?? 0) >= 25;
-            return isCompleteEnough || hasSkills || hasBio;
+    // 3. Use the unified discovery service for matched candidates
+    let candidates: any[] = [];
+    try {
+        candidates = await RecommendationService.discoverTalent(jobId, user.id, {
+            limit: 20,
+            threshold: 0.50,
         });
-        
-        if (validSeekers.length > 0) {
-            const { getSupabaseAdminClient } = await import("@/lib/supabase-admin");
-            const adminClient = getSupabaseAdminClient();
-            if (adminClient) {
-                const fetchedIds = validSeekers.map(s => s.id);
-                const { data: userRoles } = await adminClient
-                    .from("users")
-                    .select("id, role")
-                    .in("id", fetchedIds);
-                
-                if (userRoles) {
-                    const validIds = new Set(userRoles.filter(u => u.role === "JOB_SEEKER").map(u => u.id));
-                    validSeekers = validSeekers.filter(s => validIds.has(s.id));
-                }
-            }
-        }
-            
-        fullCandidates = validSeekers;
-    }
-
-    // Combine similarity score
-    const candidatesWithScores = fullCandidates.map(candidate => {
-        const matchInfo = matches?.find((m: any) => m.id === candidate.id);
-        return {
-            ...candidate,
-            similarity: matchInfo?.similarity || 0
-        };
-    }).sort((a, b) => b.similarity - a.similarity);
-
-    // Consume Quota
-    if (usage < FREE_LIMIT) {
-        await supabase.rpc('consume_quota', { p_user_id: user.id, p_quota_type: 'discovery', p_limit: FREE_LIMIT });
+    } catch (error: any) {
+        console.error("Employer discovery service failed:", error);
+        return <div className="p-6 text-red-500">Failed to load recommendations.</div>;
     }
 
     return (
         <RecommendedCandidatesClient 
             job={job}
-            candidates={candidatesWithScores} 
+            candidates={candidates} 
             usage={usage} 
             limit={FREE_LIMIT} 
             plan={user.plan}

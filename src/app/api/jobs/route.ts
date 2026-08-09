@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { buildPublicJobSlug } from "@/lib/public-slugs";
 import { syncJobEmbedding } from "@/lib/sync-embeddings";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export const dynamic = "force-dynamic";
 
@@ -190,6 +191,15 @@ export async function POST(request: Request) {
             }).catch((err) => console.error("CRM automation enqueue failed:", err));
         }).catch((err) => console.error("CRM automation import failed:", err));
 
+        // Emit Mission Control event for admin visibility
+        await emitSystemEvent({
+            category: "JOB",
+            severity: "SUCCESS",
+            event: "JOB_CREATED",
+            message: `Job ${createdJob.id} posted by employer ${auth.userId}`,
+            metadata: { employerId: auth.userId, jobId: createdJob.id }
+        });
+
         const publicSlug = buildPublicJobSlug(createdJob.title, createdJob.id);
         const { data, error } = await supabase
             .from("jobs")
@@ -240,6 +250,13 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, job: data });
     } catch (error: any) {
         console.error("Job POST error:", error);
+        await emitSystemEvent({
+            category: "JOB",
+            severity: "WARNING",
+            event: "JOB_POST_FAILED",
+            message: "Job post failed.",
+            metadata: { error: error?.message }
+        });
         return NextResponse.json({ error: error.message || "Failed to post job" }, { status: 500 });
     }
 }

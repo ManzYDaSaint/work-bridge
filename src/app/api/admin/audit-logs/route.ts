@@ -1,17 +1,22 @@
 import { validateAuth } from "@/lib/auth-guard";
 import { adminService } from "@/services/adminService";
 import { NextResponse } from "next/server";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export async function GET(request: Request) {
     const auth = await validateAuth(['ADMIN'], false);
     if (auth.error) return auth.error;
+    let limit = 50;
+    let offset = 0;
+    let userId: string | undefined = undefined;
+    let action: string | undefined = undefined;
 
     try {
         const { searchParams } = new URL(request.url);
-        const limit = parseInt(searchParams.get("limit") || "50");
-        const offset = parseInt(searchParams.get("offset") || "0");
-        const userId = searchParams.get("userId") ?? undefined;
-        const action = searchParams.get("action") ?? undefined;
+        limit = parseInt(searchParams.get("limit") || "50");
+        offset = parseInt(searchParams.get("offset") || "0");
+        userId = searchParams.get("userId") ?? undefined;
+        action = searchParams.get("action") ?? undefined;
 
         const { items, total } = await adminService.getAuditLogs({
             offset,
@@ -38,6 +43,14 @@ export async function GET(request: Request) {
     } catch (error) {
         console.error("Admin audit fetch error:", error);
         return NextResponse.json({ error: "Failed to fetch audit logs" }, { status: 500 });
+    } finally {
+        await emitSystemEvent({
+            category: "SECURITY",
+            severity: "INFO",
+            event: "ADMIN_FETCH_AUDIT_LOGS",
+            message: `Admin fetched audit logs`,
+            metadata: { limit, offset }
+        });
     }
 }
 

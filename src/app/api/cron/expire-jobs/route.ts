@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { Resend } from "resend";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,13 @@ export async function GET(req: Request) {
     }
 
     try {
+        await emitSystemEvent({
+            category: "JOB",
+            severity: "INFO",
+            event: "EXPIRE_JOBS_CRON_STARTED",
+            message: "Expire jobs cron started",
+            metadata: {}
+        });
         const supabase = await createSupabaseServerClient();
         const today = new Date().toISOString().split('T')[0];
 
@@ -60,6 +68,14 @@ export async function GET(req: Request) {
         // 2. Expire opportunities where the deadline has passed
         const { sweepExpiredOpportunities } = await import("@/services/opportunityService");
         const opportunitySweep = await sweepExpiredOpportunities();
+
+        await emitSystemEvent({
+            category: "JOB",
+            severity: "SUCCESS",
+            event: "EXPIRE_JOBS_CRON_COMPLETED",
+            message: `Expired ${expiredJobs?.length || 0} jobs and processed ${opportunitySweep.processed} opportunities`,
+            metadata: { expiredJobs: expiredJobs?.length || 0, opportunitiesProcessed: opportunitySweep.processed }
+        });
 
         return NextResponse.json({ 
             success: true, 

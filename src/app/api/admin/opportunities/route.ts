@@ -8,6 +8,7 @@ import {
     sweepExpiredOpportunities,
     OpportunityCreatePayload,
 } from "@/services/opportunityService";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 // Helper: enforce ADMIN role
 async function requireAdmin() {
@@ -32,6 +33,13 @@ export async function GET(req: NextRequest) {
 
     if (runSweep) {
         await sweepExpiredOpportunities();
+        await emitSystemEvent({
+            category: "OPPORTUNITY_MANAGEMENT",
+            severity: "INFO",
+            event: "OPPORTUNITY_SWEEP_RUN",
+            message: `Admin triggered opportunity sweep`,
+            metadata: { runSweep: true }
+        });
     }
 
     const [opportunities, analytics] = await Promise.all([
@@ -79,6 +87,15 @@ export async function POST(req: NextRequest) {
         };
 
         const opportunity = await createOpportunity(payload);
+
+        await emitSystemEvent({
+            category: "OPPORTUNITY_MANAGEMENT",
+            severity: "SUCCESS",
+            event: "OPPORTUNITY_CREATED",
+            message: `Opportunity ${opportunity.id} created by admin ${admin.id}`,
+            actorId: admin.id,
+            metadata: { opportunityId: opportunity.id }
+        });
 
         return NextResponse.json({
             opportunity,

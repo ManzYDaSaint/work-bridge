@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -30,6 +31,14 @@ export async function GET(req: Request) {
             console.error("[CRON] Database optimization error:", error);
             return NextResponse.json({ success: false, error: error.message }, { status: 500 });
         }
+
+        await emitSystemEvent({
+            category: "NOTIFICATION",
+            severity: "INFO",
+            event: "PRUNE_NOTIFICATIONS_CRON_COMPLETED",
+            message: `Pruned ${count || 0} read notifications`,
+            metadata: { pruned: count || 0 }
+        });
 
         return NextResponse.json({ 
             success: true, 

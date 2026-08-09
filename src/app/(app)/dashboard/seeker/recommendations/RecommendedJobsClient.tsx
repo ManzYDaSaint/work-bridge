@@ -7,8 +7,25 @@ import { Sparkles, Briefcase, Zap } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
+interface MatchBreakdownItem {
+    passed: boolean;
+    score: number;
+    required: string[] | string | null;
+    actual: string[] | number | string | null;
+    missing?: string[];
+    matched?: string[];
+}
+
 interface JobWithScore extends ExtendedJob {
     similarity: number;
+    hard_match_score: number;
+    hard_match_reasons: string[];
+    hard_match_breakdown: {
+        qualification: MatchBreakdownItem;
+        experience: MatchBreakdownItem;
+        skills: MatchBreakdownItem;
+        certifications: MatchBreakdownItem;
+    };
 }
 
 export default function RecommendedJobsClient({ 
@@ -18,8 +35,13 @@ export default function RecommendedJobsClient({
 }) {
     const [selectedJob, setSelectedJob] = useState<ExtendedJob | null>(null);
 
-    const renderJobCard = (job: JobWithScore, index: number) => {
-        const scorePct = Math.round(job.similarity * 100);
+    const renderJobCard = (job: JobWithScore) => {
+        const semanticPct = Math.round(job.similarity * 100);
+        const requirementPct = Math.round(job.hard_match_score);
+        const matchedSkillsCount = job.hard_match_breakdown.skills.matched?.length ?? 0;
+        const requiredSkillsCount = Array.isArray(job.hard_match_breakdown.skills.required)
+            ? job.hard_match_breakdown.skills.required.length
+            : 0;
 
         return (
             <div key={job.id} className="relative overflow-hidden rounded-xl border border-stone-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -35,10 +57,10 @@ export default function RecommendedJobsClient({
                     </div>
                     <div className="flex flex-col items-end gap-2">
                         <Badge 
-                            variant={scorePct >= 70 ? "green" : scorePct >= 50 ? "yellow" : "slate"}
+                            variant={requirementPct >= 80 ? "green" : requirementPct >= 60 ? "yellow" : "slate"}
                         >
                             <Sparkles size={10} className="mr-1 inline" />
-                            {scorePct}% Match
+                            {requirementPct}% Requirements Match
                         </Badge>
                         <button 
                             onClick={() => setSelectedJob(job as ExtendedJob)}
@@ -48,6 +70,28 @@ export default function RecommendedJobsClient({
                         </button>
                     </div>
                 </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        <p className="font-semibold text-slate-900 dark:text-white">Semantic score</p>
+                        <p>{semanticPct}%</p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        <p className="font-semibold text-slate-900 dark:text-white">Matched skills</p>
+                        <p>{matchedSkillsCount}/{requiredSkillsCount}</p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        <p className="font-semibold text-slate-900 dark:text-white">Qualification</p>
+                        <p>{job.hard_match_breakdown.qualification.passed ? "Yes" : "No"}</p>
+                    </div>
+                </div>
+
+                {job.hard_match_reasons.length > 0 && (
+                    <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-200">
+                        <p className="font-semibold">Match notes</p>
+                        <p>{job.hard_match_reasons.join(" · ")}</p>
+                    </div>
+                )}
             </div>
         );
     };

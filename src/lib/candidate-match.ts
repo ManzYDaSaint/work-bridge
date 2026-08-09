@@ -8,6 +8,8 @@ export interface CandidateMatchResult {
     yearsExperience: number;
 }
 
+import { normalizeSkills } from "./skill-normalizer";
+
 export function evaluateCandidateMatch(
     seeker: {
         skills: string[];
@@ -24,9 +26,9 @@ export function evaluateCandidateMatch(
     screeningAnswers: Record<string, any>,
     semanticSimilarity?: number
 ): CandidateMatchResult {
-    const seekerSkills = (seeker.skills || []).map(s => s.toLowerCase().trim());
-    const mustHave = (job.must_have_skills || []).map(s => s.toLowerCase().trim());
-    const niceToHave = (job.nice_to_have_skills || []).map(s => s.toLowerCase().trim());
+    const seekerSkills = normalizeSkills(seeker.skills || []);
+    const mustHave = normalizeSkills(job.must_have_skills || []);
+    const niceToHave = normalizeSkills(job.nice_to_have_skills || []);
 
     // 1. Skill Matching
     const matchedMustHaves: string[] = [];

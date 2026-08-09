@@ -23,7 +23,8 @@ export default function RecommendedCandidatesClient({
 
     const renderCandidateCard = (candidate: any, index: number) => {
         const shouldBlur = isLocked && index >= 3;
-        const scorePct = Math.round(candidate.similarity * 100);
+        const semanticPct = Math.round((candidate.similarity || 0) * 100);
+        const requirementPct = Math.round(candidate.hard_match_score || 0);
 
         return (
             <div key={candidate.id} className="relative overflow-hidden rounded-xl border border-stone-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -40,10 +41,16 @@ export default function RecommendedCandidatesClient({
                         </div>
                         <div className="flex flex-col items-end gap-2">
                             <Badge 
-                                variant={scorePct >= 70 ? "green" : scorePct >= 50 ? "blue" : "slate"}
+                                variant={requirementPct >= 80 ? "green" : requirementPct >= 60 ? "yellow" : "slate"}
                             >
                                 <Sparkles size={10} className="mr-1 inline" />
-                                {scorePct}% Match
+                                {requirementPct}% Requirements
+                            </Badge>
+                            <Badge 
+                                variant={semanticPct >= 70 ? "green" : semanticPct >= 50 ? "blue" : "slate"}
+                            >
+                                <Users size={10} className="mr-1 inline" />
+                                {semanticPct}% Semantic
                             </Badge>
                         </div>
                     </div>

@@ -1,6 +1,7 @@
 import { createNotification } from "./notifications";
 import { getSupabaseAdminClient } from "./supabase-admin";
 import { emitSystemEvent } from "./mission-control";
+import { passesJobHardRequirements, SeekerProfile } from "./matching-helpers";
 
 /**
  * Triggers AI match notifications for a newly posted job.
@@ -52,18 +53,33 @@ export async function triggerMatchNotifications(jobId: string) {
       return;
     }
 
-    // 3. We need to fetch the user_ids for these seekers to send notifications
+    // 3. Fetch seeker profiles and filter them using hard job requirements
     const seekerIds = matches.map((m: any) => m.id);
     const { data: seekers } = await supabase
       .from("job_seekers")
-      .select("id, user_id, user:users(plan)")
+      .select("id, user_id, skills, experience, qualification, certifications, user:users(plan)")
       .in("id", seekerIds);
       
     if (!seekers) return;
 
+    const filteredSeekers = seekers.filter((seeker: any) => {
+      const seekerProfile: SeekerProfile = {
+        skills: seeker.skills || [],
+        experience: seeker.experience || [],
+        qualification: seeker.qualification || null,
+        certifications: seeker.certifications || [],
+      };
+      return passesJobHardRequirements(job, seekerProfile).passed;
+    });
+
+    if (filteredSeekers.length === 0) {
+      console.log(`[MATCH_SERVICE] No seekers passed hard requirements for job ${jobId}.`);
+      return;
+    }
+
     // Monetization: Premium users get notifications instantly. Free users get delayed notification.
-    const premiumSeekers = seekers.filter((s: any) => s.user?.plan === "PREMIUM" || s.user?.plan === "PRO");
-    const freeSeekers = seekers.filter((s: any) => !s.user?.plan || s.user?.plan === "FREE");
+    const premiumSeekers = filteredSeekers.filter((s: any) => s.user?.plan === "PREMIUM" || s.user?.plan === "PRO");
+    const freeSeekers = filteredSeekers.filter((s: any) => !s.user?.plan || s.user?.plan === "FREE");
 
     // Instantly notify premium seekers
     const notifications = premiumSeekers.map((seeker: any) =>
@@ -135,10 +151,23 @@ export async function triggerDelayedFreeMatchNotifications(jobId: string) {
         if (!matches || matches.length === 0) return;
 
         const seekerIds = matches.map((m: any) => m.id);
-        const { data: seekers } = await supabase.from("job_seekers").select("id, user_id, user:users(plan)").in("id", seekerIds);
+        const { data: seekers } = await supabase
+            .from("job_seekers")
+            .select("id, user_id, skills, experience, qualification, certifications, user:users(plan)")
+            .in("id", seekerIds);
         if (!seekers) return;
 
-        const freeSeekers = seekers.filter((s: any) => !s.user?.plan || s.user?.plan === "FREE");
+        const freeSeekers = seekers
+            .filter((s: any) => !s.user?.plan || s.user?.plan === "FREE")
+            .filter((seeker: any) => {
+                const seekerProfile: SeekerProfile = {
+                    skills: seeker.skills || [],
+                    experience: seeker.experience || [],
+                    qualification: seeker.qualification || null,
+                    certifications: seeker.certifications || [],
+                };
+                return passesJobHardRequirements(job, seekerProfile).passed;
+            });
 
         const notifications = freeSeekers.map((seeker: any) =>
             createNotification({

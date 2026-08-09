@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS public.ingested_raw_payloads (
     )),
     response_headers JSONB DEFAULT '{}'::jsonb,
     checksum TEXT NOT NULL,
+    UNIQUE(source_id, external_id),
     etag TEXT,
     last_modified_header TEXT,
     processing_status TEXT DEFAULT 'PENDING' CHECK (processing_status IN (

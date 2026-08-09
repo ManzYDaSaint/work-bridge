@@ -1,6 +1,7 @@
 import { registerPlugin } from "../registry";
 import * as emailUtils from "@/lib/resend";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export const EmailNotificationWorker = {
     id: 'email-notifier',
@@ -58,6 +59,14 @@ export const EmailNotificationWorker = {
                 .update({ status: 'SENT', updated_at: new Date().toISOString() })
                 .eq('id', log.id);
 
+            await emitSystemEvent({
+                category: "NOTIFICATION",
+                severity: "SUCCESS",
+                event: "EMAIL_SENT",
+                message: `Email ${templateId} sent to ${to}`,
+                metadata: { templateId, to, taskId: payload.taskId }
+            });
+
         } catch (error: any) {
             // Log Failure and alert Admin
             await supabase
@@ -73,6 +82,13 @@ export const EmailNotificationWorker = {
                     message: `Email failed to ${payload.to}: ${error.message}`,
                     metadata: { taskId: payload.taskId }
                 });
+            await emitSystemEvent({
+                category: "NOTIFICATION",
+                severity: "CRITICAL",
+                event: "EMAIL_FAILED",
+                message: `Email ${templateId} failed to ${payload.to}: ${error.message}`,
+                metadata: { templateId, to, taskId: payload.taskId }
+            });
             throw error;
         }
     }

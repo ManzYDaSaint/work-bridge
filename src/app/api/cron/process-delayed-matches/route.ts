@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { triggerDelayedFreeMatchNotifications } from "@/lib/match-notification-service";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 const CRON_SECRET = process.env.CRON_SECRET || "local-cron-secret";
 
@@ -18,6 +19,13 @@ export async function GET(request: Request) {
     }
 
     try {
+        await emitSystemEvent({
+            category: "MATCHING",
+            severity: "INFO",
+            event: "DELAYED_MATCHES_CRON_STARTED",
+            message: "Processing delayed match notifications",
+            metadata: {}
+        });
         // Fetch jobs created roughly between 24 and 25 hours ago
         const now = new Date();
         const start = new Date(now.getTime() - 25 * 60 * 60 * 1000).toISOString();
@@ -42,6 +50,14 @@ export async function GET(request: Request) {
                 processedCount++;
             }
         }
+
+        await emitSystemEvent({
+            category: "MATCHING",
+            severity: "SUCCESS",
+            event: "DELAYED_MATCHES_CRON_COMPLETED",
+            message: `Processed ${processedCount} delayed match jobs`,
+            metadata: { jobsProcessed: processedCount }
+        });
 
         return NextResponse.json({
             success: true,

@@ -87,7 +87,50 @@ export async function checkForDuplicates(
         }
     }
 
-    // ── Tier 3: Vector Embedding Cosine Similarity ──────────────────────
+    // ── Tier 3: Staging Queue Match ──────────────────────────────────────
+    if (supabase) {
+        if (sourceUrlHash) {
+            const { data: queueUrlMatch } = await supabase
+                .from('ingested_jobs_queue')
+                .select('id, published_job_id, duplicate_of_job_id, status')
+                .not('status', 'eq', 'REJECTED')
+                .eq('source_url_hash', sourceUrlHash)
+                .maybeSingle();
+
+            if (queueUrlMatch) {
+                return {
+                    isDuplicate: true,
+                    duplicateOfJobId: queueUrlMatch.published_job_id || queueUrlMatch.duplicate_of_job_id || queueUrlMatch.id,
+                    similarityScore: 1.0,
+                    matchTier: 'URL_HASH',
+                    dnaHash,
+                    sourceUrlHash,
+                    embedding: null,
+                };
+            }
+        }
+
+        const { data: queueDnaMatch } = await supabase
+            .from('ingested_jobs_queue')
+            .select('id, published_job_id, duplicate_of_job_id, status')
+            .not('status', 'eq', 'REJECTED')
+            .eq('dna_hash', dnaHash)
+            .maybeSingle();
+
+        if (queueDnaMatch) {
+            return {
+                isDuplicate: true,
+                duplicateOfJobId: queueDnaMatch.published_job_id || queueDnaMatch.duplicate_of_job_id || queueDnaMatch.id,
+                similarityScore: 1.0,
+                matchTier: 'DNA_HASH',
+                dnaHash,
+                sourceUrlHash,
+                embedding: null,
+            };
+        }
+    }
+
+    // ── Tier 4: Vector Embedding Cosine Similarity ──────────────────────
     let embedding: number[] | null = null;
     try {
         const dnaText = constructJobDNA({

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,14 @@ export async function GET(req: Request) {
         if (auditErr) {
             console.error("[CRON] Cleanup Audit Logs Error:", auditErr);
         }
+
+        await emitSystemEvent({
+            category: "SYSTEM",
+            severity: "INFO",
+            event: "SYSTEM_CLEANUP_COMPLETE",
+            message: "System cleanup cron completed",
+            metadata: { cutoff }
+        });
 
         return NextResponse.json({
             success: true,

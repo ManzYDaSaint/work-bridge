@@ -1,5 +1,6 @@
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export const dynamic = "force-dynamic";
 
@@ -26,30 +27,45 @@ export async function GET(req: Request) {
     }
 
     // 2. Fetch metrics
-    const { count: pendingCount } = await supabase
+    const { count: pendingCount, error: pendingCountErr } = await supabase
         .from("ingested_jobs_queue")
         .select("id", { count: "exact", head: true })
         .eq("status", "PENDING_REVIEW");
+    if (pendingCountErr) {
+        return NextResponse.json({ error: pendingCountErr.message }, { status: 500 });
+    }
 
-    const { count: publishedCount } = await supabase
+    const { count: publishedCount, error: publishedCountErr } = await supabase
         .from("ingested_jobs_queue")
         .select("id", { count: "exact", head: true })
         .eq("status", "PUBLISHED");
+    if (publishedCountErr) {
+        return NextResponse.json({ error: publishedCountErr.message }, { status: 500 });
+    }
 
-    const { count: sourcesCount } = await supabase
+    const { count: sourcesCount, error: sourcesCountErr } = await supabase
         .from("job_ingestion_sources")
         .select("id", { count: "exact", head: true })
         .eq("is_enabled", true);
+    if (sourcesCountErr) {
+        return NextResponse.json({ error: sourcesCountErr.message }, { status: 500 });
+    }
 
-    const { data: sources } = await supabase
+    const { data: sources, error: sourcesErr } = await supabase
         .from("job_ingestion_sources")
         .select("*")
         .order("reputation_score", { ascending: false });
+    if (sourcesErr) {
+        return NextResponse.json({ error: sourcesErr.message }, { status: 500 });
+    }
 
     // 3. Fetch system settings
-    const { data: settingsRows } = await supabase
+    const { data: settingsRows, error: settingsErr } = await supabase
         .from("system_settings")
         .select("*");
+    if (settingsErr) {
+        return NextResponse.json({ error: settingsErr.message }, { status: 500 });
+    }
 
     const settings: Record<string, boolean> = {
         ingestion_service_enabled: true,
@@ -93,6 +109,14 @@ export async function POST(req: Request) {
                     updated_at: new Date().toISOString()
                 });
 
+            await emitSystemEvent({
+                category: "SYSTEM",
+                severity: "INFO",
+                event: "SYSTEM_SETTING_TOGGLED",
+                message: `System setting ${settingKey} set to ${settingValue}`,
+                metadata: { settingKey, settingValue }
+            });
+
             return NextResponse.json({ success: true, message: `Setting ${settingKey} updated.` });
         }
 
@@ -109,6 +133,15 @@ export async function POST(req: Request) {
                 .update({ status: "APPROVED", reviewed_at: new Date().toISOString() })
                 .eq("id", queueItemId);
 
+            await emitSystemEvent({
+                category: "INGESTION",
+                severity: "INFO",
+                event: "INGESTED_JOB_APPROVED",
+                message: `Admin approved ingested job ${queueItemId}`,
+                actorId: null,
+                metadata: { queueItemId }
+            });
+
             return NextResponse.json({ success: true, message: "Job approved and publishing task queued." });
         }
 
@@ -121,6 +154,15 @@ export async function POST(req: Request) {
                     reviewed_at: new Date().toISOString()
                 })
                 .eq("id", queueItemId);
+
+            await emitSystemEvent({
+                category: "INGESTION",
+                severity: "WARNING",
+                event: "INGESTED_JOB_REJECTED",
+                message: `Admin rejected ingested job ${queueItemId}`,
+                actorId: null,
+                metadata: { queueItemId, reason: rejectionReason }
+            });
 
             return NextResponse.json({ success: true, message: "Job rejected." });
         }
@@ -173,6 +215,15 @@ export async function POST(req: Request) {
                 priority: "HIGH"
             });
 
+            await emitSystemEvent({
+                category: "INGESTION",
+                severity: "INFO",
+                event: "INGESTED_JOB_UPDATED_AND_APPROVED",
+                message: `Admin updated and approved ingested job ${queueItemId}`,
+                actorId: null,
+                metadata: { queueItemId, updatedFields }
+            });
+
             return NextResponse.json({ success: true, message: "Job updated and approved." });
         }
 
@@ -182,6 +233,15 @@ export async function POST(req: Request) {
                 plugin_id: "job-ingestion-crawler",
                 payload: { sourceId },
                 priority: "HIGH"
+            });
+
+            await emitSystemEvent({
+                category: "INGESTION",
+                severity: "INFO",
+                event: "INGESTION_FORCE_CRAWL_QUEUED",
+                message: `Admin requested force crawl for source ${sourceId}`,
+                actorId: null,
+                metadata: { sourceId }
             });
 
             return NextResponse.json({ success: true, message: "Force crawl task queued." });

@@ -2,6 +2,7 @@ import { validateAuth } from "@/lib/auth-guard";
 import { userService } from "@/services/userService";
 import { NextResponse } from "next/server";
 import { withAudit } from "@/lib/api-utils";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,13 @@ export async function GET() {
 
     try {
         const requests = await userService.getAccountClosureRequests({});
+        await emitSystemEvent({
+            category: "USER",
+            severity: "INFO",
+            event: "ADMIN_FETCH_CLOSE_REQUESTS",
+            message: `Admin fetched account closure requests`,
+            metadata: { count: requests?.length }
+        });
         return NextResponse.json(requests);
     } catch (error) {
         console.error("Close requests GET error:", error);
@@ -25,6 +33,13 @@ export const PATCH = withAudit(async (request: Request) => {
     try {
         const { id, status } = await request.json();
         await userService.updateAccountClosureStatus(id, status);
+        await emitSystemEvent({
+            category: "USER",
+            severity: "INFO",
+            event: "ADMIN_UPDATE_CLOSE_REQUEST",
+            message: `Closure request ${id} set to ${status}`,
+            metadata: { id, status }
+        });
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error("Close request PATCH error:", error);

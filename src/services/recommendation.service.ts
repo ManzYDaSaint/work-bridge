@@ -1,9 +1,26 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { generateEmbedding } from "@/lib/embedding-service";
+import { fetchJobsWithEmployers } from "@/lib/seeker-data";
+import { scoreJobSeekerMatch, SeekerProfile, StructuredMatchResult } from "@/lib/matching-helpers";
 
 export interface RecommendationOptions {
   limit?: number;
   threshold?: number;
+}
+
+export interface RecommendedJob extends Record<string, any> {
+  similarity: number;
+  hard_match_score: number;
+  hard_match_breakdown: StructuredMatchResult["breakdown"];
+  hard_match_reasons: string[];
+  hard_match_passed: boolean;
+}
+
+export interface RecommendedCandidate extends Record<string, any> {
+  similarity: number;
+  hard_match_score: number;
+  hard_match_breakdown: StructuredMatchResult["breakdown"];
+  hard_match_reasons: string[];
+  hard_match_passed: boolean;
 }
 
 export class RecommendationService {
@@ -36,15 +53,16 @@ export class RecommendationService {
    */
   static async getRecommendedJobs(userId: string, options: RecommendationOptions = {}) {
     const { limit = 10, threshold = 0.3 } = options;
+    const matchCount = Math.max(limit * 2, 50);
 
     // 1. No quota gate for seekers — recommendations are always unlimited
     // (Seekers are the product; gating them hurts the talent pool)
 
-    // 2. Get Seeker's embedding
+    // 2. Get Seeker's embedding and profile fields needed for hard filtering
     const supabase = await this.getSupabase();
     const { data: seeker, error: seekerError } = await supabase
       .from('job_seekers')
-      .select('embedding')
+      .select('embedding, skills, experience, qualification, certifications')
       .eq('id', userId)
       .single();
 
@@ -56,12 +74,53 @@ export class RecommendationService {
     const { data: recommendations, error: recError } = await supabase.rpc('match_jobs_for_seeker', {
       query_embedding: seeker.embedding,
       match_threshold: threshold,
-      match_count: limit,
+      match_count: matchCount,
     });
 
     if (recError) throw recError;
 
-    return recommendations;
+    const candidateJobs = Array.isArray(recommendations) ? recommendations : [];
+    const jobIds = candidateJobs.map((item: any) => item.id);
+
+    if (jobIds.length === 0) {
+      return [];
+    }
+
+    const { data: jobs, error: jobsError } = await fetchJobsWithEmployers(supabase, jobIds, { status: "ACTIVE" });
+
+    if (jobsError || !jobs) {
+      throw jobsError || new Error('Failed to fetch candidate jobs');
+    }
+
+    const seekerProfile: SeekerProfile = {
+      skills: seeker.skills || [],
+      experience: seeker.experience || [],
+      qualification: seeker.qualification || null,
+      certifications: seeker.certifications || [],
+    };
+
+    const jobMap = new Map((jobs || []).map((job: any) => [job.id, job]));
+
+    const filtered: RecommendedJob[] = candidateJobs
+      .map((match: any) => {
+        const job = jobMap.get(match.id);
+        if (!job) return null;
+
+        const structuredMatch = scoreJobSeekerMatch(job, seekerProfile);
+        return {
+          ...job,
+          similarity: match.similarity || 0,
+          hard_match_score: structuredMatch.score,
+          hard_match_breakdown: structuredMatch.breakdown,
+          hard_match_passed: structuredMatch.passed,
+          hard_match_reasons: structuredMatch.reasons,
+        } as RecommendedJob;
+      })
+      .filter((item: any) => item && item.hard_match_passed)
+      .sort((a: any, b: any) => b.similarity - a.similarity)
+      .slice(0, limit);
+
+    return filtered;
   }
 
   /**
@@ -76,11 +135,11 @@ export class RecommendationService {
       throw new Error("Talent discovery limit reached. Upgrade to Premium to find more candidates.");
     }
 
-    // 2. Get Job's embedding
+    // 2. Get Job's embedding and hard requirements
     const supabase = await this.getSupabase();
     const { data: job, error: jobError } = await supabase
       .from('jobs')
-      .select('embedding')
+      .select('id, embedding, must_have_skills, minimum_years_experience, qualification, required_certifications, skills')
       .eq('id', jobId)
       .single();
 
@@ -89,21 +148,73 @@ export class RecommendationService {
     }
 
     // 3. Call pgvector matching function
+    const candidateCount = Math.max(limit * 4, 100);
     const { data: candidates, error: candError } = await supabase.rpc('match_candidates', {
       query_embedding: job.embedding,
       match_threshold: threshold,
-      match_count: limit,
+      match_count: candidateCount,
     });
 
     if (candError) throw candError;
     
-    let validCandidates = candidates || [];
-    
-    if (validCandidates.length > 0) {
+    const validCandidates = Array.isArray(candidates) ? candidates : [];
+    const candidateSeekerIds = validCandidates.map((item: any) => item.id);
+
+    const { data: seekerRows, error: seekerRowsError } = await supabase
+      .from('job_seekers')
+      .select('id, full_name, bio, location, skills, completion, experience, qualification, certifications, seniority_level, employment_status, profile_visibility, avatar_url')
+      .in('id', candidateSeekerIds);
+
+    if (seekerRowsError) {
+      throw seekerRowsError;
+    }
+
+    const filteredSeekers = (seekerRows || []).filter((seeker: any) => {
+      if (seeker.profile_visibility === 'HIDDEN') return false;
+      const hasSkills = Array.isArray(seeker.skills) && seeker.skills.length > 0;
+      const hasBio = typeof seeker.bio === 'string' && seeker.bio.trim().length > 10;
+      const isCompleteEnough = (seeker.completion ?? 0) >= 25;
+      return isCompleteEnough || hasSkills || hasBio;
+    });
+
+    const seekerMap = new Map(filteredSeekers.map((row: any) => [row.id, row]));
+
+    const seekerMatches: RecommendedCandidate[] = validCandidates
+      .map((match: any) => {
+        const seeker = seekerMap.get(match.id);
+        if (!seeker) return null;
+
+        const seekerProfile: SeekerProfile = {
+          skills: seeker.skills || [],
+          experience: seeker.experience || [],
+          qualification: seeker.qualification || null,
+          certifications: seeker.certifications || [],
+        };
+
+        const structuredMatch = scoreJobSeekerMatch(job, seekerProfile);
+        if (!structuredMatch.passed) return null;
+
+        return {
+          ...seeker,
+          ...match,
+          similarity: match.similarity || 0,
+          hard_match_score: structuredMatch.score,
+          hard_match_breakdown: structuredMatch.breakdown,
+          hard_match_reasons: structuredMatch.reasons,
+          hard_match_passed: structuredMatch.passed,
+        } as RecommendedCandidate;
+      })
+      .filter((item: any) => item !== null)
+      .sort((a: any, b: any) => b.similarity - a.similarity)
+      .slice(0, limit);
+
+    let validCandidatesWithRoles = seekerMatches;
+
+    if (validCandidatesWithRoles.length > 0) {
         const { getSupabaseAdminClient } = await import("@/lib/supabase-admin");
         const adminClient = getSupabaseAdminClient();
         if (adminClient) {
-            const seekerIds = validCandidates.map((c: any) => c.id);
+            const seekerIds = validCandidatesWithRoles.map((c: any) => c.id);
             const { data: userRoles } = await adminClient
                 .from("users")
                 .select("id, role")
@@ -111,12 +222,12 @@ export class RecommendationService {
             
             if (userRoles) {
                 const validIds = new Set(userRoles.filter(u => u.role === "JOB_SEEKER").map(u => u.id));
-                validCandidates = validCandidates.filter((c: any) => validIds.has(c.id));
+                validCandidatesWithRoles = validCandidatesWithRoles.filter((c: any) => validIds.has(c.id));
             }
         }
     }
 
-    return validCandidates;
+    return validCandidatesWithRoles;
   }
 
   /**

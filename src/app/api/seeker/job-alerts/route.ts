@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { withAuth } from "@/lib/auth-guard";
 import { NextResponse } from "next/server";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 export const GET = withAuth(async (request, auth) => {
     const supabase = await createSupabaseServerClient();
@@ -62,6 +63,22 @@ export const POST = withAuth(async (request, auth) => {
             throw error;
         }
         
+        await emitSystemEvent({
+            category: "NOTIFICATION",
+            severity: "INFO",
+            event: "JOB_ALERT_CREATED",
+            message: `User ${auth.userId} created a job alert.`,
+            actorId: auth.userId,
+            metadata: {
+                alertId: newAlert?.id,
+                keywords,
+                location,
+                jobType,
+                workMode,
+                frequency
+            }
+        });
+
         return NextResponse.json({ success: true, alert: newAlert });
     } catch {
         console.error("Job Alert POST error");
@@ -88,6 +105,15 @@ export const DELETE = withAuth(async (request, auth) => {
 
         if (error) throw error;
         
+        await emitSystemEvent({
+            category: "NOTIFICATION",
+            severity: "INFO",
+            event: "JOB_ALERT_DELETED",
+            message: `User ${auth.userId} deleted job alert ${alertId}.`,
+            actorId: auth.userId,
+            metadata: { alertId }
+        });
+
         return NextResponse.json({ success: true });
     } catch {
         return NextResponse.json({ error: "Failed to delete alert" }, { status: 500 });
