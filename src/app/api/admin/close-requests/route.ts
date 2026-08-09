@@ -17,7 +17,7 @@ export async function GET() {
             severity: "INFO",
             event: "ADMIN_FETCH_CLOSE_REQUESTS",
             message: `Admin fetched account closure requests`,
-            metadata: { count: requests?.length }
+            metadata: { count: requests?.items?.length ?? 0 }
         });
         return NextResponse.json(requests);
     } catch (error) {
