@@ -8,16 +8,14 @@ import { Sparkles, Briefcase, Zap } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
-type JobWithScore = RecommendedJob & ExtendedJob;
-
 export default function RecommendedJobsClient({ 
     jobs, 
 }: { 
-    jobs: JobWithScore[], 
+    jobs: RecommendedJob[], 
 }) {
     const [selectedJob, setSelectedJob] = useState<ExtendedJob | null>(null);
 
-    const renderJobCard = (job: JobWithScore) => {
+    const renderJobCard = (job: RecommendedJob) => {
         const semanticPct = Math.round(job.similarity * 100);
         const requirementPct = Math.round(job.hard_match_score);
         const matchedSkillsCount = job.hard_match_breakdown.skills.matched?.length ?? 0;
