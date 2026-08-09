@@ -3,34 +3,17 @@
 import { useState } from "react";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
 import JobDetailModal, { ExtendedJob } from "@/components/jobs/JobDetailModal";
-import { RecommendationService, RecommendedJob } from "@/services/recommendation.service";
+import { RecommendedJob } from "@/services/recommendation.service";
 import { Sparkles, Briefcase, Zap } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
-interface MatchBreakdownItem {
-    passed: boolean;
-    score: number;
-    required: string[] | string | null;
-    actual: string[] | number | string | null;
-    missing?: string[];
-    matched?: string[];
-}
-
-interface JobWithScore extends RecommendedJob, ExtendedJob {
-    hard_match_reasons: string[];
-    hard_match_breakdown: {
-        qualification: MatchBreakdownItem;
-        experience: MatchBreakdownItem;
-        skills: MatchBreakdownItem;
-        certifications: MatchBreakdownItem;
-    };
-}
+type JobWithScore = RecommendedJob & ExtendedJob;
 
 export default function RecommendedJobsClient({ 
     jobs, 
 }: { 
-    jobs: RecommendedJob[], 
+    jobs: JobWithScore[], 
 }) {
     const [selectedJob, setSelectedJob] = useState<ExtendedJob | null>(null);
 
