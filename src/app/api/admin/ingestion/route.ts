@@ -138,7 +138,7 @@ export async function POST(req: Request) {
                 severity: "INFO",
                 event: "INGESTED_JOB_APPROVED",
                 message: `Admin approved ingested job ${queueItemId}`,
-                actorId: null,
+                actorId: undefined,
                 metadata: { queueItemId }
             });
 
@@ -160,7 +160,7 @@ export async function POST(req: Request) {
                 severity: "WARNING",
                 event: "INGESTED_JOB_REJECTED",
                 message: `Admin rejected ingested job ${queueItemId}`,
-                actorId: null,
+                actorId: undefined,
                 metadata: { queueItemId, reason: rejectionReason }
             });
 
@@ -220,7 +220,7 @@ export async function POST(req: Request) {
                 severity: "INFO",
                 event: "INGESTED_JOB_UPDATED_AND_APPROVED",
                 message: `Admin updated and approved ingested job ${queueItemId}`,
-                actorId: null,
+                actorId: undefined,
                 metadata: { queueItemId, updatedFields }
             });
 
@@ -240,7 +240,7 @@ export async function POST(req: Request) {
                 severity: "INFO",
                 event: "INGESTION_FORCE_CRAWL_QUEUED",
                 message: `Admin requested force crawl for source ${sourceId}`,
-                actorId: null,
+                actorId: undefined,
                 metadata: { sourceId }
             });
 
