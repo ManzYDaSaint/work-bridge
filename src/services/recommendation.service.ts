@@ -1,13 +1,14 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { fetchJobsWithEmployers } from "@/lib/seeker-data";
 import { scoreJobSeekerMatch, SeekerProfile, StructuredMatchResult } from "@/lib/matching-helpers";
+import { Job } from "@/types";
 
 export interface RecommendationOptions {
   limit?: number;
   threshold?: number;
 }
 
-export interface RecommendedJob extends Record<string, any> {
+export interface RecommendedJob extends Job {
   similarity: number;
   hard_match_score: number;
   hard_match_breakdown: StructuredMatchResult["breakdown"];

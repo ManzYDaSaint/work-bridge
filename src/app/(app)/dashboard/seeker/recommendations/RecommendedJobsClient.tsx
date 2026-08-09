@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
-import JobDetailModal, { ExtendedJob } from "@/components/jobs/JobDetailModal";
+import JobDetailModal from "@/components/jobs/JobDetailModal";
 import { RecommendedJob } from "@/services/recommendation.service";
 import { Sparkles, Briefcase, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -13,7 +13,7 @@ export default function RecommendedJobsClient({
 }: { 
     jobs: RecommendedJob[], 
 }) {
-    const [selectedJob, setSelectedJob] = useState<ExtendedJob | null>(null);
+    const [selectedJob, setSelectedJob] = useState<RecommendedJob | null>(null);
 
     const renderJobCard = (job: RecommendedJob) => {
         const semanticPct = Math.round(job.similarity * 100);
@@ -43,7 +43,7 @@ export default function RecommendedJobsClient({
                             {requirementPct}% Requirements Match
                         </Badge>
                         <button 
-                            onClick={() => setSelectedJob(job as ExtendedJob)}
+                            onClick={() => setSelectedJob(job)}
                             className="text-sm font-semibold text-[#16324f] hover:underline dark:text-slate-200"
                         >
                             View Details
