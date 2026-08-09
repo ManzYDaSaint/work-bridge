@@ -125,7 +125,7 @@ export default function RecommendedJobsClient({
                         <p className="mt-2 text-slate-500">We couldn't find any jobs that closely match your profile right now. Try updating your skills or check back later.</p>
                     </div>
                 ) : (
-                    jobs.map((job, idx) => renderJobCard(job, idx))
+                    jobs.map((job) => renderJobCard(job))
                 )}
             </div>
 
