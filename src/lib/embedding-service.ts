@@ -55,7 +55,7 @@ export function constructSeekerDNA(profile: any): string {
     const normalizedCerts = normalizeSkills(rawCerts);
     const certs = normalizedCerts.length > 0 ? normalizedCerts.join(", ") : (Array.isArray(profile.certifications) ? profile.certifications.join(", ") : (profile.certifications || ""));
     const bio = profile.bio || "";
-    const cvSnippet = extractCVContentSnippet(profile.resume_url, bio);
+    const cvSnippet = extractCVContentSnippet(profile.resume_url);
     
     const experience = (profile.experience || [])
         .map((exp: any) => `${exp.role || exp.title || "Role"} at ${exp.company || exp.employer || "Organization"}: ${exp.description || ""}`)

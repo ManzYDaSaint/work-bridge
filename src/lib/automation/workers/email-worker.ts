@@ -86,8 +86,8 @@ export const EmailNotificationWorker = {
                 category: "NOTIFICATION",
                 severity: "CRITICAL",
                 event: "EMAIL_FAILED",
-                message: `Email ${templateId} failed to ${payload.to}: ${error.message}`,
-                metadata: { templateId, to, taskId: payload.taskId }
+                message: `Email ${payload.templateId} failed to ${payload.to}: ${error.message}`,
+                metadata: { templateId: payload.templateId, to: payload.to, taskId: payload.taskId }
             });
             throw error;
         }

@@ -26,5 +26,5 @@ export default async function EditOpportunityPage({ params }: { params: { id: st
 
     if (error || !opp) redirect("/dashboard/admin/opportunities");
 
-    return <EditOpportunityClient opportunity={opp} adminId={user.id} />;
+    return <EditOpportunityClient opportunity={opp} />;
 }

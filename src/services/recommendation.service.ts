@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { fetchJobsWithEmployers } from "@/lib/seeker-data";
 import { scoreJobSeekerMatch, SeekerProfile, StructuredMatchResult } from "@/lib/matching-helpers";
 import { Job } from "@/types";
+import { generateEmbedding } from "@/lib/embedding-service";
 
 export interface RecommendationOptions {
   limit?: number;
@@ -117,8 +118,8 @@ export class RecommendationService {
           hard_match_reasons: structuredMatch.reasons,
         } as RecommendedJob;
       })
-      .filter((item: any) => item && item.hard_match_passed)
-      .sort((a: any, b: any) => b.similarity - a.similarity)
+      .filter((item): item is RecommendedJob => item !== null && item.hard_match_passed)
+      .sort((a, b) => b.similarity - a.similarity)
       .slice(0, limit);
 
     return filtered;
@@ -205,8 +206,8 @@ export class RecommendationService {
           hard_match_passed: structuredMatch.passed,
         } as RecommendedCandidate;
       })
-      .filter((item: any) => item !== null)
-      .sort((a: any, b: any) => b.similarity - a.similarity)
+      .filter((item): item is RecommendedCandidate => item !== null)
+      .sort((a, b) => b.similarity - a.similarity)
       .slice(0, limit);
 
     let validCandidatesWithRoles = seekerMatches;
