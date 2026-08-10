@@ -9,23 +9,36 @@ import "./workers/ingestion-crawler-worker";
 import "./workers/ingestion-parser-worker";
 import "./workers/ingestion-publisher-worker";
 
-export async function processQueue() {
+export async function processQueue(options?: { taskId?: string; limit?: number }) {
     const supabase = getSupabaseAdminClient();
     if (!supabase) return;
 
-    // 1. Fetch pending tasks ordered by priority
-    const { data: tasks } = await supabase
-        .from('automation_tasks')
-        .select('*')
-        .eq('status', 'PENDING')
-        .lte('run_after', new Date().toISOString())
-        .order('created_at', { ascending: true })
-        .limit(10);
+    let tasks: any[] = [];
+
+    if (options?.taskId) {
+        const { data, error } = await supabase
+            .from('automation_tasks')
+            .select('*')
+            .eq('id', options.taskId)
+            .maybeSingle();
+
+        if (error) throw error;
+        if (data) tasks = [data];
+    } else {
+        const { data } = await supabase
+            .from('automation_tasks')
+            .select('*')
+            .eq('status', 'PENDING')
+            .lte('run_after', new Date().toISOString())
+            .order('created_at', { ascending: true })
+            .limit(options?.limit ?? 10);
+
+        tasks = data || [];
+    }
 
     if (!tasks || tasks.length === 0) return;
 
     for (const task of tasks) {
-        // 2. Mark as RUNNING
         await supabase
             .from('automation_tasks')
             .update({
@@ -35,8 +48,7 @@ export async function processQueue() {
                 updated_at: new Date().toISOString(),
             })
             .eq('id', task.id);
-        
-        // 3. Execute plugin
+
         const plugin = getPlugin(task.plugin_id);
         if (plugin) {
             try {
@@ -49,7 +61,7 @@ export async function processQueue() {
                         updated_at: new Date().toISOString(),
                     })
                     .eq('id', task.id);
-                
+
                 await emitSystemEvent({
                     category: "AUTOMATION",
                     severity: "SUCCESS",
@@ -66,7 +78,7 @@ export async function processQueue() {
                         updated_at: new Date().toISOString(),
                     })
                     .eq('id', task.id);
-                
+
                 await emitSystemEvent({
                     category: "AUTOMATION",
                     severity: "WARNING",
@@ -84,7 +96,7 @@ export async function processQueue() {
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', task.id);
-            
+
             await emitSystemEvent({
                 category: "AUTOMATION",
                 severity: "CRITICAL",

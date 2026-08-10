@@ -254,7 +254,7 @@ export async function POST(req: Request) {
             });
 
             try {
-                await processQueue();
+                await processQueue({ taskId: insertedTask?.id });
             } catch (processError: any) {
                 console.error("[FORCE_CRAWL] Immediate automation processing failed:", processError.message);
             }
