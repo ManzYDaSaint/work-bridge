@@ -6,6 +6,12 @@ import {
     Zap, Building2, MapPin, Power, ShieldCheck, ShieldAlert
 } from "lucide-react";
 import { JobPostingForm } from "@/components/jobs/JobPostingForm";
+import {
+    JobQuickFormValues,
+    serializeCommaSkills,
+    serializeScreeningQuestions,
+    toIngestionQueueFields,
+} from "@/lib/validations/job";
 
 interface IngestionData {
     queueItems: any[];
@@ -116,8 +122,8 @@ export default function IngestionAdminClient() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Ingestion Engine Kill Switch */}
                 <div className={`rounded-xl border p-5 flex items-center justify-between gap-4 transition-all ${engineOn
-                        ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800"
-                        : "bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800"
+                    ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800"
+                    : "bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800"
                     }`}>
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${engineOn ? "bg-emerald-100 dark:bg-emerald-900/40" : "bg-rose-100 dark:bg-rose-900/40"}`}>
@@ -146,8 +152,8 @@ export default function IngestionAdminClient() {
 
                 {/* Admin Approval Gate */}
                 <div className={`rounded-xl border p-5 flex items-center justify-between gap-4 transition-all ${approvalOn
-                        ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
-                        : "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
+                    ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
+                    : "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
                     }`}>
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${approvalOn ? "bg-amber-100 dark:bg-amber-900/40" : "bg-blue-100 dark:bg-blue-900/40"}`}>
@@ -218,8 +224,8 @@ export default function IngestionAdminClient() {
                         key={tab}
                         onClick={() => setSelectedTab(tab)}
                         className={`pb-3 px-4 text-sm font-medium border-b-2 transition capitalize ${selectedTab === tab
-                                ? "border-emerald-500 text-emerald-600 dark:text-emerald-400"
-                                : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                            ? "border-emerald-500 text-emerald-600 dark:text-emerald-400"
+                            : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                             }`}
                     >
                         {tab === "queue" ? `Verification Queue (${data.queueItems.length})` : `Sources & Connectors (${data.sources.length})`}
@@ -248,8 +254,8 @@ export default function IngestionAdminClient() {
                                     key={item.id}
                                     onClick={() => selectItem(item)}
                                     className={`p-4 bg-white dark:bg-gray-900 border rounded-xl cursor-pointer transition shadow-sm hover:border-emerald-500 ${selectedItem?.id === item.id
-                                            ? "border-emerald-500 ring-2 ring-emerald-500/20"
-                                            : "border-gray-200 dark:border-gray-800"
+                                        ? "border-emerald-500 ring-2 ring-emerald-500/20"
+                                        : "border-gray-200 dark:border-gray-800"
                                         }`}
                                 >
                                     <div className="flex justify-between items-start">
@@ -285,32 +291,42 @@ export default function IngestionAdminClient() {
 
                             <div className="p-6 max-h-[75vh] overflow-y-auto">
                                 <JobPostingForm
+                                    key={selectedItem.id}
                                     defaultValues={{
                                         title: editedItem.title,
                                         description: editedItem.description,
                                         location: editedItem.location,
                                         type: editedItem.type,
-                                        workMode: editedItem.work_mode,
-                                        skillsInput: editedItem.skills?.join(", "),
-                                        mustHaveSkillsInput: editedItem.must_have_skills?.join(", "),
-                                        niceToHaveSkillsInput: editedItem.nice_to_have_skills?.join(", "),
-                                        minimumYearsExperience: editedItem.minimum_years_experience,
-                                        qualification: editedItem.qualification,
-                                        salaryRange: editedItem.salary_range,
-                                        deadline: editedItem.deadline,
-                                        applicationMethod: editedItem.application_method,
-                                        externalApplyUrl: editedItem.external_apply_url,
-                                        applyEmail: editedItem.apply_email,
-                                        applyWhatsapp: editedItem.apply_whatsapp,
-                                        applyPhone: editedItem.apply_phone,
-                                        applicationInstructions: editedItem.application_instructions,
-                                        displayCompanyName: editedItem.display_company_name,
+                                        workMode: editedItem.work_mode || "REMOTE",
+                                        skillsInput: serializeCommaSkills(editedItem.skills),
+                                        mustHaveSkillsInput: serializeCommaSkills(editedItem.must_have_skills),
+                                        niceToHaveSkillsInput: serializeCommaSkills(editedItem.nice_to_have_skills),
+                                        minimumYearsExperience: editedItem.minimum_years_experience ?? 0,
+                                        qualification: editedItem.qualification || "",
+                                        screeningQuestionsInput: serializeScreeningQuestions(editedItem.screening_questions),
+                                        salaryRange: editedItem.salary_range || "",
+                                        deadline: editedItem.deadline
+                                            ? new Date(editedItem.deadline).toISOString().split("T")[0]
+                                            : "",
+                                        applicationMethod: editedItem.application_method || "external_url",
+                                        externalApplyUrl: editedItem.external_apply_url || "",
+                                        applyEmail: editedItem.apply_email || "",
+                                        applyWhatsapp: editedItem.apply_whatsapp || "",
+                                        applyPhone: editedItem.apply_phone || "",
+                                        applicationInstructions: editedItem.application_instructions || "",
+                                        allowOneTapApply: editedItem.allow_one_tap_apply ?? false,
+                                        postingType: editedItem.posting_type || "AGANYU",
+                                        displayCompanyName: editedItem.display_company_name || "",
+                                        jobSource: editedItem.job_source || editedItem.source?.name || "Ingestion Engine",
                                     }}
-                                    onSubmit={async (data) => {
-                                        await handleAction("UPDATE_AND_APPROVE", selectedItem.id, { updatedFields: data });
+                                    onSubmit={async (data: JobQuickFormValues) => {
+                                        await handleAction("UPDATE_AND_APPROVE", selectedItem.id, {
+                                            updatedFields: toIngestionQueueFields(data),
+                                        });
                                     }}
                                     saving={!!actionLoading}
                                     submitLabel="Save & Publish"
+                                    companyNamePlaceholder={editedItem.display_company_name || "hiring company"}
                                 />
                             </div>
                         </div>
@@ -346,10 +362,10 @@ export default function IngestionAdminClient() {
                                         <td className="px-6 py-4 font-bold text-emerald-600">{src.reputation_score}/100</td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${src.health_status === "HEALTHY"
-                                                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                                                    : src.health_status === "DEGRADED"
-                                                        ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                                        : "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
+                                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                                : src.health_status === "DEGRADED"
+                                                    ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                                    : "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
                                                 }`}>
                                                 {src.health_status}
                                             </span>

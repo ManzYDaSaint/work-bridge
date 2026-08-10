@@ -115,3 +115,80 @@ export const jobQuickFormSchema = z.object({
 });
 
 export type JobQuickFormValues = z.infer<typeof jobQuickFormSchema>;
+
+export function defaultJobDeadline(): string {
+    return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+}
+
+export function toJobsApiPayload(data: JobQuickFormValues) {
+    const skills = parseCommaSkills(data.skillsInput);
+    const mustHaveSkills = parseCommaSkills(
+        data.mustHaveSkillsInput?.trim() ? data.mustHaveSkillsInput : data.skillsInput
+    );
+    const niceToHaveSkills = parseCommaSkills(data.niceToHaveSkillsInput || "");
+    const screeningQuestions = parseScreeningQuestions(data.screeningQuestionsInput);
+    const deadline = data.deadline?.trim() || defaultJobDeadline();
+
+    return {
+        title: data.title,
+        description: data.description,
+        location: data.location,
+        type: data.type,
+        workMode: data.workMode,
+        skills,
+        mustHaveSkills,
+        niceToHaveSkills,
+        minimumYearsExperience: data.minimumYearsExperience || 0,
+        qualification: data.qualification?.trim() || undefined,
+        screeningQuestions,
+        salaryRange: data.salaryRange?.trim() || undefined,
+        deadline,
+        applicationMethod: data.applicationMethod,
+        externalApplyUrl: data.externalApplyUrl?.trim() || undefined,
+        applyEmail: data.applyEmail?.trim() || undefined,
+        applyWhatsapp: data.applyWhatsapp?.trim() || undefined,
+        applyPhone: data.applyPhone?.trim() || undefined,
+        applicationInstructions: data.applicationInstructions?.trim() || undefined,
+        allowOneTapApply: data.allowOneTapApply,
+        postingType: data.postingType,
+        displayCompanyName: data.displayCompanyName?.trim() || undefined,
+        jobSource: data.jobSource?.trim() || undefined,
+    };
+}
+
+/** Maps form values to ingested_jobs_queue column names. */
+export function toIngestionQueueFields(data: JobQuickFormValues) {
+    const skills = parseCommaSkills(data.skillsInput);
+    const mustHaveSkills = parseCommaSkills(
+        data.mustHaveSkillsInput?.trim() ? data.mustHaveSkillsInput : data.skillsInput
+    );
+    const niceToHaveSkills = parseCommaSkills(data.niceToHaveSkillsInput || "");
+    const screeningQuestions = parseScreeningQuestions(data.screeningQuestionsInput);
+    const deadline = data.deadline?.trim() || defaultJobDeadline();
+
+    return {
+        title: data.title,
+        description: data.description,
+        location: data.location,
+        type: data.type,
+        work_mode: data.workMode,
+        skills,
+        must_have_skills: mustHaveSkills,
+        nice_to_have_skills: niceToHaveSkills,
+        minimum_years_experience: data.minimumYearsExperience || 0,
+        qualification: data.qualification?.trim() || null,
+        screening_questions: screeningQuestions,
+        salary_range: data.salaryRange?.trim() || null,
+        deadline,
+        application_method: data.applicationMethod,
+        external_apply_url: data.externalApplyUrl?.trim() || null,
+        apply_email: data.applyEmail?.trim() || null,
+        apply_whatsapp: data.applyWhatsapp?.trim() || null,
+        apply_phone: data.applyPhone?.trim() || null,
+        application_instructions: data.applicationInstructions?.trim() || null,
+        allow_one_tap_apply: data.allowOneTapApply ?? false,
+        posting_type: data.postingType || "AGANYU",
+        display_company_name: data.displayCompanyName?.trim() || undefined,
+        job_source: data.jobSource?.trim() || "Ingestion Engine",
+    };
+}

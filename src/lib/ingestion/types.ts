@@ -222,6 +222,10 @@ export interface IngestedJobQueueItem {
     apply_phone: string | null;
     application_instructions: string | null;
     application_method: string;
+    screening_questions: ScreeningQuestion[];
+    posting_type: string;
+    allow_one_tap_apply: boolean;
+    job_source: string | null;
 
     // Intelligence metadata
     extraction_method: ExtractionMethod;
