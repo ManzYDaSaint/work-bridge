@@ -5,6 +5,8 @@
  * connectors, rule engine, AI enrichment, intelligence, and publishing.
  */
 
+import { ScreeningQuestion } from '@/types';
+
 // ─────────────────────────────────────────────────────────────────
 // Source Registry
 // ─────────────────────────────────────────────────────────────────
