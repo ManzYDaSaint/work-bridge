@@ -1,6 +1,7 @@
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
 import { emitSystemEvent } from "@/lib/mission-control";
+import { processQueue } from "@/lib/automation/engine";
 
 export const dynamic = "force-dynamic";
 
@@ -228,12 +229,20 @@ export async function POST(req: Request) {
         }
 
         if (action === "FORCE_CRAWL") {
-            // Queue crawler task for background execution
-            await supabase.from("automation_tasks").insert({
+            if (!sourceId) {
+                return NextResponse.json({ error: "Missing sourceId" }, { status: 400 });
+            }
+
+            // Queue crawler task for immediate processing.
+            const { data: insertedTask, error: taskError } = await supabase.from("automation_tasks").insert({
                 plugin_id: "job-ingestion-crawler",
                 payload: { sourceId },
                 priority: "HIGH"
-            });
+            }).select("id").single();
+
+            if (taskError) {
+                throw taskError;
+            }
 
             await emitSystemEvent({
                 category: "INGESTION",
@@ -241,10 +250,16 @@ export async function POST(req: Request) {
                 event: "INGESTION_FORCE_CRAWL_QUEUED",
                 message: `Admin requested force crawl for source ${sourceId}`,
                 actorId: undefined,
-                metadata: { sourceId }
+                metadata: { sourceId, taskId: insertedTask?.id }
             });
 
-            return NextResponse.json({ success: true, message: "Force crawl task queued." });
+            try {
+                await processQueue();
+            } catch (processError: any) {
+                console.error("[FORCE_CRAWL] Immediate automation processing failed:", processError.message);
+            }
+
+            return NextResponse.json({ success: true, message: "Force crawl task queued and processing attempted." });
         }
 
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });
