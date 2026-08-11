@@ -67,7 +67,7 @@ export const JobIngestionCrawlerWorker = {
                         });
                     }
                 } catch (filterErr) {
-                    console.warn(`[CrawlerWorker] Discovery filters failed for source ${source.id}:`, filterErr?.message || filterErr);
+                    console.warn(`[CrawlerWorker] Discovery filters failed for source ${source.id}:`, (filterErr as any)?.message || filterErr);
                 }
 
                 let newPayloadsCount = 0;
