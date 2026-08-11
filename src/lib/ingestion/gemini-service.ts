@@ -14,6 +14,7 @@ import type {
     GeminiEnrichmentResult,
     StructuredJobFields,
 } from "./types";
+import { IngestionEvents } from "./ingestion-events";
 
 // ─────────────────────────────────────────────────────────────────
 // Configuration
@@ -179,7 +180,7 @@ export async function enrichWithGemini(
         await emitSystemEvent({
             category: 'AUTOMATION',
             severity: 'CRITICAL',
-            event: 'INGESTION_CIRCUIT_BREAKER',
+            event: IngestionEvents.CIRCUIT_BREAKER_OPEN,
             message: 'Gemini daily quota approaching limit — circuit breaker open',
             metadata: { ...usageState },
         });
@@ -226,8 +227,32 @@ export async function enrichWithGemini(
             const text = body.candidates?.[0]?.content?.parts?.[0]?.text;
             if (!text) throw new Error('Empty Gemini response');
 
-            const parsed: GeminiEnrichmentResult = JSON.parse(text);
+            const rawParsed = JSON.parse(text);
             const tokensUsed = body.usageMetadata?.totalTokenCount || 0;
+
+            // Sanitize AI response: only keep requested fields and ensure confidence_score numeric
+            const allowedKeys = [
+                'title','description','location','type','work_mode','skills','must_have_skills','nice_to_have_skills',
+                'minimum_years_experience','qualification','salary_range','deadline','display_company_name',
+                'external_apply_url','apply_email','apply_whatsapp','apply_phone','application_instructions','confidence_score'
+            ];
+
+            const parsed: GeminiEnrichmentResult = {} as any;
+            for (const key of allowedKeys) {
+                if (key === 'confidence_score') continue;
+                if (Object.prototype.hasOwnProperty.call(rawParsed, key)) {
+                    (parsed as any)[key] = rawParsed[key];
+                } else {
+                    // Ensure missing fields are explicit null (caller expects null when not found)
+                    (parsed as any)[key] = null;
+                }
+            }
+
+            // Normalize confidence_score
+            let conf = Number(rawParsed?.confidence_score || rawParsed?.confidence || 0) || 0;
+            if (conf < 0) conf = 0;
+            if (conf > 100) conf = 100;
+            parsed.confidence_score = conf;
 
             // Update circuit breaker counters
             usageState.requestsToday++;

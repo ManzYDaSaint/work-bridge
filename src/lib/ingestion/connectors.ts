@@ -282,6 +282,99 @@ export class RestApiConnector implements JobSourceConnector {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Career Page Connector
+// ─────────────────────────────────────────────────────────────────
+
+const JOB_LINK_KEYWORDS = [
+    'job', 'jobs', 'career', 'careers', 'vacancy', 'vacancies',
+    'opportunity', 'opportunities', 'recruitment', 'position',
+    'apply', 'advertisement', 'advertisements'
+];
+
+const NON_JOB_LINK_KEYWORDS = [
+    'privacy', 'terms', 'login', 'signin', 'sign-in', 'register',
+    'facebook', 'instagram', 'twitter', 'youtube', 'linkedin.com/company',
+    'mailto:', 'tel:', '#'
+];
+
+export class CareerPageConnector implements JobSourceConnector {
+    readonly connectorType: ConnectorType = 'CAREER_PAGE';
+
+    async discoverJobs(source: IngestionSource): Promise<DiscoveredJobRef[]> {
+        const url = source.feed_url || source.base_url;
+        const res = await fetch(url, {
+            redirect: 'follow',
+            headers: {
+                'User-Agent': 'AganyuJobIngestionEngine/1.0 (+https://aganyu.com)',
+                'Accept': 'text/html,application/xhtml+xml',
+                ...source.custom_headers,
+            },
+        });
+
+        if (!res.ok) {
+            throw new Error(`[CareerPageConnector] Failed to fetch ${url}: ${res.statusText}`);
+        }
+
+        const html = await res.text();
+        const links = extractCareerPageLinks(html, url, source);
+
+        if (links.length > 0) {
+            return links;
+        }
+
+        const pageTitle = extractHtmlTitle(html) || source.name;
+        if (looksLikeVacancyPage(html, pageTitle)) {
+            return [{
+                externalId: crypto.createHash('md5').update(url).digest('hex'),
+                url,
+                title: pageTitle,
+                metadata: { isListingPageFallback: true },
+            }];
+        }
+
+        return [];
+    }
+
+    async fetchJob(ref: DiscoveredJobRef, source: IngestionSource): Promise<FetchedPayload> {
+        const res = await fetch(ref.url, {
+            redirect: 'follow',
+            headers: {
+                'User-Agent': 'AganyuJobIngestionEngine/1.0 (+https://aganyu.com)',
+                'Accept': 'text/html,application/xhtml+xml,application/pdf',
+                ...source.custom_headers,
+            },
+        });
+
+        if (!res.ok) {
+            throw new Error(`[CareerPageConnector] Failed to fetch job ${ref.url}: ${res.statusText}`);
+        }
+
+        const contentTypeHeader = res.headers.get('content-type') || '';
+        const contentType = contentTypeHeader.includes('pdf') ? 'TEXT' : 'HTML';
+        const raw = await res.text();
+
+        if (isExpiredContent(raw)) {
+            return {
+                rawContent: '',
+                contentType: 'TEXT',
+                url: ref.url,
+                checksum: 'EXPIRED_SKIP',
+            };
+        }
+
+        const rawContent = ref.title ? `<h1>${ref.title}</h1>\n${raw}` : raw;
+        const checksum = crypto.createHash('sha256').update(rawContent).digest('hex');
+
+        return {
+            rawContent,
+            contentType,
+            url: ref.url,
+            checksum,
+        };
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Connector Registry
 // ─────────────────────────────────────────────────────────────────
 
@@ -290,6 +383,27 @@ const connectorRegistry: Map<ConnectorType, JobSourceConnector> = new Map();
 // Register built-in connectors
 connectorRegistry.set('RSS', new RSSConnector());
 connectorRegistry.set('REST_API', new RestApiConnector());
+connectorRegistry.set('CAREER_PAGE', new CareerPageConnector());
+
+// Safe stubs for advanced, source-specific connectors
+class StubConnector implements JobSourceConnector {
+    constructor(readonly connectorType: ConnectorType) {}
+    async discoverJobs(_source: IngestionSource): Promise<DiscoveredJobRef[]> {
+        throw new Error(`Connector ${this.connectorType} is not yet implemented.`);
+    }
+    async fetchJob(_ref: DiscoveredJobRef, _source: IngestionSource): Promise<FetchedPayload> {
+        throw new Error(`Connector ${this.connectorType} is not yet implemented.`);
+    }
+}
+
+connectorRegistry.set('GREENHOUSE', new StubConnector('GREENHOUSE'));
+connectorRegistry.set('LEVER', new StubConnector('LEVER'));
+connectorRegistry.set('ASHBY', new StubConnector('ASHBY'));
+connectorRegistry.set('WORKDAY', new StubConnector('WORKDAY'));
+connectorRegistry.set('SMARTRECRUITERS', new StubConnector('SMARTRECRUITERS'));
+connectorRegistry.set('WORDPRESS_JOBS', new StubConnector('WORDPRESS_JOBS'));
+connectorRegistry.set('HTML_PARSER', new StubConnector('HTML_PARSER'));
+connectorRegistry.set('EMAIL_WEBHOOK', new StubConnector('EMAIL_WEBHOOK'));
 
 export function getConnector(type: ConnectorType): JobSourceConnector {
     const connector = connectorRegistry.get(type);
@@ -348,4 +462,94 @@ function getXmlTagValue(xml: string, tagName: string): string | undefined {
         .replace(/&#039;/g, "'")
         .replace(/&nbsp;/g, ' ')
         .trim();
+}
+
+function extractCareerPageLinks(html: string, baseUrl: string, source: IngestionSource): DiscoveredJobRef[] {
+    const refs: DiscoveredJobRef[] = [];
+    const seen = new Set<string>();
+    const maxLinks = Number(source.selector_config?.maxLinks || 30);
+    const includeKeywords = Array.isArray(source.selector_config?.linkIncludeKeywords)
+        ? source.selector_config.linkIncludeKeywords.map((kw: string) => kw.toLowerCase())
+        : JOB_LINK_KEYWORDS;
+    const excludeKeywords = Array.isArray(source.selector_config?.linkExcludeKeywords)
+        ? [...NON_JOB_LINK_KEYWORDS, ...source.selector_config.linkExcludeKeywords.map((kw: string) => kw.toLowerCase())]
+        : NON_JOB_LINK_KEYWORDS;
+
+    const linkRegex = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    let match;
+
+    while ((match = linkRegex.exec(html)) !== null && refs.length < maxLinks) {
+        const href = decodeHtmlEntities(match[1] || '').trim();
+        const label = cleanHtmlLabel(match[2] || '');
+        if (!href || !label || label.length < 3) continue;
+
+        const absoluteUrl = toAbsoluteUrl(href, baseUrl);
+        if (!absoluteUrl || seen.has(absoluteUrl)) continue;
+
+        const haystack = `${absoluteUrl} ${label}`.toLowerCase();
+        if (excludeKeywords.some(kw => haystack.includes(kw))) continue;
+        if (!includeKeywords.some(kw => haystack.includes(kw))) continue;
+
+        seen.add(absoluteUrl);
+        refs.push({
+            externalId: crypto.createHash('md5').update(absoluteUrl).digest('hex'),
+            url: absoluteUrl,
+            title: label,
+            metadata: { sourceListUrl: baseUrl },
+        });
+    }
+
+    return refs;
+}
+
+function toAbsoluteUrl(href: string, baseUrl: string): string | null {
+    try {
+        return new URL(href, baseUrl).toString();
+    } catch {
+        return null;
+    }
+}
+
+function extractHtmlTitle(html: string): string | null {
+    const h1 = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
+    if (h1?.[1]) return cleanHtmlLabel(h1[1]);
+
+    const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+    if (title?.[1]) return cleanHtmlLabel(title[1]);
+
+    return null;
+}
+
+function cleanHtmlLabel(html: string): string {
+    return decodeHtmlEntities(html)
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function decodeHtmlEntities(text: string): string {
+    return text
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#039;/g, "'")
+        .replace(/&nbsp;/g, ' ');
+}
+
+function looksLikeVacancyPage(html: string, title: string): boolean {
+    const text = `${title} ${cleanHtmlLabel(html)}`.toLowerCase();
+    const positiveHits = JOB_LINK_KEYWORDS.filter(kw => text.includes(kw)).length;
+    const applySignals = /(deadline|closing date|how to apply|applications? (?:are )?invited|position|post:)/i.test(text);
+    return positiveHits >= 2 && applySignals;
+}
+
+function isExpiredContent(content: string): boolean {
+    const body = content.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+    return /class=["'][^"']*(?:expired|closed)[^"']*["']/i.test(body)
+        || /applications have closed/i.test(body)
+        || /this (?:listing|vacancy|job) has expired/i.test(body)
+        || /deadline has passed/i.test(body);
 }

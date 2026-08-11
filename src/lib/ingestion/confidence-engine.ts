@@ -50,7 +50,31 @@ export function shouldCallGemini(result: RuleExtractionResult): boolean {
  * These are fields with confidence below the critical threshold.
  */
 export function getFieldsForGemini(result: RuleExtractionResult): string[] {
-    return Object.entries(result.confidence)
-        .filter(([, conf]) => (conf as number) < CRITICAL_FIELD_THRESHOLD)
-        .map(([field]) => field);
+    // Ensure we return fields that are either missing (undefined/null) or below the critical threshold.
+    const knownFields = [
+        'title','description','location','type','work_mode','skills','must_have_skills','nice_to_have_skills',
+        'minimum_years_experience','qualification','salary_range','deadline','display_company_name',
+        'external_apply_url','apply_email','apply_whatsapp','apply_phone','application_instructions'
+    ];
+
+    const fields: string[] = [];
+    for (const f of knownFields) {
+        const conf = (result.confidence as any)[f];
+        const val = (result.data as any)[f];
+
+        // If field is missing or explicitly null/empty, request AI
+        const isMissing = val === undefined || val === null || (typeof val === 'string' && val.trim() === '') || (Array.isArray(val) && val.length === 0);
+        if (isMissing) {
+            fields.push(f);
+            continue;
+        }
+
+        // If there's a confidence score and it's below threshold, include it
+        if (typeof conf === 'number' && conf < CRITICAL_FIELD_THRESHOLD) {
+            fields.push(f);
+            continue;
+        }
+    }
+
+    return fields;
 }

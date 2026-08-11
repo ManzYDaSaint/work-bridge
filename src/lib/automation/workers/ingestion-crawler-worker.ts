@@ -10,6 +10,8 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getConnector } from "@/lib/ingestion/connectors";
 import { emitSystemEvent } from "@/lib/mission-control";
 import type { IngestionSource } from "@/lib/ingestion/types";
+import { IngestionEvents } from "@/lib/ingestion/ingestion-events";
+import { computeSourceHealthStatus, shouldAutoDisableSource } from "@/lib/ingestion/source-health";
 
 export const JobIngestionCrawlerWorker = {
     id: "job-ingestion-crawler",
@@ -24,7 +26,7 @@ export const JobIngestionCrawlerWorker = {
             .eq('key', 'ingestion_service_enabled')
             .maybeSingle();
 
-        const serviceEnabled = settingData ? (settingData.value as boolean) : true;
+        const serviceEnabled = settingData ? (settingData.value === true || settingData.value === 'true') : true;
         if (!serviceEnabled) {
             console.log("[CrawlerWorker] Ingestion service is globally DISABLED via system_settings. Skipping crawl.");
             return;
@@ -45,7 +47,28 @@ export const JobIngestionCrawlerWorker = {
         for (const source of sources as IngestionSource[]) {
             try {
                 const connector = getConnector(source.connector_type);
-                const discovered = await connector.discoverJobs(source);
+                let discovered = await connector.discoverJobs(source);
+
+                // Apply optional source-level discovery filters (non-destructive)
+                try {
+                    if (Array.isArray(source.path_whitelist) && source.path_whitelist.length > 0) {
+                        discovered = discovered.filter(ref => source.path_whitelist!.some(p => ref.url.includes(p)));
+                    }
+
+                    if (Array.isArray(source.path_blacklist) && source.path_blacklist.length > 0) {
+                        discovered = discovered.filter(ref => !source.path_blacklist!.some(p => ref.url.includes(p)));
+                    }
+
+                    if (Array.isArray(source.discovery_keywords) && source.discovery_keywords.length > 0) {
+                        const kws = source.discovery_keywords.map(k => k.toLowerCase());
+                        discovered = discovered.filter(ref => {
+                            const text = ((ref.title || '') + ' ' + JSON.stringify(ref.metadata || '')).toLowerCase();
+                            return kws.some(k => text.includes(k));
+                        });
+                    }
+                } catch (filterErr) {
+                    console.warn(`[CrawlerWorker] Discovery filters failed for source ${source.id}:`, filterErr?.message || filterErr);
+                }
 
                 let newPayloadsCount = 0;
 
@@ -136,20 +159,30 @@ export const JobIngestionCrawlerWorker = {
 
                 // Update source crawl metrics
                 const newConsecutiveErrors = 0;
+                const newHealthStatus = computeSourceHealthStatus(newConsecutiveErrors, 0);
                 
                 await supabase.from('job_ingestion_sources').update({
                     last_crawl_at: new Date().toISOString(),
                     last_success_at: new Date().toISOString(),
+                    last_job_found_at: discovered.length > 0 ? new Date().toISOString() : source.last_job_found_at,
                     consecutive_errors: newConsecutiveErrors,
-                    health_status: 'HEALTHY'
+                    health_status: newHealthStatus
                 }).eq('id', source.id);
 
                 await emitSystemEvent({
                     category: 'AUTOMATION',
                     severity: 'SUCCESS',
-                    event: 'INGESTION_CRAWL_COMPLETED',
+                    event: IngestionEvents.JOB_DISCOVERED,
                     message: `Crawl completed for ${source.name}: ${discovered.length} discovered, ${newPayloadsCount} new payloads queued.`,
                     metadata: { sourceId: source.id, discoveredCount: discovered.length, newPayloadsCount }
+                });
+
+                await emitSystemEvent({
+                    category: 'INGESTION',
+                    severity: 'INFO',
+                    event: IngestionEvents.SOURCE_HEALTH_UPDATED,
+                    message: `Source health updated for ${source.name}: ${newHealthStatus}`,
+                    metadata: { sourceId: source.id, healthStatus: newHealthStatus, consecutiveErrors: newConsecutiveErrors }
                 });
 
             } catch (err: any) {
@@ -170,20 +203,24 @@ export const JobIngestionCrawlerWorker = {
                     }
                 }
 
+                const errorRate = 0; // Placeholder until we calculate errors / success count history
+                const newHealthStatus = computeSourceHealthStatus(newErrorCount, errorRate);
+                const disableSource = shouldAutoDisableSource(newErrorCount, errorRate);
+
                 await supabase.from('job_ingestion_sources').update({
                     last_crawl_at: new Date().toISOString(),
                     consecutive_errors: newErrorCount,
                     last_error_message: err.message,
-                    health_status: shouldDisable ? 'DISABLED' : 'DEGRADED',
-                    is_enabled: !shouldDisable
+                    health_status: newHealthStatus,
+                    is_enabled: !disableSource
                 }).eq('id', source.id);
 
                 await emitSystemEvent({
                     category: 'AUTOMATION',
-                    severity: shouldDisable ? 'CRITICAL' : 'WARNING',
-                    event: 'INGESTION_CRAWL_FAILED',
-                    message: `Crawl ${shouldDisable ? 'disabled' : 'failed'} for source ${source.name}: ${err.message}`,
-                    metadata: { sourceId: source.id, error: err.message, consecutiveErrors: newErrorCount }
+                    severity: disableSource ? 'CRITICAL' : 'WARNING',
+                    event: disableSource ? IngestionEvents.SOURCE_DISABLED : IngestionEvents.SOURCE_DEGRADED,
+                    message: `Crawl ${disableSource ? 'disabled' : 'degraded'} source ${source.name}: ${err.message}`,
+                    metadata: { sourceId: source.id, error: err.message, consecutiveErrors: newErrorCount, healthStatus: newHealthStatus }
                 });
             }
         }

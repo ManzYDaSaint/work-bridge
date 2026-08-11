@@ -14,6 +14,14 @@ import type {
     StructuredJobFields,
     FieldConfidenceMap,
 } from "./types";
+import {
+    extractOpenGraphFields,
+    extractJsonLdObjects,
+    extractJobFieldsFromJsonLd,
+    extractBestTitle,
+    extractBestDescription,
+    findJobPostingJsonLd,
+} from "./extraction-utils";
 
 // ─────────────────────────────────────────────────────────────────
 // Malawi-Specific Dictionaries
@@ -99,6 +107,27 @@ export function extractJobFields(
     const text = rawText || "";
     const lowerText = text.toLowerCase();
 
+    // ── Multi-Level Extraction Helpers ───────────────────────────
+    const jsonLd = contentType === 'HTML'
+        ? findJobPostingJsonLd(text)
+        : null;
+
+    const openGraph = contentType === 'HTML'
+        ? extractOpenGraphFields(text)
+        : {};
+
+    if (jsonLd) {
+        const jsonLdFields = extractJobFieldsFromJsonLd(jsonLd);
+        Object.assign(data, jsonLdFields);
+        confidence.title = data.title ? 95 : (confidence.title || 0);
+        confidence.description = data.description ? 90 : (confidence.description || 0);
+        confidence.display_company_name = data.display_company_name ? 90 : (confidence.display_company_name || 0);
+        confidence.location = data.location ? 90 : (confidence.location || 0);
+        confidence.type = data.type ? 90 : (confidence.type || 0);
+        confidence.deadline = data.deadline ? 90 : (confidence.deadline || 0);
+        confidence.external_apply_url = data.external_apply_url ? 90 : (confidence.external_apply_url || 0);
+    }
+
     // ── Non-Vacancy / Blog Article Filter ───────────────────────
     const NON_VACANCY_KEYWORDS = [
         'job hunting tips', 'cv stand out', 'how to write a cv', 'interview tips',
@@ -125,12 +154,22 @@ export function extractJobFields(
     }
 
     // ── Title ──────────────────────────────────────────────────
-    const h1Match = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(text);
-    if (h1Match && h1Match[1]) {
-        const cleanH1 = h1Match[1].replace(/<[^>]*>/g, '').trim();
-        if (cleanH1.length > 2 && cleanH1.length < 120 && !cleanH1.includes('{') && !cleanH1.includes('width:')) {
-            data.title = cleanText(cleanH1);
-            confidence.title = 95;
+    if (!data.title) {
+        const ogTitle = extractBestTitle(openGraph);
+        if (ogTitle) {
+            data.title = cleanText(ogTitle);
+            confidence.title = 90;
+        }
+    }
+
+    if (!data.title) {
+        const h1Match = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(text);
+        if (h1Match && h1Match[1]) {
+            const cleanH1 = h1Match[1].replace(/<[^>]*>/g, '').trim();
+            if (cleanH1.length > 2 && cleanH1.length < 120 && !cleanH1.includes('{') && !cleanH1.includes('width:')) {
+                data.title = cleanText(cleanH1);
+                confidence.title = 95;
+            }
         }
     }
 
@@ -147,13 +186,23 @@ export function extractJobFields(
     }
 
     // ── Description ───────────────────────────────────────────
-    // For rule extraction, description is the raw text (cleaned).
-    // A more sophisticated approach uses Gemini to normalize.
-    if (text.length > 50) {
-        data.description = cleanHtml(text);
-        confidence.description = text.length > 200 ? 85 : 60;
-    } else {
-        confidence.description = 0;
+    if (!data.description) {
+        const ogDescription = extractBestDescription(openGraph);
+        if (ogDescription) {
+            data.description = cleanHtml(ogDescription);
+            confidence.description = 90;
+        }
+    }
+
+    if (!data.description) {
+        // For rule extraction, description is the raw text (cleaned).
+        // A more sophisticated approach uses Gemini to normalize.
+        if (text.length > 50) {
+            data.description = cleanHtml(text);
+            confidence.description = text.length > 200 ? 85 : 60;
+        } else {
+            confidence.description = 0;
+        }
     }
 
     // ── Employer / Display Company Name ───────────────────────

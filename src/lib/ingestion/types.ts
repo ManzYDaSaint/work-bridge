@@ -11,7 +11,18 @@ import { ScreeningQuestion } from '@/types';
 // Source Registry
 // ─────────────────────────────────────────────────────────────────
 
-export type ConnectorType = 'RSS' | 'REST_API' | 'CAREER_PAGE' | 'HTML_PARSER' | 'EMAIL_WEBHOOK';
+export type ConnectorType =
+    | 'RSS'
+    | 'REST_API'
+    | 'CAREER_PAGE'
+    | 'HTML_PARSER'
+    | 'EMAIL_WEBHOOK'
+    | 'GREENHOUSE'
+    | 'LEVER'
+    | 'ASHBY'
+    | 'WORKDAY'
+    | 'SMARTRECRUITERS'
+    | 'WORDPRESS_JOBS';
 export type SourceHealthStatus = 'HEALTHY' | 'DEGRADED' | 'FAILING' | 'DISABLED';
 
 export interface IngestionSource {
@@ -55,6 +66,10 @@ export interface IngestionSource {
     auth_config: Record<string, any>;
     selector_config: Record<string, any>;
     custom_headers: Record<string, string>;
+    // Discovery configuration (optional)
+    path_whitelist?: string[];   // Only accept discovered URLs containing one of these substrings
+    path_blacklist?: string[];   // Reject discovered URLs containing one of these substrings
+    discovery_keywords?: string[]; // Require at least one of these keywords in title or metadata
 
     created_at: string;
     updated_at: string;
@@ -197,7 +212,13 @@ export interface JobIntelligenceResult {
 // Ingested Jobs Queue Status
 // ─────────────────────────────────────────────────────────────────
 
-export type IngestionQueueStatus = 'PENDING_REVIEW' | 'APPROVED' | 'PUBLISHED' | 'REJECTED' | 'DUPLICATE';
+export type IngestionQueueStatus =
+    | 'PENDING_REVIEW'
+    | 'NEEDS_MORE_DATA'
+    | 'APPROVED'
+    | 'PUBLISHED'
+    | 'REJECTED'
+    | 'DUPLICATE';
 
 export interface IngestedJobQueueItem {
     id: string;

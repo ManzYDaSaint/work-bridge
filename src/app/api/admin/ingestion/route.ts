@@ -10,16 +10,23 @@ export async function GET(req: Request) {
     if (!supabase) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
-    const status = searchParams.get("status") || "PENDING_REVIEW";
+    const status = searchParams.get("status") || "ACTIONABLE";
 
     // 1. Fetch queued items
-    const { data: queueItems, error: queueErr } = await supabase
+    let queueQuery = supabase
         .from("ingested_jobs_queue")
         .select(`
             *,
             source:job_ingestion_sources(id, name, connector_type, reputation_score)
-        `)
-        .eq("status", status)
+        `);
+
+    if (status === "ACTIONABLE") {
+        queueQuery = queueQuery.in("status", ["PENDING_REVIEW", "NEEDS_MORE_DATA"]);
+    } else {
+        queueQuery = queueQuery.eq("status", status);
+    }
+
+    const { data: queueItems, error: queueErr } = await queueQuery
         .order("created_at", { ascending: false })
         .limit(50);
 
@@ -42,6 +49,14 @@ export async function GET(req: Request) {
         .eq("status", "PUBLISHED");
     if (publishedCountErr) {
         return NextResponse.json({ error: publishedCountErr.message }, { status: 500 });
+    }
+
+    const { count: needsMoreDataCount, error: needsMoreDataCountErr } = await supabase
+        .from("ingested_jobs_queue")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "NEEDS_MORE_DATA");
+    if (needsMoreDataCountErr) {
+        return NextResponse.json({ error: needsMoreDataCountErr.message }, { status: 500 });
     }
 
     const { count: sourcesCount, error: sourcesCountErr } = await supabase
@@ -85,6 +100,7 @@ export async function GET(req: Request) {
         settings,
         metrics: {
             pendingCount: pendingCount || 0,
+            needsMoreDataCount: needsMoreDataCount || 0,
             publishedCount: publishedCount || 0,
             sourcesCount: sourcesCount || 0,
         }
@@ -226,6 +242,27 @@ export async function POST(req: Request) {
             });
 
             return NextResponse.json({ success: true, message: "Job updated and approved." });
+        }
+
+        if (action === "TOGGLE_SOURCE_STATUS") {
+            if (!sourceId) return NextResponse.json({ error: "Missing sourceId" }, { status: 400 });
+            // Correctly extract isEnabled from the body
+            const isEnabled = body.isEnabled; 
+
+            await supabase
+                .from("job_ingestion_sources")
+                .update({ is_enabled: isEnabled })
+                .eq("id", sourceId);
+
+            await emitSystemEvent({
+                category: "INGESTION",
+                severity: "INFO",
+                event: "INGESTION_SOURCE_TOGGLED",
+                message: `Source ${sourceId} set to ${isEnabled ? "enabled" : "disabled"}`,
+                metadata: { sourceId, isEnabled }
+            });
+
+            return NextResponse.json({ success: true, message: `Source status updated.` });
         }
 
         if (action === "FORCE_CRAWL") {

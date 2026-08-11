@@ -14,7 +14,9 @@ import { enrichWithGemini } from "@/lib/ingestion/gemini-service";
 import { analyzeJobIntelligence } from "@/lib/ingestion/job-intelligence";
 import { checkForDuplicates } from "@/lib/ingestion/duplicate-detector";
 import { deriveApplicationMethod } from "@/lib/ingestion/types";
+import { validateExtractedJob } from "@/lib/ingestion/validation";
 import { emitSystemEvent } from "@/lib/mission-control";
+import { IngestionEvents } from "@/lib/ingestion/ingestion-events";
 
 export const JobIngestionParserWorker = {
     id: "job-ingestion-parser",
@@ -87,14 +89,22 @@ export const JobIngestionParserWorker = {
         }
 
         // 4. Gemini Enrichment (if needed and enabled)
-        // 5. Job Intelligence (Analyze early to use for prioritization)
-        const intel = analyzeJobIntelligence(finalJobFields);
+        await emitSystemEvent({
+            category: 'INGESTION',
+            severity: 'INFO',
+            event: IngestionEvents.EXTRACTION_STARTED,
+            message: `Extraction started for raw payload ${rawPayload.id}`,
+            metadata: { rawPayloadId: rawPayload.id, sourceId: payload.sourceId }
+        });
+
+        // 5. Early intelligence is used only to decide whether an AI repair is worth the cost.
+        const preAiIntel = analyzeJobIntelligence(finalJobFields);
 
         if (shouldCallGemini(ruleResult)) {
             const missingFields = getFieldsForGemini(ruleResult);
             if (missingFields.length > 0) {
                 // Priority Check: Only enrich high-quality jobs, or sample low-quality ones
-                const isHighQuality = intel.quality_score >= 60;
+                const isHighQuality = preAiIntel.quality_score >= 60;
                 const isSampled = Math.random() < 0.2; // Sample 20% of low-quality jobs
 
                 if (isHighQuality || isSampled) {
@@ -115,23 +125,53 @@ export const JobIngestionParserWorker = {
                     );
 
                     if (aiResult.result) {
-                        extractionMethod = 'RULE_PLUS_AI';
-                        aiModelUsed = 'gemini-2.0-flash';
-                        aiTokensUsed = aiResult.tokensUsed;
-
-                        // Merge Gemini fields (prefer existing rule fields if set)
                         const enriched = aiResult.result;
-                        for (const key of missingFields) {
-                            const val = (enriched as any)[key];
-                            if (val !== undefined && val !== null) {
+                        const aiConfidence = enriched.confidence_score || 0;
+                        const AI_MERGE_CONFIDENCE_THRESHOLD = 60;
+
+                        if (aiConfidence >= AI_MERGE_CONFIDENCE_THRESHOLD) {
+                            extractionMethod = 'RULE_PLUS_AI';
+                            aiModelUsed = 'gemini-2.0-flash';
+                            aiTokensUsed = aiResult.tokensUsed;
+
+                            const isValidFieldValue = (value: any) => {
+                                if (value === undefined || value === null) return false;
+                                if (typeof value === 'string' && value.trim() === '') return false;
+                                if (Array.isArray(value) && value.length === 0) return false;
+                                return true;
+                            };
+
+                            for (const key of missingFields) {
+                                const val = (enriched as any)[key];
+                                if (!isValidFieldValue(val)) {
+                                    continue;
+                                }
+
                                 (finalJobFields as any)[key] = val;
                                 (finalConfidence as any)[key] = Math.max(
                                     (finalConfidence as any)[key] || 0,
-                                    enriched.confidence_score || 80
+                                    aiConfidence
                                 );
                             }
+
+                            overallConfidence = Math.max(overallConfidence, aiConfidence);
+
+                            await emitSystemEvent({
+                                category: 'INGESTION',
+                                severity: 'INFO',
+                                event: IngestionEvents.AI_ENRICHMENT_COMPLETED,
+                                message: `Gemini enrichment completed for raw payload ${rawPayload.id}`,
+                                metadata: { rawPayloadId: rawPayload.id, aiConfidence, missingFields, fromCache: aiResult.fromCache },
+                            });
+                        } else {
+                            await emitSystemEvent({
+                                category: 'INGESTION',
+                                severity: 'WARNING',
+                                event: IngestionEvents.AI_ENRICHMENT_COMPLETED,
+                                message: `Gemini returned low confidence (${aiConfidence}) for raw payload ${rawPayload.id}, skipping merge`,
+                                metadata: { rawPayloadId: rawPayload.id, aiConfidence, missingFields, fromCache: aiResult.fromCache },
+                            });
                         }
-                        overallConfidence = Math.max(overallConfidence, enriched.confidence_score || overallConfidence);
                     }
                 }
             }
@@ -160,11 +200,51 @@ export const JobIngestionParserWorker = {
             }
         }
 
-        // 6. Duplicate Detection
-        const dupCheck = await checkForDuplicates(finalJobFields, rawPayload.url);
+        // 6. Re-run intelligence after optional AI repair so quality/scam scores reflect final fields.
+        const intel = analyzeJobIntelligence(finalJobFields);
 
         // 7. Application Method Derivation
         const application_method = deriveApplicationMethod(finalJobFields);
+
+        // 8. Validation & Quality Gate
+        const validation = validateExtractedJob({
+            job: finalJobFields,
+            applicationMethod: application_method,
+            overallConfidence,
+            intelligence: intel,
+            sourceName: source?.name,
+        });
+
+        if (validation.decision === 'REJECTED') {
+            await supabase
+                .from('ingested_raw_payloads')
+                .update({
+                    processing_status: 'FAILED',
+                    error_message: `Rejected by validation gate: ${validation.issues.join('; ')}`,
+                    parsed_at: new Date().toISOString(),
+                })
+                .eq('id', rawPayload.id);
+
+            await emitSystemEvent({
+                category: 'INGESTION',
+                severity: 'WARNING',
+                event: IngestionEvents.VALIDATION_FAILED,
+                message: `Rejected ingested payload "${finalJobFields.title || rawPayload.url}" before review`,
+                metadata: {
+                    rawPayloadId: rawPayload.id,
+                    sourceId: payload.sourceId,
+                    issues: validation.issues,
+                    missingFields: validation.missingFields,
+                    overallConfidence,
+                    qualityScore: intel.quality_score,
+                    scamRiskScore: intel.scam_risk_score,
+                },
+            });
+            return;
+        }
+
+        // 9. Duplicate Detection
+        const dupCheck = await checkForDuplicates(finalJobFields, rawPayload.url);
 
         // Check Global Admin Approval Requirement Setting
         const { data: settingApproval } = await supabase
@@ -176,9 +256,11 @@ export const JobIngestionParserWorker = {
         const requireAdminApproval = settingApproval ? (settingApproval.value as boolean) : true;
 
         // Determine queue status
-        let queueStatus: 'PENDING_REVIEW' | 'APPROVED' | 'DUPLICATE' = 'PENDING_REVIEW';
+        let queueStatus: 'PENDING_REVIEW' | 'APPROVED' | 'DUPLICATE' | 'NEEDS_MORE_DATA' = 'PENDING_REVIEW';
         if (dupCheck.isDuplicate) {
             queueStatus = 'DUPLICATE';
+        } else if (validation.decision === 'NEEDS_MORE_DATA') {
+            queueStatus = 'NEEDS_MORE_DATA';
         } else if (!requireAdminApproval && source?.auto_publish && overallConfidence >= 85 && intel.scam_risk_score < 30) {
             queueStatus = 'APPROVED';
         }
@@ -189,8 +271,8 @@ export const JobIngestionParserWorker = {
             .insert({
                 raw_payload_id: rawPayload.id,
                 source_id: payload.sourceId,
-                title: finalJobFields.title || 'Untitled Vacancy',
-                display_company_name: finalJobFields.display_company_name || source?.name || 'Unknown Company',
+                title: finalJobFields.title || 'Needs Title',
+                display_company_name: finalJobFields.display_company_name || source?.name || 'Needs Company',
                 description: formatDescription(finalJobFields.description || ''),
                 location: finalJobFields.location || source?.default_location || 'Malawi',
                 type: finalJobFields.type || 'Full-time',
@@ -227,6 +309,9 @@ export const JobIngestionParserWorker = {
                 duplicate_of_job_id: dupCheck.duplicateOfJobId,
                 duplicate_similarity: dupCheck.similarityScore,
                 status: queueStatus,
+                rejection_reason: validation.decision === 'NEEDS_MORE_DATA'
+                    ? validation.issues.join('; ')
+                    : null,
             })
             .select('id')
             .single();
