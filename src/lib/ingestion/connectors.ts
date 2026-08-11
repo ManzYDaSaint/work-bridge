@@ -41,7 +41,6 @@ export class RSSConnector implements JobSourceConnector {
         const items = extractRssItems(xmlText);
         const discoveredRefs: DiscoveredJobRef[] = [];
         const seenUrls = new Set<string>(); // Deduplicate URLs across digest pages
-        let digestProcessed = false; // Only process the MOST RECENT digest post
 
         for (const item of items) {
             const rawTitle = item.title || '';
@@ -60,14 +59,7 @@ export class RSSConnector implements JobSourceConnector {
                 || (item.description && (item.description.includes('/job/') || item.description.includes('/vacancy/')));
 
             if (isDigestPost && itemUrl) {
-                // OPTIMIZATION: Only process the FIRST (most recent) digest post
-                if (digestProcessed) {
-                    console.log(`[RSSConnector] Skipping older digest: "${cleanTitle}"`);
-                    continue;
-                }
-                digestProcessed = true;
-
-                // Fetch the latest digest page HTML and extract child job links
+                // Process the digest page HTML and extract child job links
                 try {
                     const pageRes = await fetch(itemUrl, {
                         headers: {
