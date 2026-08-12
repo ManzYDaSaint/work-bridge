@@ -244,6 +244,55 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: true, message: "Job updated and approved." });
         }
 
+        if (action === "CREATE_SOURCE") {
+            const { name, connector_type, crawl_frequency_minutes, is_enabled } = body;
+            if (!name || !connector_type) return NextResponse.json({ error: "Missing name or connector_type" }, { status: 400 });
+
+            const { data: newSource, error: createError } = await supabase
+                .from("job_ingestion_sources")
+                .insert({
+                    name,
+                    connector_type,
+                    crawl_frequency_minutes: crawl_frequency_minutes || 360,
+                    is_enabled: is_enabled ?? true
+                })
+                .select()
+                .single();
+
+            if (createError) return NextResponse.json({ error: createError.message }, { status: 500 });
+
+            await emitSystemEvent({
+                category: "INGESTION",
+                severity: "INFO",
+                event: "INGESTION_SOURCE_CREATED",
+                message: `Source ${name} created`,
+                metadata: { sourceId: newSource.id }
+            });
+
+            return NextResponse.json({ success: true, source: newSource });
+        }
+
+        if (action === "DELETE_SOURCE") {
+            if (!sourceId) return NextResponse.json({ error: "Missing sourceId" }, { status: 400 });
+
+            const { error: deleteError } = await supabase
+                .from("job_ingestion_sources")
+                .delete()
+                .eq("id", sourceId);
+
+            if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 });
+
+            await emitSystemEvent({
+                category: "INGESTION",
+                severity: "WARNING",
+                event: "INGESTION_SOURCE_DELETED",
+                message: `Source ${sourceId} deleted`,
+                metadata: { sourceId }
+            });
+
+            return NextResponse.json({ success: true, message: `Source deleted.` });
+        }
+
         if (action === "TOGGLE_SOURCE_STATUS") {
             if (!sourceId) return NextResponse.json({ error: "Missing sourceId" }, { status: 400 });
             // Correctly extract isEnabled from the body

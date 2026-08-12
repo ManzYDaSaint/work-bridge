@@ -32,10 +32,24 @@ export default function IngestionAdminClient() {
     const [selectedTab, setSelectedTab] = useState<"queue" | "sources">("queue");
     const [selectedItem, setSelectedItem] = useState<any | null>(null);
     const [editedItem, setEditedItem] = useState<any | null>(null);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [newSource, setNewSource] = useState({ name: "", connector_type: "basic-scraper", crawl_frequency_minutes: 360 });
 
     const selectItem = (item: any) => {
         setSelectedItem(item);
         setEditedItem({ ...item });
+    };
+
+    const handleAddSource = async () => {
+        await handleAction("CREATE_SOURCE", undefined, newSource);
+        setIsAddModalOpen(false);
+        setNewSource({ name: "", connector_type: "basic-scraper", crawl_frequency_minutes: 360 });
+    };
+
+    const deleteSource = async (sourceId: string) => {
+        if (confirm("Are you sure you want to delete this source?")) {
+            await handleAction("DELETE_SOURCE", undefined, { sourceId });
+        }
     };
 
     const fetchData = async () => {
@@ -354,6 +368,23 @@ export default function IngestionAdminClient() {
             {/* Sources Tab */}
             {selectedTab === "sources" && (
                 <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm">
+                    <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-end">
+                        <button onClick={() => setIsAddModalOpen(true)} className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium">Add New Source</button>
+                    </div>
+                    {isAddModalOpen && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                            <div className="bg-white dark:bg-gray-900 p-6 rounded-xl w-full max-w-md">
+                                <h2 className="text-lg font-bold mb-4">Add New Source</h2>
+                                <input className="w-full p-2 border rounded mb-3" placeholder="Source Name" value={newSource.name} onChange={(e) => setNewSource({ ...newSource, name: e.target.value })} />
+                                <input className="w-full p-2 border rounded mb-3" placeholder="Connector Type" value={newSource.connector_type} onChange={(e) => setNewSource({ ...newSource, connector_type: e.target.value })} />
+                                <input type="number" className="w-full p-2 border rounded mb-4" placeholder="Crawl Frequency (min)" value={newSource.crawl_frequency_minutes} onChange={(e) => setNewSource({ ...newSource, crawl_frequency_minutes: parseInt(e.target.value) })} />
+                                <div className="flex gap-2 justify-end">
+                                    <button onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 text-gray-500">Cancel</button>
+                                    <button onClick={handleAddSource} className="px-4 py-2 bg-emerald-600 text-white rounded">Add</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
                         <thead className="bg-gray-50 dark:bg-gray-800 text-xs font-semibold text-gray-500 uppercase">
                             <tr>
@@ -406,6 +437,12 @@ export default function IngestionAdminClient() {
                                                 title={!engineOn ? "Enable Scraping Engine to crawl" : !src.is_enabled ? "Enable this source before crawling" : "Force crawl this source"}
                                             >
                                                 Force Crawl
+                                            </button>
+                                            <button
+                                                onClick={() => deleteSource(src.id)}
+                                                className="text-xs px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300 font-medium rounded transition"
+                                            >
+                                                Delete
                                             </button>
                                         </td>
                                     </tr>
