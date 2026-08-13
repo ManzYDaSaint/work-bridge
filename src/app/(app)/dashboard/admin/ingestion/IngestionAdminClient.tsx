@@ -122,14 +122,25 @@ export default function IngestionAdminClient() {
                         Multi-stage automated scraper, rule extraction, Gemini AI enrichment &amp; verification queue.
                     </p>
                 </div>
-                <button
-                    onClick={fetchData}
-                    disabled={loading}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
-                >
-                    <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-                    Refresh
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => handleAction("FORCE_CRAWL")}
+                        disabled={!engineOn || loading || !!actionLoading}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
+                        title="Trigger crawler for all enabled sources"
+                    >
+                        <Zap className="w-4 h-4" />
+                        Force Crawl All
+                    </button>
+                    <button
+                        onClick={fetchData}
+                        disabled={loading}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                        Refresh
+                    </button>
+                </div>
             </div>
 
             {/* ── Master Control Banner ── */}

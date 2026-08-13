@@ -314,16 +314,32 @@ export async function POST(req: Request) {
         }
 
         if (action === "FORCE_CRAWL") {
-            if (!sourceId) {
-                return NextResponse.json({ error: "Missing sourceId" }, { status: 400 });
+            let sourcesToCrawl = [];
+            if (sourceId) {
+                sourcesToCrawl = [sourceId];
+            } else {
+                // Fetch enabled sources
+                const { data: sources, error: sourcesError } = await supabase
+                    .from("job_ingestion_sources")
+                    .select("id")
+                    .eq("is_enabled", true);
+                if (sourcesError) throw sourcesError;
+                sourcesToCrawl = sources?.map(s => s.id) || [];
             }
 
-            // Queue crawler task for immediate processing.
-            const { data: insertedTask, error: taskError } = await supabase.from("automation_tasks").insert({
+            if (sourcesToCrawl.length === 0) {
+                return NextResponse.json({ error: "No enabled sources found to crawl" }, { status: 400 });
+            }
+
+            // Prepare tasks
+            const tasks = sourcesToCrawl.map(sid => ({
                 plugin_id: "job-ingestion-crawler",
-                payload: { sourceId },
+                payload: { sourceId: sid },
                 priority: "HIGH"
-            }).select("id").single();
+            }));
+
+            // Queue crawler tasks
+            const { error: taskError } = await supabase.from("automation_tasks").insert(tasks);
 
             if (taskError) {
                 throw taskError;
@@ -333,18 +349,19 @@ export async function POST(req: Request) {
                 category: "INGESTION",
                 severity: "INFO",
                 event: "INGESTION_FORCE_CRAWL_QUEUED",
-                message: `Admin requested force crawl for source ${sourceId}`,
+                message: `Admin requested force crawl for ${sourcesToCrawl.length} source(s)`,
                 actorId: undefined,
-                metadata: { sourceId, taskId: insertedTask?.id }
+                metadata: { sourceIds: sourcesToCrawl }
             });
 
+            // Trigger processor globally to pick up all new pending tasks
             try {
-                await processQueue({ taskId: insertedTask?.id });
+                await processQueue();
             } catch (processError: any) {
-                console.error("[FORCE_CRAWL] Immediate automation processing failed:", processError.message);
+                console.error("[FORCE_CRAWL] Automation processing failed:", processError.message);
             }
 
-            return NextResponse.json({ success: true, message: "Force crawl task queued and processing attempted." });
+            return NextResponse.json({ success: true, message: `${sourcesToCrawl.length} crawl tasks queued and processing attempted.` });
         }
 
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });
