@@ -273,12 +273,12 @@ export function extractJobFields(
 
         if (hasKeyword) {
             const patternStr = keywords.map(k => k.replace(/['’]/g, "['’]?")).join('|');
-            const qualRegex = new RegExp(`(?:${patternStr})\\s+(?:in|of)?\\s*([a-zA-Z0-9\\s,/-]{3,80}?)(?=[.\\n;]|from|registered|with|at|$)`, 'i');
+            const qualRegex = new RegExp(`(?:${patternStr})\\s+(?:in|of)?\\s*([a-zA-Z0-9\\s,/-]{3,120}?)(?=[.\\n;]|from|registered|with|at|$)`, 'i');
             const qualMatch = qualRegex.exec(text);
 
             if (qualMatch && qualMatch[1]?.trim()) {
                 let rawSpec = qualMatch[1].trim().replace(/\s+/g, ' ').replace(/^(?:in|degree\s+in|degree)\s+/i, '');
-                const spec = rawSpec.length > 70 ? rawSpec.slice(0, 70) + '...' : rawSpec;
+                const spec = rawSpec.length > 100 ? rawSpec.slice(0, 100).trim() : rawSpec;
                 detectedQual = spec ? `${level} in ${spec}` : level;
                 qualConf = 90;
             } else {
@@ -293,7 +293,9 @@ export function extractJobFields(
     confidence.qualification = qualConf;
 
     // ── Skills ────────────────────────────────────────────────
-    const normalized = normalizeSkills(text);
+    // Strip HTML tags and entities before running skill normalization
+    const cleanTextForSkills = text.replace(/<[^>]*>/g, ' ').replace(/&[a-zA-Z0-9#]+;/g, ' ');
+    const normalized = normalizeSkills(cleanTextForSkills);
     if (normalized.length > 0) {
         data.skills = normalized;
         confidence.skills = 75;
@@ -333,10 +335,12 @@ export function extractJobFields(
 
     // ── Application URL ──────────────────────────────────────
     const urls = text.match(URL_REGEX) || [];
-    const applyUrl = urls.find(u =>
+    let applyUrl = urls.find(u =>
         /apply|career|recruit|vacancy|job/i.test(u)
     ) || urls[0] || null;
     if (applyUrl) {
+        // Decode HTML entities like &amp;#038; in external URL
+        applyUrl = applyUrl.replace(/&amp;#038;/g, '&').replace(/&amp;/g, '&');
         data.external_apply_url = applyUrl;
         confidence.external_apply_url = 75;
     } else {
@@ -475,6 +479,7 @@ function matchFirstPattern(text: string, patterns: RegExp[]): string | null {
 
 function cleanText(text: string): string {
     return text
+        .replace(/<[^>]*>/g, '') // Strip remaining HTML tags
         .replace(/\s+/g, ' ')
         .replace(/^[^a-zA-Z0-9]+/, '')
         .trim();
@@ -506,6 +511,7 @@ function cleanHtml(html: string): string {
             .replace(/&gt;/g, '>')
             .replace(/&quot;/g, '"')
             .replace(/&#039;/g, "'")
+            .replace(/&#038;/g, "&")
             // Collapse 3+ consecutive newlines to 2
             .replace(/\n{3,}/g, '\n\n')
             // Trim each line
@@ -554,13 +560,10 @@ function parseDate(dateStr: string): string | null {
  */
 function cleanDescriptionBody(description: string): string {
     const redundantPatterns = [
-        /^\s*(?:VACANCY ANNOUNCEMENT|JOB VACANCY|JOB TITLE|POSITION)\s*:\s*[^\n]+\n*/gi,
-        /^\s*(?:COMPANY|ORGANISATION|ORGANIZATION)\s*:\s*[^\n]+\n*/gi,
-        /^\s*LOCATION\s*:\s*[^\n]+\n*/gi,
-        /^\s*(?:CONTRACT|TYPE|EMPLOYMENT TYPE)\s*:\s*[^\n]+\n*/gi,
-        /^\s*WORK MODE\s*:\s*[^\n]+\n*/gi,
-        /\n+\s*(?:APPLICATION PROCESS|HOW TO APPLY|APPLICATION METHOD|TO APPLY)\s*:\s*[\s\S]*?(?=\n\n|$)/gi,
-        /\n+\s*(?:CLOSING DATE|DEADLINE)\s*:\s*[^\n]+\n*/gi,
+        /^\s*(?:VACANCY ANNOUNCEMENT|JOB VACANCY|JOB TITLE|POSITION|ORGANIZATION|ORGANISATION|COMPANY|LOCATION|CLOSING DATE|DEADLINE|APPLY URL)\s*:\s*[^\n]+\n*/gim,
+        /^\s*https?:\/\/[^\s\n]+\n*/gim,
+        /\n+\s*(?:APPLICATION PROCESS|HOW TO APPLY|APPLICATION METHOD|TO APPLY)\s*:\s*[\s\S]*?(?=\n\n|$)/gim,
+        /\n+\s*(?:CLOSING DATE|DEADLINE)\s*:\s*[^\n]+\n*/gim,
     ];
 
     let cleaned = description;
