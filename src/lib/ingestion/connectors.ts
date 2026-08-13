@@ -193,7 +193,25 @@ export class RSSConnector implements JobSourceConnector {
 
                     // ── STRATEGY 2: Full HTML Fallback ──
                     // Prepend ref title to preserve the exact job title from RSS feed
-                    const fullContent = ref.title ? `<h1>${ref.title}</h1>\n${html}` : html;
+                    // Clean HTML to extract title & main job content div, avoiding website header/footer boilerplate
+                    let cleanedHtml = html;
+                    const mainContentMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i) ||
+                                             html.match(/<main[^>]*>([\s\S]*?)<\/main>/i) ||
+                                             html.match(/<div[^>]*class="[^"]*(?:single_job_listing|job-overview|entry-content|job-description)[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+                    if (mainContentMatch && mainContentMatch[1]) {
+                        cleanedHtml = mainContentMatch[1];
+                    } else {
+                        // Strip out heavy non-content sections
+                        cleanedHtml = html
+                            .replace(/<head[\s\S]*?<\/head>/gi, '')
+                            .replace(/<header[\s\S]*?<\/header>/gi, '')
+                            .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+                            .replace(/<nav[\s\S]*?<\/nav>/gi, '')
+                            .replace(/<script[\s\S]*?<\/script>/gi, '')
+                            .replace(/<style[\s\S]*?<\/style>/gi, '');
+                    }
+
+                    const fullContent = ref.title ? `<h1>${ref.title}</h1>\n${cleanedHtml}` : cleanedHtml;
                     const checksum = crypto.createHash('sha256').update(fullContent).digest('hex');
                     return {
                         rawContent: fullContent,
