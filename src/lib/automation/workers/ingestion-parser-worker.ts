@@ -131,7 +131,7 @@ export const JobIngestionParserWorker = {
 
                         if (aiConfidence >= AI_MERGE_CONFIDENCE_THRESHOLD) {
                             extractionMethod = 'RULE_PLUS_AI';
-                            aiModelUsed = 'gemini-2.0-flash';
+                            aiModelUsed = 'gemini-3.1-flash-lite';
                             aiTokensUsed = aiResult.tokensUsed;
 
                             const isValidFieldValue = (value: any) => {

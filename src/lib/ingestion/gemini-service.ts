@@ -20,7 +20,7 @@ import { IngestionEvents } from "./ingestion-events";
 // Configuration
 // ─────────────────────────────────────────────────────────────────
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
 const PROMPT_VERSION = "v1";
 const MAX_RETRIES = 1;
 
@@ -149,7 +149,7 @@ async function cacheResult(
         await supabase.from('ingested_ai_cache').upsert({
             content_hash: contentHash,
             prompt_version: PROMPT_VERSION,
-            model_version: 'gemini-2.0-flash',
+            model_version: 'gemini-3.1-flash-lite',
             response,
             tokens_used: tokensUsed,
         }, { onConflict: 'content_hash,prompt_version' });
