@@ -2,6 +2,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
 import { emitSystemEvent } from "@/lib/mission-control";
 import { processQueue } from "@/lib/automation/engine";
+import { getPlugin } from "@/lib/automation/registry";
 
 export const dynamic = "force-dynamic";
 
@@ -138,12 +139,11 @@ export async function POST(req: Request) {
         }
 
         if (action === "APPROVE") {
-            // Trigger publisher task
-            await supabase.from("automation_tasks").insert({
-                plugin_id: "job-ingestion-publisher",
-                payload: { queueItemId },
-                priority: "HIGH"
-            });
+            // Immediately trigger publisher
+            const plugin = getPlugin("job-ingestion-publisher");
+            if (plugin) {
+                plugin.run({ queueItemId }).catch(console.error);
+            }
 
             await supabase
                 .from("ingested_jobs_queue")
@@ -159,7 +159,7 @@ export async function POST(req: Request) {
                 metadata: { queueItemId }
             });
 
-            return NextResponse.json({ success: true, message: "Job approved and publishing task queued." });
+            return NextResponse.json({ success: true, message: "Job approved and publishing initiated." });
         }
 
         if (action === "REJECT") {
@@ -225,12 +225,11 @@ export async function POST(req: Request) {
                     .eq("id", queueItemId);
             }
 
-            // Trigger publisher worker
-            await supabase.from("automation_tasks").insert({
-                plugin_id: "job-ingestion-publisher",
-                payload: { queueItemId },
-                priority: "HIGH"
-            });
+            // Immediately trigger publisher
+            const plugin = getPlugin("job-ingestion-publisher");
+            if (plugin) {
+                plugin.run({ queueItemId }).catch(console.error);
+            }
 
             await emitSystemEvent({
                 category: "INGESTION",
@@ -241,7 +240,7 @@ export async function POST(req: Request) {
                 metadata: { queueItemId, updatedFields }
             });
 
-            return NextResponse.json({ success: true, message: "Job updated and approved." });
+            return NextResponse.json({ success: true, message: "Job updated and approved (immediate publishing initiated)." });
         }
 
         if (action === "CREATE_SOURCE") {
