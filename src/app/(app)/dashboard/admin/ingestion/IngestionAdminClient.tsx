@@ -294,7 +294,7 @@ export default function IngestionAdminClient() {
             </div>
 
             {/* Metrics & Telemetry Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-xs flex items-center justify-between">
                     <div>
                         <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Awaiting Review</p>
@@ -322,30 +322,6 @@ export default function IngestionAdminClient() {
                     </div>
                     <div className="p-2.5 bg-rose-50 dark:bg-rose-950/40 rounded-xl text-rose-600 dark:text-rose-400">
                         <ShieldAlert className="w-5 h-5" />
-                    </div>
-                </div>
-
-                {/* Extraction Accuracy & Confidence Telemetry Widget */}
-                <div className="bg-white dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-xs flex flex-col justify-between">
-                    <div className="flex items-center justify-between">
-                        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Extraction Accuracy</p>
-                        <Activity className="w-4 h-4 text-emerald-500" />
-                    </div>
-                    <div className="mt-2">
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-2xl font-extrabold text-gray-900 dark:text-white">
-                                {data.queueItems.length > 0
-                                    ? Math.round(data.queueItems.reduce((acc, i) => acc + (i.overall_confidence || 0), 0) / data.queueItems.length)
-                                    : 88}%
-                            </span>
-                            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">High Fidelity</span>
-                        </div>
-                        {/* Mini Telemetry Bar Chart */}
-                        <div className="w-full bg-gray-100 dark:bg-gray-800 h-2 rounded-full overflow-hidden mt-2 flex">
-                            <div className="bg-emerald-500 h-full" style={{ width: `${data.queueItems.length > 0 ? (data.queueItems.filter(i => (i.overall_confidence || 0) >= 80).length / data.queueItems.length) * 100 : 75}%` }} title="High Accuracy (>=80%)" />
-                            <div className="bg-amber-400 h-full" style={{ width: `${data.queueItems.length > 0 ? (data.queueItems.filter(i => (i.overall_confidence || 0) >= 50 && (i.overall_confidence || 0) < 80).length / data.queueItems.length) * 100 : 20}%` }} title="Medium Accuracy" />
-                            <div className="bg-rose-500 h-full" style={{ width: `${data.queueItems.length > 0 ? (data.queueItems.filter(i => (i.overall_confidence || 0) < 50 || i.status === "NEEDS_MORE_DATA").length / data.queueItems.length) * 100 : 5}%` }} title="Needs Repair" />
-                        </div>
                     </div>
                 </div>
 

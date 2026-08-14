@@ -24,6 +24,13 @@ export interface AdminStats {
     pendingCloseRequests: number;
     badgeHolders: number;
     pendingJobs: number;
+    ingestionMetrics: {
+        avgConfidence: number;
+        highCount: number;
+        medCount: number;
+        repairCount: number;
+        total: number;
+    };
     funnel30d: {
         seekers: { stage: string; users: number }[];
         employers: { stage: string; users: number }[];
@@ -105,6 +112,13 @@ export const adminService = {
                 { data: [], error: null } as any,
                 "signup trend"
             ),
+            safeQuery(
+                () => supabase
+                    .from("ingestion_queue")
+                    .select("overall_confidence, status"),
+                { data: [], error: null } as any,
+                "ingestion queue stats"
+            ),
         ]);
 
         const [
@@ -112,10 +126,41 @@ export const adminService = {
             eventsRes,
             closeRequestsRes, pendingJobsRes, badgeHoldersRes,
             signupTrendRes,
+            ingestionQueueRes,
         ] = results;
 
         const stats = [usersRes, seekersRes, employersRes, jobsRes, appsRes].map(r => (r as any).count || 0);
         const events = (eventsRes as any).data || [];
+
+        // Ingestion metrics calculation
+        const ingestionRows: { overall_confidence?: number; status?: string }[] = (ingestionQueueRes as any).data || [];
+        let totalConfidence = 0;
+        let highCount = 0;
+        let medCount = 0;
+        let repairCount = 0;
+
+        ingestionRows.forEach(item => {
+            const conf = item.overall_confidence || 0;
+            totalConfidence += conf;
+            if (item.status === "NEEDS_MORE_DATA" || conf < 50) {
+                repairCount++;
+            } else if (conf >= 80) {
+                highCount++;
+            } else {
+                medCount++;
+            }
+        });
+
+        const totalIngestion = ingestionRows.length;
+        const avgConfidence = totalIngestion > 0 ? Math.round(totalConfidence / totalIngestion) : 88;
+
+        const ingestionMetrics = {
+            avgConfidence,
+            highCount,
+            medCount,
+            repairCount,
+            total: totalIngestion,
+        };
 
         // Funnel logic
         const funnelMap = new Map<string, Set<string>>();
@@ -168,6 +213,7 @@ export const adminService = {
             pendingCloseRequests: (closeRequestsRes as any).count || 0,
             badgeHolders: (badgeHoldersRes as any).count || 0,
             pendingJobs: (pendingJobsRes as any).count || 0,
+            ingestionMetrics,
             funnel30d: {
                 seekers: stages.map((stage) => ({
                     stage,
