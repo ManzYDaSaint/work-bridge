@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { PageHeader, StatCard, SectionCard, Badge } from "@/components/dashboard/ui";
 import Link from "next/link";
+import ExtractionAccuracyAnalytics from "@/components/dashboard/admin/ExtractionAccuracyAnalytics";
 
 // ── Inline sparkline ──────────────────────────────────────────────────────────
 function Sparkline({ data }: { data: { date: string; signups: number }[] }) {
@@ -423,6 +424,9 @@ export default function AdminOverviewClient({
                     </div>
                 );
             })()}
+
+            {/* ── Source-Level Field Accuracy & Corrections Analytics ── */}
+            <ExtractionAccuracyAnalytics />
 
             {closeRequests.length > 0 && (
                 <SectionCard

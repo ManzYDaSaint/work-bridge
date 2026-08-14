@@ -1,6 +1,5 @@
 import { requireAuth } from "@/lib/auth-guard";
 import IngestionAdminClient from "./IngestionAdminClient";
-import FeedbackVisualizationClient from "./FeedbackVisualizationClient";
 
 export const metadata = {
     title: "Job Ingestion Engine | Aganyu Admin",
@@ -12,9 +11,6 @@ export default async function IngestionAdminPage() {
     if (!auth.user) return null;
 
     return (
-        <div className="space-y-10">
-            <IngestionAdminClient />
-            <FeedbackVisualizationClient />
-        </div>
+        <IngestionAdminClient />
     );
 }
