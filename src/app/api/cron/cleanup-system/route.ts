@@ -23,26 +23,26 @@ export async function GET(req: Request) {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const cutoff = thirtyDaysAgo.toISOString();
 
-        // 1. Cleanup old parsed ingestion payloads (keep for 30 days)
-        const { error: payloadErr } = await supabase
-            .from('ingested_raw_payloads')
-            .delete()
-            .eq('processing_status', 'PARSED')
-            .lt('created_at', cutoff);
-
-        if (payloadErr) {
-            console.error("[CRON] Cleanup Payloads Error:", payloadErr);
-        }
+        // 1. Cleanup old ingestion payloads (keep for 30 days)
+        await supabase.from('ingested_raw_payloads').delete().in('processing_status', ['PARSED', 'FAILED', 'PENDING']).lt('created_at', cutoff);
 
         // 2. Cleanup old system audit logs (keep for 30 days)
-        const { error: auditErr } = await supabase
-            .from('system_events')
-            .delete()
-            .lt('created_at', cutoff);
+        await supabase.from('audit_logs').delete().lt('created_at', cutoff);
 
-        if (auditErr) {
-            console.error("[CRON] Cleanup Audit Logs Error:", auditErr);
-        }
+        // 3. Cleanup old completed automation tasks (keep for 30 days)
+        await supabase.from('automation_tasks').delete().eq('status', 'COMPLETED').lt('created_at', cutoff);
+
+        // 4. Cleanup old AI health logs (keep for 30 days)
+        await supabase.from('ai_health_logs').delete().lt('created_at', cutoff);
+
+        // 5. Cleanup old email logs (keep for 30 days)
+        await supabase.from('email_logs').delete().lt('created_at', cutoff);
+
+        // 6. Cleanup old system events (keep for 30 days)
+        await supabase.from('mission_control_events').delete().lt('created_at', cutoff);
+
+        // 7. Cleanup old opportunity views (keep for 30 days)
+        await supabase.from('opportunity_views').delete().lt('viewed_at', cutoff);
 
         await emitSystemEvent({
             category: "SYSTEM",
@@ -54,7 +54,7 @@ export async function GET(req: Request) {
 
         return NextResponse.json({
             success: true,
-            message: "Cleanup tasks executed",
+            message: "All cleanup tasks executed",
         });
 
     } catch (error) {
