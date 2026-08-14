@@ -5,10 +5,16 @@ const AI_EMBEDDING_URL = "https://ai.aganyu.com/embed";
 export async function checkAiServerHealth() {
     const start = Date.now();
     try {
-        const response = await fetch(`${AI_EMBEDDING_URL}/health`, { method: 'GET' });
+        // Ping AI Embedding service with a minimal test input payload
+        const response = await fetch(`${AI_EMBEDDING_URL}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ inputs: 'health check' }),
+            signal: AbortSignal.timeout(5000),
+        });
         const latency = Date.now() - start;
         return {
-            status: response.ok ? 'ONLINE' : 'OFFLINE',
+            status: response.ok ? 'ONLINE' : 'DEGRADED',
             latency,
             timestamp: new Date().toISOString()
         };
@@ -19,7 +25,7 @@ export async function checkAiServerHealth() {
 
 export async function performIntegrityScan() {
     const supabase = await createSupabaseServerClient();
-    
+
     // Scan for Jobs missing embeddings
     const { count: jobsMissingCount } = await supabase
         .from('jobs')
