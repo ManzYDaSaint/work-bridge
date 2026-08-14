@@ -80,6 +80,7 @@ export const JobIngestionCrawlerWorker = {
                     await Promise.allSettled(chunk.map(async (ref) => {
                         try {
                             // OPTIMIZATION: Check if we already have this URL in raw_payloads (avoid re-fetching)
+                            // Refined: Check via URL or external_id first
                             const { data: existing } = await supabase
                                 .from('ingested_raw_payloads')
                                 .select('id')
@@ -108,6 +109,20 @@ export const JobIngestionCrawlerWorker = {
                                     if (retries > maxRetries) throw err;
                                     await new Promise(res => setTimeout(res, 1000 * retries)); // Exponential backoff
                                 }
+                            }
+
+                            // Sanity Validation
+                            const { isContentSanityCheckPassed } = await import("@/lib/ingestion/validation");
+                            const sanity = isContentSanityCheckPassed(fetched.rawContent);
+                            if (!sanity.passed) {
+                                console.log(`[CrawlerWorker] Skipped failed sanity check: ${ref.title}. Reason: ${sanity.reason}`);
+                                await supabase.from('ingested_dead_letter_queue').insert({
+                                    source_id: source.id,
+                                    payload: { url: ref.url, reason: sanity.reason },
+                                    error_message: sanity.reason,
+                                    type: 'SANITY_CHECK_FAILED'
+                                });
+                                return;
                             }
 
                             // OPTIMIZATION: Skip expired jobs — don't store them at all

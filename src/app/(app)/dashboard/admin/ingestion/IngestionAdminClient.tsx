@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     Activity, CheckCircle2, Clock, Database, RefreshCw,
     Zap, Building2, MapPin, Power, ShieldCheck, ShieldAlert
@@ -15,6 +15,7 @@ import {
 
 interface IngestionData {
     queueItems: any[];
+    totalCount: number;
     sources: any[];
     settings: { ingestion_service_enabled: boolean; ingestion_require_admin_approval: boolean };
     metrics: { pendingCount: number; needsMoreDataCount: number; publishedCount: number; sourcesCount: number };
@@ -25,11 +26,17 @@ export default function IngestionAdminClient() {
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [data, setData] = useState<IngestionData>({
         queueItems: [],
+        totalCount: 0,
         sources: [],
         settings: { ingestion_service_enabled: true, ingestion_require_admin_approval: true },
         metrics: { pendingCount: 0, needsMoreDataCount: 0, publishedCount: 0, sourcesCount: 0 },
     });
     const [selectedTab, setSelectedTab] = useState<"queue" | "sources">("queue");
+    const [selectedQueueItems, setSelectedQueueItems] = useState<string[]>([]);
+    const [sourceFilter, setSourceFilter] = useState("");
+    const [confidenceFilter, setConfidenceFilter] = useState(0);
+    const [page, setPage] = useState(1);
+    const limit = 50;
     const [selectedItem, setSelectedItem] = useState<any | null>(null);
     const [editedItem, setEditedItem] = useState<any | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -52,10 +59,18 @@ export default function IngestionAdminClient() {
         }
     };
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/admin/ingestion");
+            let url = "/api/admin/ingestion/data";
+            const params = new URLSearchParams();
+            if (sourceFilter) params.append("sourceId", sourceFilter);
+            if (confidenceFilter > 0) params.append("minConfidence", confidenceFilter.toString());
+            params.append("page", page.toString());
+            params.append("limit", limit.toString());
+
+            if (params.toString()) url += `?${params.toString()}`;
+            const res = await fetch(url);
             const json = await res.json();
             if (res.ok) setData(json);
         } catch (err) {
@@ -63,17 +78,30 @@ export default function IngestionAdminClient() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [sourceFilter, confidenceFilter, page, limit]);
 
-    useEffect(() => { fetchData(); }, []);
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    const totalPages = Math.ceil(data.totalCount / limit);
 
     const handleAction = async (action: string, queueItemId?: string, extraData?: any) => {
         setActionLoading(queueItemId || action);
+        let url = "/api/admin/ingestion";
+        let body = { action, queueItemId, ...extraData };
+
+        if (["APPROVE", "REJECT", "UPDATE_AND_APPROVE", "DELETE_QUEUE_ITEM"].includes(action)) {
+            url = `/api/admin/ingestion/queue/${queueItemId}`;
+        } else if (["CREATE_SOURCE", "DELETE_SOURCE", "TOGGLE_SOURCE_STATUS"].includes(action)) {
+            url = "/api/admin/ingestion/sources";
+        } else if (action === "FORCE_CRAWL") {
+            url = "/api/admin/ingestion/crawl";
+        }
+
         try {
-            const res = await fetch("/api/admin/ingestion", {
+            const res = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action, queueItemId, ...extraData }),
+                body: JSON.stringify(body),
             });
             if (res.ok) {
                 if (selectedItem?.id === queueItemId) { setSelectedItem(null); setEditedItem(null); }
@@ -86,13 +114,34 @@ export default function IngestionAdminClient() {
         }
     };
 
+    const handleBulkAction = async (action: "BULK_APPROVE" | "BULK_DELETE") => {
+        if (!confirm(`Are you sure you want to perform ${action} on ${selectedQueueItems.length} jobs?`)) return;
+
+        setActionLoading(action);
+        try {
+            const res = await fetch("/api/admin/ingestion/queue/bulk", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action, queueItemIds: selectedQueueItems }),
+            });
+            if (res.ok) {
+                setSelectedQueueItems([]);
+                await fetchData();
+            }
+        } catch (err) {
+            console.error("Bulk action error:", err);
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
     const toggleSetting = async (key: string, currentValue: boolean) => {
         setActionLoading(key);
         try {
-            await fetch("/api/admin/ingestion", {
+            await fetch("/api/admin/ingestion/settings", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action: "TOGGLE_SETTING", settingKey: key, settingValue: !currentValue }),
+                body: JSON.stringify({ settingKey: key, settingValue: !currentValue }),
             });
             setData(prev => ({
                 ...prev,
@@ -277,45 +326,112 @@ export default function IngestionAdminClient() {
                                 <span>Scraping Engine is <strong>Disabled</strong>. Re-enable it above to resume crawling.</span>
                             </div>
                         )}
+                        {/* Filters */}
+                        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-wrap gap-4 items-center">
+                            <select
+                                value={sourceFilter}
+                                onChange={(e) => setSourceFilter(e.target.value)}
+                                className="text-sm border rounded-lg p-2 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+                            >
+                                <option value="">All Sources</option>
+                                {data.sources.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                                <label>Min Confidence: {confidenceFilter}%</label>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={confidenceFilter}
+                                    onChange={(e) => setConfidenceFilter(parseInt(e.target.value))}
+                                    className="w-32"
+                                />
+                            </div>
+                        </div>
+
                         {data.queueItems.length === 0 ? (
                             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-10 text-center text-gray-500">
                                 <Activity className="w-8 h-8 mx-auto mb-3 opacity-30" />
-                                <p>No items in the verification queue. Crawlers are operating cleanly!</p>
+                                <p>No items match the criteria.</p>
                             </div>
                         ) : (
-                            data.queueItems.map((item) => (
-                                <div
-                                    key={item.id}
-                                    onClick={() => selectItem(item)}
-                                    className={`p-4 bg-white dark:bg-gray-900 border rounded-xl cursor-pointer transition shadow-sm hover:border-emerald-500 ${selectedItem?.id === item.id
-                                        ? "border-emerald-500 ring-2 ring-emerald-500/20"
-                                        : "border-gray-200 dark:border-gray-800"
-                                        }`}
-                                >
-                                    <div className="flex justify-between items-start">
-                                        <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1">{item.title}</h3>
-                                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${item.status === "NEEDS_MORE_DATA"
-                                            ? "bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300"
-                                            : "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300"
-                                            }`}>
-                                            {item.status === "NEEDS_MORE_DATA" ? "Needs Repair" : `${item.overall_confidence}% Conf`}
-                                        </span>
+                            <>
+                                {selectedQueueItems.length > 0 && (
+                                    <div className="sticky top-0 bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between z-10 shadow-sm">
+                                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{selectedQueueItems.length} selected</span>
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => handleBulkAction("BULK_APPROVE")}
+                                                disabled={!!actionLoading}
+                                                className="text-xs px-3 py-1.5 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50"
+                                            >Bulk Approve</button>
+                                            <button 
+                                                onClick={() => handleBulkAction("BULK_DELETE")}
+                                                disabled={!!actionLoading}
+                                                className="text-xs px-3 py-1.5 bg-rose-600 text-white rounded hover:bg-rose-700 disabled:opacity-50"
+                                            >Bulk Delete</button>
+                                        </div>
                                     </div>
-                                    {item.status === "NEEDS_MORE_DATA" && item.rejection_reason && (
-                                        <p className="mt-2 text-xs text-rose-600 dark:text-rose-300 line-clamp-2">
-                                            {item.rejection_reason}
-                                        </p>
-                                    )}
-                                    <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
-                                        <span className="flex items-center gap-1"><Building2 className="w-3.5 h-3.5" />{item.display_company_name}</span>
-                                        <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{item.location}</span>
+                                )}
+                                {data.queueItems.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className={`p-4 bg-white dark:bg-gray-900 border rounded-xl cursor-pointer transition shadow-sm hover:border-emerald-500 ${selectedItem?.id === item.id
+                                            ? "border-emerald-500 ring-2 ring-emerald-500/20"
+                                            : "border-gray-200 dark:border-gray-800"
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                type="checkbox"
+                                                className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                                checked={selectedQueueItems.includes(item.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setSelectedQueueItems([...selectedQueueItems, item.id]);
+                                                    else setSelectedQueueItems(selectedQueueItems.filter(id => id !== item.id));
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                            />
+                                            <div className="flex-1" onClick={() => selectItem(item)}>
+                                                <div className="flex justify-between items-start">
+                                                    <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1">{item.title}</h3>
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${item.status === "NEEDS_MORE_DATA"
+                                                        ? "bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300"
+                                                        : "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300"
+                                                        }`}>
+                                                        {item.status === "NEEDS_MORE_DATA" ? "Needs Repair" : `${item.overall_confidence}% Conf`}
+                                                    </span>
+                                                </div>
+                                                {item.status === "NEEDS_MORE_DATA" && item.rejection_reason && (
+                                                    <p className="mt-2 text-xs text-rose-600 dark:text-rose-300 line-clamp-2">
+                                                        {item.rejection_reason}
+                                                    </p>
+                                                )}
+                                                <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                                                    <span className="flex items-center gap-1"><Building2 className="w-3.5 h-3.5" />{item.display_company_name}</span>
+                                                    <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{item.location}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="mt-3 flex items-center justify-between text-xs">
-                                        <span className="text-gray-400">Source: {item.source?.name || "Scraper"}</span>
-                                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded">{item.extraction_method}</span>
+                                ))}
+                                {/* Pagination */}
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-center gap-2 mt-4">
+                                        <button
+                                            disabled={page === 1}
+                                            onClick={() => setPage(page - 1)}
+                                            className="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded disabled:opacity-50"
+                                        >Previous</button>
+                                        <span className="text-sm">Page {page} of {totalPages}</span>
+                                        <button
+                                            disabled={page === totalPages}
+                                            onClick={() => setPage(page + 1)}
+                                            className="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded disabled:opacity-50"
+                                        >Next</button>
                                     </div>
-                                </div>
-                            ))
+                                )}
+                            </>
                         )}
                     </div>
 
@@ -329,6 +445,16 @@ export default function IngestionAdminClient() {
                                     <p className="text-xs text-gray-500 mt-0.5">All fields are editable. Correct any errors then Approve &amp; Publish.</p>
                                 </div>
                                 <button onClick={() => { setSelectedItem(null); setEditedItem(null); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition">✕ Close</button>
+                                <button
+                                    onClick={async () => {
+                                        if (confirm("Are you sure you want to delete this job item? This action cannot be undone.")) {
+                                            await handleAction("DELETE_QUEUE_ITEM", selectedItem.id);
+                                        }
+                                    }}
+                                    className="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 text-xs px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950 transition"
+                                >
+                                    🗑️ Delete
+                                </button>
                             </div>
 
                             <div className="p-6 max-h-[75vh] overflow-y-auto">
