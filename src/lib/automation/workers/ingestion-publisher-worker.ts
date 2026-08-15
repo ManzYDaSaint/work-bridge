@@ -27,53 +27,59 @@ export const JobIngestionPublisherWorker = {
             throw new Error(`[PublisherWorker] Queue item not found: ${payload.queueItemId}`);
         }
 
-        // 2. Locate or create System Recruiter entry in public.employers
-        const { data: systemUser } = await supabase
-            .from('users')
-            .select('id')
-            .eq('email', 'jobs@aganyu.com')
-            .maybeSingle();
-
-        let targetUserId = systemUser?.id;
-        if (!targetUserId) {
-            const { data: adminUser } = await supabase
-                .from('users')
-                .select('id')
-                .eq('role', 'ADMIN')
-                .limit(1)
-                .maybeSingle();
-            targetUserId = adminUser?.id;
-        }
-
-        if (!targetUserId) {
-            throw new Error("[PublisherWorker] No system recruiter or admin user found to publish job under.");
-        }
-
-        // Fetch matching employer profile in public.employers
+        // 2. Locate existing employer profile or create System Recruiter entry
         let { data: employerProfile } = await supabase
             .from('employers')
             .select('id')
-            .eq('id', targetUserId)
+            .or('company_name.ilike.%Aganyu%,company_name.ilike.%System Recruiter%')
+            .limit(1)
             .maybeSingle();
 
-        // Auto-provision system employer profile if missing
         if (!employerProfile) {
+            const { data: systemUser } = await supabase
+                .from('users')
+                .select('id')
+                .eq('email', 'jobs@aganyu.com')
+                .maybeSingle();
+
+            let targetUserId = systemUser?.id;
+            if (!targetUserId) {
+                const { data: adminUser } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('role', 'ADMIN')
+                    .limit(1)
+                    .maybeSingle();
+                targetUserId = adminUser?.id;
+            }
+
+            if (!targetUserId) {
+                throw new Error("[PublisherWorker] No system recruiter or admin user found to publish job under.");
+            }
+
+            // Auto-provision system employer profile if missing
             const { data: newProfile, error: profileErr } = await supabase
                 .from('employers')
                 .insert({
                     id: targetUserId,
                     company_name: 'Aganyu Recruiter',
-                    verification_status: 'VERIFIED',
+                    status: 'APPROVED',
+                    recruiter_verified: true,
                 })
                 .select('id')
                 .single();
 
-            if (!profileErr && newProfile) {
+            if (profileErr) {
+                console.error("[PublisherWorker] Employer auto-provision failed:", profileErr);
+            } else if (newProfile) {
                 employerProfile = newProfile;
             }
         }
 
-        const employerId = employerProfile?.id || targetUserId;
+        const employerId = employerProfile?.id;
+        if (!employerId) {
+            throw new Error("[PublisherWorker] Unable to assign employer ID for job publishing.");
+        }
 
         // Generate public slug
         const baseSlug = item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');

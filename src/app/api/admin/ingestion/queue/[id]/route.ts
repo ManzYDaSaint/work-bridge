@@ -32,7 +32,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         if (action === "APPROVE") {
             const plugin = getPlugin("job-ingestion-publisher");
             if (plugin) {
-                plugin.run({ queueItemId }).catch(console.error);
+                await plugin.run({ queueItemId });
             }
 
             await supabase
@@ -115,7 +115,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
             const plugin = getPlugin("job-ingestion-publisher");
             if (plugin) {
-                plugin.run({ queueItemId }).catch(console.error);
+                await plugin.run({ queueItemId });
             }
 
             await emitSystemEvent({
