@@ -10,6 +10,12 @@ on:
 jobs:
     backup:
         runs-on: ubuntu-latest
+        env:
+            SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+            AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            AWS_REGION: ${{ secrets.AWS_REGION }}
+            S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
 
         steps:
             - name: Checkout repository
@@ -28,8 +34,6 @@ jobs:
               run: echo "FILE_NAME=db-backup-$(date +'%Y-%m-%d_%H-%M-%S').sql.gz" >> $GITHUB_ENV
 
             - name: Dump Database
-              env:
-                  SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
               run: |
                   set -eo pipefail
                   if [ -z "$SUPABASE_DB_URL" ]; then
@@ -48,7 +52,7 @@ jobs:
                   retention-days: 14
 
             - name: Configure AWS Credentials
-              if: ${{ secrets.AWS_ACCESS_KEY_ID != '' && secrets.AWS_SECRET_ACCESS_KEY != '' }}
+              if: ${{ env.AWS_ACCESS_KEY_ID != '' && env.AWS_SECRET_ACCESS_KEY != '' }}
               uses: aws-actions/configure-aws-credentials@v4
               with:
                   aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -56,13 +60,7 @@ jobs:
                   aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
 
             - name: Upload Backup to AWS S3
-              if: ${{ secrets.S3_BUCKET_NAME != '' && secrets.AWS_ACCESS_KEY_ID != '' }}
-              env:
-                  S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+              if: ${{ env.S3_BUCKET_NAME != '' && env.AWS_ACCESS_KEY_ID != '' }}
               run: |
                   aws s3 cp backups/${FILE_NAME} s3://${S3_BUCKET_NAME}/backups/${FILE_NAME}
                   echo "Successfully uploaded backup to S3 bucket: ${S3_BUCKET_NAME}"
-
-
-            # Optional: Prune old backups (keep last 30 days) if your S3 bucket doesn't have a lifecycle rule
-            # Note: It's better to configure a lifecycle rule directly in the S3 bucket settings.
