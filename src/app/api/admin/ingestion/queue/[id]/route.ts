@@ -1,7 +1,7 @@
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { NextResponse } from "next/server";
 import { emitSystemEvent } from "@/lib/mission-control";
-import { getPlugin } from "@/lib/automation/registry";
+import { JobIngestionPublisherWorker } from "@/lib/automation/workers/ingestion-publisher-worker";
 import { IngestionActionSchema } from "@/lib/validations/ingestion";
 import { logApiError } from "@/lib/api-error-handler";
 import { z } from "zod";
@@ -30,15 +30,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     try {
         if (action === "APPROVE") {
-            const plugin = getPlugin("job-ingestion-publisher");
-            if (plugin) {
-                await plugin.run({ queueItemId });
-            }
-
-            await supabase
-                .from("ingested_jobs_queue")
-                .update({ status: "APPROVED", reviewed_at: new Date().toISOString() })
-                .eq("id", queueItemId);
+            await JobIngestionPublisherWorker.run({ queueItemId });
 
             await emitSystemEvent({
                 category: "INGESTION",
@@ -49,7 +41,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 metadata: { queueItemId }
             });
 
-            return NextResponse.json({ success: true, message: "Job approved and publishing initiated." });
+            return NextResponse.json({ success: true, message: "Job approved and published." });
         }
 
         if (action === "REJECT") {
@@ -107,16 +99,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                     .from("ingested_jobs_queue")
                     .update({
                         ...updatedFields,
-                        status: "APPROVED",
                         reviewed_at: new Date().toISOString()
                     })
                     .eq("id", queueItemId);
             }
 
-            const plugin = getPlugin("job-ingestion-publisher");
-            if (plugin) {
-                await plugin.run({ queueItemId });
-            }
+            await JobIngestionPublisherWorker.run({ queueItemId });
 
             await emitSystemEvent({
                 category: "INGESTION",
