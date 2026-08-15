@@ -21,12 +21,11 @@ export async function GET(req: Request) {
     }
 
     try {
-        // Fetch enabled opportunity sources (source_type = 'OPPORTUNITY')
+        // Fetch enabled opportunity sources from standalone opportunity_ingestion_sources table
         const { data: sources, error } = await supabase
-            .from("job_ingestion_sources")
+            .from("opportunity_ingestion_sources")
             .select("id, name, slug, last_crawl_at, crawl_frequency_minutes")
-            .eq("is_enabled", true)
-            .or("source_type.eq.OPPORTUNITY,slug.ilike.%scholarship%,slug.ilike.%opportunity%");
+            .eq("is_enabled", true);
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });

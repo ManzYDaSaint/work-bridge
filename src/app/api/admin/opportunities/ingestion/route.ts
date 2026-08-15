@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         // If no sourceId provided, find or auto-create default ScholarshipTab source
         if (!sourceId) {
             const { data: defaultSource } = await supabase
-                .from("job_ingestion_sources")
+                .from("opportunity_ingestion_sources")
                 .select("id")
                 .or("slug.eq.scholarshiptab-african-rss,name.ilike.%ScholarshipTab%")
                 .maybeSingle();
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
             } else {
                 // Auto-create default ScholarshipTab source on the fly
                 const { data: newSource, error: seedErr } = await supabase
-                    .from("job_ingestion_sources")
+                    .from("opportunity_ingestion_sources")
                     .insert({
                         name: "ScholarshipTab (African Students RSS)",
                         slug: "scholarshiptab-african-rss",
@@ -57,7 +57,6 @@ export async function POST(request: Request) {
                         is_enabled: true,
                         auto_publish: false,
                         crawl_frequency_minutes: 720,
-                        source_type: "OPPORTUNITY",
                     })
                     .select("id")
                     .single();

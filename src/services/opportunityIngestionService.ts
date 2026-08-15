@@ -23,7 +23,7 @@ export async function crawlOpportunitySource(sourceId: string) {
     if (!supabase) throw new Error("Supabase admin client unavailable");
 
     const { data: source, error } = await supabase
-        .from("job_ingestion_sources")
+        .from("opportunity_ingestion_sources")
         .select("*")
         .eq("id", sourceId)
         .single();
@@ -124,7 +124,7 @@ export async function crawlOpportunitySource(sourceId: string) {
 
     // Update source last crawl timestamp
     await supabase
-        .from("job_ingestion_sources")
+        .from("opportunity_ingestion_sources")
         .update({
             last_crawl_at: new Date().toISOString(),
             last_success_at: new Date().toISOString(),
@@ -155,7 +155,7 @@ export async function getStagedOpportunitiesQueue(status = "PENDING_REVIEW") {
         .from("ingested_opportunities_queue")
         .select(`
             *,
-            source:job_ingestion_sources(name, slug)
+            source:opportunity_ingestion_sources(name, slug)
         `)
         .order("created_at", { ascending: false });
 
