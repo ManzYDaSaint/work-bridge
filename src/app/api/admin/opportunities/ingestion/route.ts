@@ -33,9 +33,12 @@ export async function POST(request: Request) {
         const body = await request.json().catch(() => ({}));
         let sourceId = body.sourceId;
 
-        // If no sourceId provided, find or auto-create default active scholarship sources
+        // If no sourceId provided, find or auto-create default active scholarship sources using admin client
         if (!sourceId) {
-            const { data: defaultSource } = await supabase
+            const { getSupabaseAdminClient } = await import("@/lib/supabase-admin");
+            const adminClient = getSupabaseAdminClient() || supabase;
+
+            const { data: defaultSource } = await adminClient
                 .from("opportunity_ingestion_sources")
                 .select("id")
                 .or("slug.eq.opportunities-for-africans-rss,slug.eq.greatyop-rss,slug.eq.opportunity-desk-rss,name.ilike.%Opportunities For Africans%")
@@ -45,7 +48,7 @@ export async function POST(request: Request) {
                 sourceId = defaultSource.id;
             } else {
                 // Auto-create default Opportunities For Africans source on the fly
-                const { data: newSource, error: seedErr } = await supabase
+                const { data: newSource, error: seedErr } = await adminClient
                     .from("opportunity_ingestion_sources")
                     .insert({
                         name: "Opportunities For Africans RSS",
@@ -63,6 +66,8 @@ export async function POST(request: Request) {
 
                 if (!seedErr && newSource) {
                     sourceId = newSource.id;
+                } else if (seedErr) {
+                    console.error("[OpportunityIngestion] Auto-seed source error:", seedErr);
                 }
             }
         }
