@@ -57,6 +57,7 @@ export async function POST(request: Request) {
                         is_enabled: true,
                         auto_publish: false,
                         crawl_frequency_minutes: 720,
+                        source_type: "OPPORTUNITY",
                     })
                     .select("id")
                     .single();

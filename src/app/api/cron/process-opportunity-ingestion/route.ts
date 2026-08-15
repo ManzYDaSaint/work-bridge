@@ -21,19 +21,18 @@ export async function GET(req: Request) {
     }
 
     try {
-        // Fetch enabled opportunity sources (slug contains 'scholarship' or 'opportunity')
+        // Fetch enabled opportunity sources (source_type = 'OPPORTUNITY')
         const { data: sources, error } = await supabase
             .from("job_ingestion_sources")
             .select("id, name, slug, last_crawl_at, crawl_frequency_minutes")
-            .eq("is_enabled", true);
+            .eq("is_enabled", true)
+            .or("source_type.eq.OPPORTUNITY,slug.ilike.%scholarship%,slug.ilike.%opportunity%");
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        const opportunitySources = (sources || []).filter(
-            (s) => s.slug.includes("scholarship") || s.slug.includes("opportunity")
-        );
+        const opportunitySources = sources || [];
 
         if (opportunitySources.length === 0) {
             return NextResponse.json({ success: true, message: "No opportunity ingestion sources found." });

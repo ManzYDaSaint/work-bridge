@@ -32,8 +32,8 @@ export const JobIngestionCrawlerWorker = {
             return;
         }
 
-        // Fetch source(s) to process
-        let query = supabase.from('job_ingestion_sources').select('*').eq('is_enabled', true);
+        // Fetch source(s) to process (only JOB source_type)
+        let query = supabase.from('job_ingestion_sources').select('*').or('source_type.eq.JOB,source_type.is.null').eq('is_enabled', true);
         if (payload.sourceId) {
             query = query.eq('id', payload.sourceId);
         }

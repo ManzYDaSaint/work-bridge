@@ -95,8 +95,10 @@ ON CONFLICT (id) DO UPDATE SET
     description = EXCLUDED.description,
     updated_at = timezone('utc'::text, now());
 
--- Seed default ScholarshipTab source in job_ingestion_sources
-INSERT INTO public.job_ingestion_sources (name, slug, connector_type, base_url, feed_url, default_location, is_enabled, auto_publish, crawl_frequency_minutes)
+-- Seed default ScholarshipTab source in job_ingestion_sources (marked as OPPORTUNITY source_type)
+ALTER TABLE public.job_ingestion_sources ADD COLUMN IF NOT EXISTS source_type TEXT DEFAULT 'JOB' CHECK (source_type IN ('JOB', 'OPPORTUNITY'));
+
+INSERT INTO public.job_ingestion_sources (name, slug, connector_type, base_url, feed_url, default_location, is_enabled, auto_publish, crawl_frequency_minutes, source_type)
 VALUES
-    ('ScholarshipTab (African Students RSS)', 'scholarshiptab-african-rss', 'RSS', 'https://www.scholarshiptab.com', 'https://www.scholarshiptab.com/scholarshipxml.xml', 'Global', true, false, 720)
-ON CONFLICT (slug) DO NOTHING;
+    ('ScholarshipTab (African Students RSS)', 'scholarshiptab-african-rss', 'RSS', 'https://www.scholarshiptab.com', 'https://www.scholarshiptab.com/scholarshipxml.xml', 'Global', true, false, 720, 'OPPORTUNITY')
+ON CONFLICT (slug) DO UPDATE SET source_type = 'OPPORTUNITY';

@@ -73,6 +73,7 @@ export async function GET(req: Request) {
     const { count: sourcesCount, error: sourcesCountErr } = await supabase
         .from("job_ingestion_sources")
         .select("id", { count: "exact", head: true })
+        .or("source_type.eq.JOB,source_type.is.null")
         .eq("is_enabled", true);
     if (sourcesCountErr) {
         return NextResponse.json({ error: sourcesCountErr.message }, { status: 500 });
@@ -81,6 +82,7 @@ export async function GET(req: Request) {
     const { data: sources, error: sourcesErr } = await supabase
         .from("job_ingestion_sources")
         .select("*")
+        .or("source_type.eq.JOB,source_type.is.null")
         .order("reputation_score", { ascending: false });
     if (sourcesErr) {
         return NextResponse.json({ error: sourcesErr.message }, { status: 500 });
