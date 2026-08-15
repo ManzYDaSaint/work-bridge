@@ -74,6 +74,9 @@ export interface OpportunityCreatePayload {
     experience_years_min?: number;
     funding_type: OpportunityFundingType;
     funding_amount?: string;
+    target_regions?: string[];
+    host_institutions?: string[];
+    gender_eligibility?: "ANY" | "WOMEN_ONLY" | "MEN_ONLY";
     weight_education?: number;
     weight_certifications?: number;
     weight_skills?: number;
@@ -98,7 +101,7 @@ export async function detectDuplicateOpportunity(opts: {
     excludeId?: string;
 }) {
     const supabase = getSupabaseAdminClient();
-    if (!supabase) return false;
+    if (!supabase) return { isDuplicate: false, existingId: undefined, confidence: 0 };
 
     let query = supabase
         .from("opportunities")
@@ -111,7 +114,8 @@ export async function detectDuplicateOpportunity(opts: {
     }
 
     const { data } = await query;
-    const isDuplicate = !!(data && data.length > 0);
+    const existingOpp = data && data[0];
+    const isDuplicate = !!existingOpp;
 
     if (isDuplicate) {
         await emitSystemEvent({
@@ -123,7 +127,11 @@ export async function detectDuplicateOpportunity(opts: {
         });
     }
 
-    return isDuplicate;
+    return {
+        isDuplicate,
+        existingId: existingOpp?.id || undefined,
+        confidence: isDuplicate ? 95 : 0,
+    };
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

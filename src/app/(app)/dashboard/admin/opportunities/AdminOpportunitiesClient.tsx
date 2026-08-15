@@ -11,6 +11,7 @@ import {
     BarChart3, MousePointerClick, Users
 } from "lucide-react";
 import Link from "next/link";
+import OpportunityIngestionQueue from "./OpportunityIngestionQueue";
 
 // ── Status helpers ─────────────────────────────────────────────────────────────
 
@@ -69,6 +70,7 @@ export default function AdminOpportunitiesClient({
     const [actioning, setActioning] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState("ALL");
     const [search, setSearch] = useState("");
+    const [activeTab, setActiveTab] = useState<"active" | "ingestion">("active");
 
     const filtered = initialOpportunities.filter((o) => {
         const matchesStatus = statusFilter === "ALL" || o.status === statusFilter;
@@ -148,7 +150,35 @@ export default function AdminOpportunitiesClient({
                 }}
             />
 
-            {/* Analytics cards */}
+            {/* Sub Navigation Tabs */}
+            <div className="flex border-b border-stone-200 dark:border-slate-800">
+                <button
+                    onClick={() => setActiveTab("active")}
+                    className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+                        activeTab === "active"
+                            ? "border-[#16324f] text-[#16324f] dark:border-blue-400 dark:text-blue-400"
+                            : "border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400"
+                    }`}
+                >
+                    <GraduationCap className="h-4 w-4" /> Published & Draft Opportunities
+                </button>
+                <button
+                    onClick={() => setActiveTab("ingestion")}
+                    className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+                        activeTab === "ingestion"
+                            ? "border-[#16324f] text-[#16324f] dark:border-blue-400 dark:text-blue-400"
+                            : "border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400"
+                    }`}
+                >
+                    <Sparkles className="h-4 w-4 text-blue-600" /> Automated Ingestion Queue
+                </button>
+            </div>
+
+            {activeTab === "ingestion" ? (
+                <OpportunityIngestionQueue />
+            ) : (
+                <>
+                    {/* Analytics cards */}
             {analytics && (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <StatCard
@@ -337,6 +367,8 @@ export default function AdminOpportunitiesClient({
                     })
                 )}
             </div>
+            </>
+            )}
         </div>
     );
 }

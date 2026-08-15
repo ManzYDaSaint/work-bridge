@@ -25,6 +25,7 @@ export async function GET(req: Request) {
         'queue-retention-reminders',
         'prune-notifications',
         'process-ingestion',
+        'process-opportunity-ingestion',
         'cleanup-system'
     ];
 

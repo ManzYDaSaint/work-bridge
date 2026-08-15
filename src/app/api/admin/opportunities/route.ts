@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Duplicate Opportunity Check (#5)
-        const isDuplicate = await detectDuplicateOpportunity({
+        const { isDuplicate } = await detectDuplicateOpportunity({
             title: body.title,
             organization_name: body.organization_name,
             deadline: body.deadline,
