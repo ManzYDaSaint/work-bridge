@@ -37,12 +37,19 @@ export async function POST(request: Request) {
         if (!sourceId) {
             const { getSupabaseAdminClient } = await import("@/lib/supabase-admin");
             const adminClient = getSupabaseAdminClient() || supabase;
+            
+            console.log("[OpportunityIngestion DEBUG] Attempting to find source...");
+            if (!adminClient) {
+                console.error("[OpportunityIngestion DEBUG] Admin client failed to initialize.");
+            }
 
-            const { data: defaultSource } = await adminClient
+            const { data: defaultSource, error: queryErr } = await adminClient
                 .from("opportunity_ingestion_sources")
                 .select("id")
                 .or("slug.eq.opportunities-for-africans-rss,slug.eq.greatyop-rss,slug.eq.opportunity-desk-rss,name.ilike.%Opportunities For Africans%")
                 .maybeSingle();
+
+            console.log("[OpportunityIngestion DEBUG] Query result:", { defaultSource, queryErr });
 
             if (defaultSource) {
                 sourceId = defaultSource.id;
