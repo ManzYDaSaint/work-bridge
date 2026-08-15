@@ -113,7 +113,7 @@ export default function OpportunityIngestionQueue() {
                             Automated Opportunity Ingestion Queue
                         </h3>
                         <p className="text-xs text-slate-500">
-                            Ingested from sources like ScholarshipTab. AI extracts funding, target regions, and deadlines for review.
+                            Ingested from open feeds like Opportunities For Africans, Scholars4Dev, and Opportunity Desk. AI extracts funding, target regions, and deadlines.
                         </p>
                     </div>
                 </div>

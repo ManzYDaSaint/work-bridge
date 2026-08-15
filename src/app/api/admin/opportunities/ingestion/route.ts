@@ -33,27 +33,27 @@ export async function POST(request: Request) {
         const body = await request.json().catch(() => ({}));
         let sourceId = body.sourceId;
 
-        // If no sourceId provided, find or auto-create default ScholarshipTab source
+        // If no sourceId provided, find or auto-create default active scholarship sources
         if (!sourceId) {
             const { data: defaultSource } = await supabase
                 .from("opportunity_ingestion_sources")
                 .select("id")
-                .or("slug.eq.scholarshiptab-african-rss,name.ilike.%ScholarshipTab%")
+                .or("slug.eq.opportunities-for-africans-rss,slug.eq.greatyop-rss,slug.eq.opportunity-desk-rss,name.ilike.%Opportunities For Africans%")
                 .maybeSingle();
 
             if (defaultSource) {
                 sourceId = defaultSource.id;
             } else {
-                // Auto-create default ScholarshipTab source on the fly
+                // Auto-create default Opportunities For Africans source on the fly
                 const { data: newSource, error: seedErr } = await supabase
                     .from("opportunity_ingestion_sources")
                     .insert({
-                        name: "ScholarshipTab (African Students RSS)",
-                        slug: "scholarshiptab-african-rss",
+                        name: "Opportunities For Africans RSS",
+                        slug: "opportunities-for-africans-rss",
                         connector_type: "RSS",
-                        base_url: "https://www.scholarshiptab.com",
-                        feed_url: "https://www.scholarshiptab.com/scholarshipxml.xml",
-                        default_location: "Global",
+                        base_url: "https://www.opportunitiesforafricans.com",
+                        feed_url: "https://www.opportunitiesforafricans.com/feed/",
+                        default_location: "Africa",
                         is_enabled: true,
                         auto_publish: false,
                         crawl_frequency_minutes: 720,

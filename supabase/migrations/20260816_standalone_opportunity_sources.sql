@@ -53,8 +53,10 @@ ALTER TABLE public.ingested_opportunities_queue
     ADD CONSTRAINT ingested_opportunities_queue_source_id_fkey 
     FOREIGN KEY (source_id) REFERENCES public.opportunity_ingestion_sources(id) ON DELETE CASCADE;
 
--- 3. Seed default ScholarshipTab source into opportunity_ingestion_sources
+-- 3. Seed default high-reliability scholarship sources into opportunity_ingestion_sources
 INSERT INTO public.opportunity_ingestion_sources (name, slug, connector_type, base_url, feed_url, default_location, is_enabled, auto_publish, crawl_frequency_minutes)
 VALUES
-    ('ScholarshipTab (African Students RSS)', 'scholarshiptab-african-rss', 'RSS', 'https://www.scholarshiptab.com', 'https://www.scholarshiptab.com/scholarshipxml.xml', 'Global', true, false, 720)
+    ('Opportunities For Africans RSS', 'opportunities-for-africans-rss', 'RSS', 'https://www.opportunitiesforafricans.com', 'https://www.opportunitiesforafricans.com/feed/', 'Africa', true, false, 720),
+    ('Greatyop (Youth & International Opportunities)', 'greatyop-rss', 'RSS', 'https://greatyop.com', 'https://greatyop.com/feed/', 'Global', true, false, 720),
+    ('Opportunity Desk RSS', 'opportunity-desk-rss', 'RSS', 'https://opportunitydesk.org', 'https://opportunitydesk.org/feed/', 'Global', true, false, 720)
 ON CONFLICT (slug) DO NOTHING;
