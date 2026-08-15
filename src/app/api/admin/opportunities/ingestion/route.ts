@@ -33,49 +33,23 @@ export async function POST(request: Request) {
         const body = await request.json().catch(() => ({}));
         let sourceId = body.sourceId;
 
-        // If no sourceId provided, find or auto-create default active scholarship sources using admin client
+        // If no sourceId provided, find default active scholarship sources using admin client
         if (!sourceId) {
             const { getSupabaseAdminClient } = await import("@/lib/supabase-admin");
             const adminClient = getSupabaseAdminClient() || supabase;
             
-            console.log("[OpportunityIngestion DEBUG] Attempting to find source...");
-            if (!adminClient) {
-                console.error("[OpportunityIngestion DEBUG] Admin client failed to initialize.");
-            }
-
+            // Try to find any enabled source first
             const { data: defaultSource, error: queryErr } = await adminClient
                 .from("opportunity_ingestion_sources")
                 .select("id")
-                .or("slug.eq.opportunities-for-africans-rss,slug.eq.greatyop-rss,slug.eq.opportunity-desk-rss,name.ilike.%Opportunities For Africans%")
+                .eq("is_enabled", true)
+                .limit(1)
                 .maybeSingle();
-
-            console.log("[OpportunityIngestion DEBUG] Query result:", { defaultSource, queryErr });
 
             if (defaultSource) {
                 sourceId = defaultSource.id;
             } else {
-                // Auto-create default Opportunities For Africans source on the fly
-                const { data: newSource, error: seedErr } = await adminClient
-                    .from("opportunity_ingestion_sources")
-                    .insert({
-                        name: "Opportunities For Africans RSS",
-                        slug: "opportunities-for-africans-rss",
-                        connector_type: "RSS",
-                        base_url: "https://www.opportunitiesforafricans.com",
-                        feed_url: "https://www.opportunitiesforafricans.com/feed/",
-                        default_location: "Africa",
-                        is_enabled: true,
-                        auto_publish: false,
-                        crawl_frequency_minutes: 720,
-                    })
-                    .select("id")
-                    .single();
-
-                if (!seedErr && newSource) {
-                    sourceId = newSource.id;
-                } else if (seedErr) {
-                    console.error("[OpportunityIngestion] Auto-seed source error:", seedErr);
-                }
+                console.error("[OpportunityIngestion] No enabled opportunity source found.");
             }
         }
 
