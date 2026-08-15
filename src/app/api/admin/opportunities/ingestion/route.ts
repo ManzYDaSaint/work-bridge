@@ -33,19 +33,42 @@ export async function POST(request: Request) {
         const body = await request.json().catch(() => ({}));
         let sourceId = body.sourceId;
 
-        // If no sourceId provided, find default ScholarshipTab source
+        // If no sourceId provided, find or auto-create default ScholarshipTab source
         if (!sourceId) {
             const { data: defaultSource } = await supabase
                 .from("job_ingestion_sources")
                 .select("id")
-                .ilike("name", "%ScholarshipTab%")
+                .or("slug.eq.scholarshiptab-african-rss,name.ilike.%ScholarshipTab%")
                 .maybeSingle();
 
-            sourceId = defaultSource?.id;
+            if (defaultSource) {
+                sourceId = defaultSource.id;
+            } else {
+                // Auto-create default ScholarshipTab source on the fly
+                const { data: newSource, error: seedErr } = await supabase
+                    .from("job_ingestion_sources")
+                    .insert({
+                        name: "ScholarshipTab (African Students RSS)",
+                        slug: "scholarshiptab-african-rss",
+                        connector_type: "RSS",
+                        base_url: "https://www.scholarshiptab.com",
+                        feed_url: "https://www.scholarshiptab.com/scholarshipxml.xml",
+                        default_location: "Global",
+                        is_enabled: true,
+                        auto_publish: false,
+                        crawl_frequency_minutes: 720,
+                    })
+                    .select("id")
+                    .single();
+
+                if (!seedErr && newSource) {
+                    sourceId = newSource.id;
+                }
+            }
         }
 
         if (!sourceId) {
-            return NextResponse.json({ error: "No opportunity ingestion source found" }, { status: 404 });
+            return NextResponse.json({ error: "No opportunity ingestion source configured in database." }, { status: 404 });
         }
 
         const result = await crawlOpportunitySource(sourceId);

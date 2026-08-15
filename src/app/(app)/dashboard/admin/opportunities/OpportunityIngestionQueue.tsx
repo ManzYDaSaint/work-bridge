@@ -51,7 +51,8 @@ export default function OpportunityIngestionQueue() {
                 toast.success(`Crawl completed! Found ${data.newCount || 0} new opportunities.`);
                 fetchQueue();
             } else {
-                toast.error("Crawl failed.");
+                const err = await res.json().catch(() => ({}));
+                toast.error(err.error || "Crawl failed.");
             }
         } catch {
             toast.error("Network error during crawl.");
