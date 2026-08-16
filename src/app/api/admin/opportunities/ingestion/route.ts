@@ -31,34 +31,62 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json().catch(() => ({}));
-        let sourceId = body.sourceId;
+        const specificSourceId: string | null = body.sourceId || null;
 
-        // If no sourceId provided, find default active scholarship sources using admin client
-        if (!sourceId) {
-            const { getSupabaseAdminClient } = await import("@/lib/supabase-admin");
-            const adminClient = getSupabaseAdminClient() || supabase;
-            
-            // Try to find any enabled source first
-            const { data: defaultSource, error: queryErr } = await adminClient
+        const { getSupabaseAdminClient } = await import("@/lib/supabase-admin");
+        const adminClient = getSupabaseAdminClient() || supabase;
+
+        let sourceIds: string[] = [];
+
+        if (specificSourceId) {
+            sourceIds = [specificSourceId];
+        } else {
+            // Crawl ALL enabled sources (not just the first one)
+            const { data: allSources, error: queryErr } = await adminClient
                 .from("opportunity_ingestion_sources")
-                .select("id")
-                .eq("is_enabled", true)
-                .limit(1)
-                .maybeSingle();
+                .select("id, name")
+                .eq("is_enabled", true);
 
-            if (defaultSource) {
-                sourceId = defaultSource.id;
-            } else {
-                console.error("[OpportunityIngestion] No enabled opportunity source found.");
+            if (queryErr || !allSources || allSources.length === 0) {
+                console.error("[OpportunityIngestion] No enabled opportunity sources found.", queryErr?.message);
+                return NextResponse.json(
+                    { error: "No opportunity ingestion sources configured in database." },
+                    { status: 404 }
+                );
+            }
+
+            sourceIds = allSources.map((s: { id: string }) => s.id);
+            console.log(`[OpportunityIngestion] Crawling ${sourceIds.length} sources:`, allSources.map((s: any) => s.name).join(", "));
+        }
+
+        // Crawl each source sequentially — one failure doesn't block the rest
+        let totalNew = 0;
+        let totalDuplicates = 0;
+        let totalErrors = 0;
+        const sourceResults: Record<string, any> = {};
+
+        for (const sid of sourceIds) {
+            try {
+                const result = await crawlOpportunitySource(sid);
+                totalNew += result.newCount;
+                totalDuplicates += result.duplicateCount;
+                totalErrors += (result as any).errorCount ?? 0;
+                sourceResults[sid] = result;
+            } catch (sourceErr: any) {
+                console.error(`[OpportunityIngestion] Crawl failed for source ${sid}:`, sourceErr.message);
+                sourceResults[sid] = { error: sourceErr.message };
+                totalErrors++;
             }
         }
 
-        if (!sourceId) {
-            return NextResponse.json({ error: "No opportunity ingestion source configured in database." }, { status: 404 });
-        }
-
-        const result = await crawlOpportunitySource(sourceId);
-        return NextResponse.json({ success: true, ...result });
+        return NextResponse.json({
+            success: true,
+            newCount: totalNew,
+            duplicateCount: totalDuplicates,
+            errorCount: totalErrors,
+            sourcesProcessed: sourceIds.length,
+            sourceResults,
+        });
     } catch (err: any) {
         return NextResponse.json({ error: err.message || "Crawl failed" }, { status: 500 });
     }

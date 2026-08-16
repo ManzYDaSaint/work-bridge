@@ -113,6 +113,13 @@ export async function parseOpportunityWithGemini(
         if (!text) return null;
 
         const parsed: ExtractedOpportunityFields = JSON.parse(text);
+
+        // Reject low-confidence extractions (e.g. list-style digest posts have confidence ~0)
+        if (!parsed.title || (parsed.confidence_score !== undefined && parsed.confidence_score < 30)) {
+            console.warn(`[GeminiOpportunityService] Skipping low-confidence extraction (score=${parsed.confidence_score}) for ${sourceUrl}`);
+            return null;
+        }
+
         if (!parsed.application_url) parsed.application_url = sourceUrl;
         if (!parsed.target_regions || parsed.target_regions.length === 0) parsed.target_regions = ['GLOBAL'];
         if (!parsed.host_institutions) parsed.host_institutions = [];
@@ -142,3 +149,4 @@ export async function parseOpportunityWithGemini(
         return null;
     }
 }
+

@@ -75,8 +75,16 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                     .single();
 
                 if (existing) {
+                    const validKeys = Object.keys(existing);
+                    const filteredUpdatedFields = Object.entries(updatedFields).reduce((acc, [key, val]) => {
+                        if (validKeys.includes(key)) {
+                            acc[key] = val;
+                        }
+                        return acc;
+                    }, {} as Record<string, any>);
+
                     const feedbackRows = [];
-                    for (const [key, val] of Object.entries(updatedFields)) {
+                    for (const [key, val] of Object.entries(filteredUpdatedFields)) {
                         if (JSON.stringify((existing as any)[key]) !== JSON.stringify(val)) {
                             feedbackRows.push({
                                 queue_item_id: queueItemId,
@@ -93,15 +101,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                     if (feedbackRows.length > 0) {
                         await supabase.from("ingested_human_feedback").insert(feedbackRows);
                     }
-                }
 
-                await supabase
-                    .from("ingested_jobs_queue")
-                    .update({
-                        ...updatedFields,
-                        reviewed_at: new Date().toISOString()
-                    })
-                    .eq("id", queueItemId);
+                    await supabase
+                        .from("ingested_jobs_queue")
+                        .update({
+                            ...filteredUpdatedFields,
+                            reviewed_at: new Date().toISOString()
+                        })
+                        .eq("id", queueItemId);
+                }
             }
 
             await JobIngestionPublisherWorker.run({ queueItemId });

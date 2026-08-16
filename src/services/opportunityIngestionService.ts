@@ -2,9 +2,11 @@
  * Aganyu Opportunity Ingestion Engine — Service Layer
  *
  * Handles:
- * 1. Source crawling & raw payload ingestion
- * 2. Gemini AI extraction into ingested_opportunities_queue
- * 3. Administrative approval, rejection, and publishing to public.opportunities
+ * 1. Source crawling & raw payload ingestion into `ingested_opportunity_raw_payloads`
+ * 2. Gemini AI extraction into `ingested_opportunities_queue`
+ * 3. Administrative approval, rejection, and publishing to `public.opportunities`
+ *
+ * Fully separated from Job Ingestion schema and tables.
  */
 
 import crypto from "crypto";
@@ -37,50 +39,67 @@ export async function crawlOpportunitySource(sourceId: string) {
 
     let newCount = 0;
     let duplicateCount = 0;
+    let errorCount = 0;
 
     for (const ref of discovered) {
-        const fetched = await connector.fetchJob(ref, source);
-        if (!fetched.rawContent || fetched.checksum === "EXPIRED_SKIP") continue;
+        try {
+            const fetched = await connector.fetchJob(ref, source);
+            if (!fetched.rawContent || fetched.checksum === "EXPIRED_SKIP") continue;
 
-        // Check if raw payload exists
-        const { data: existingPayload } = await supabase
-            .from("ingested_raw_payloads")
-            .select("id")
-            .eq("source_id", source.id)
-            .eq("external_id", ref.externalId)
-            .maybeSingle();
+            // ── 1. Check raw payload dedup & insert into ingested_opportunity_raw_payloads (if table exists) ──
+            const urlHash = crypto.createHash("md5").update(ref.url).digest("hex");
+            let rawPayloadId: string | null = null;
 
-        if (existingPayload) {
-            duplicateCount++;
-            continue;
-        }
+            const { data: existingQueued } = await supabase
+                .from("ingested_opportunities_queue")
+                .select("id")
+                .eq("source_url_hash", urlHash)
+                .maybeSingle();
 
-        // Insert raw payload
-        const { data: rawPayload, error: rawError } = await supabase
-            .from("ingested_raw_payloads")
-            .insert({
-                source_id: source.id,
-                external_id: ref.externalId,
-                url: ref.url,
-                payload: fetched.rawContent,
-                content_type: fetched.contentType,
-                checksum: fetched.checksum,
-                processing_status: "PENDING",
-            })
-            .select("id")
-            .single();
+            if (existingQueued) {
+                duplicateCount++;
+                continue;
+            }
 
-        if (rawError || !rawPayload) {
-            console.error(`[OpportunityIngestion] Failed raw payload insert:`, rawError);
-            continue;
-        }
+            // Try inserting into dedicated opportunity raw payloads table if available
+            try {
+                const { data: rawPayload } = await supabase
+                    .from("ingested_opportunity_raw_payloads")
+                    .insert({
+                        source_id: source.id,
+                        external_id: ref.externalId,
+                        url: ref.url,
+                        payload: fetched.rawContent,
+                        content_type: fetched.contentType,
+                        checksum: fetched.checksum,
+                        processing_status: "PENDING",
+                    })
+                    .select("id")
+                    .maybeSingle();
 
-        newCount++;
+                if (rawPayload) {
+                    rawPayloadId = rawPayload.id;
+                }
+            } catch {
+                // If table doesn't exist yet, proceed gracefully using queue dedup
+            }
 
-        // Process AI parsing
-        const parsed = await parseOpportunityWithGemini(fetched.rawContent, ref.url, fetched.checksum);
-        if (parsed && parsed.title) {
-            // Check for duplicates in public.opportunities
+            // ── 2. Gemini AI Parse ──
+            const parsed = await parseOpportunityWithGemini(fetched.rawContent, ref.url, fetched.checksum);
+
+            if (!parsed || !parsed.title) {
+                console.warn(`[OpportunityIngestion] Gemini returned no title for ${ref.url}`);
+                if (rawPayloadId) {
+                    await supabase
+                        .from("ingested_opportunity_raw_payloads")
+                        .update({ processing_status: "FAILED", error_log: "Gemini returned no title or low confidence" })
+                        .eq("id", rawPayloadId);
+                }
+                errorCount++;
+                continue;
+            }
+
+            // Check for semantic duplicates in published opportunities
             const duplicateCheck = await detectDuplicateOpportunity({
                 title: parsed.title,
                 organization_name: parsed.organization_name || "Unknown Organization",
@@ -89,8 +108,8 @@ export async function crawlOpportunitySource(sourceId: string) {
 
             const status = duplicateCheck.isDuplicate ? "DUPLICATE" : "PENDING_REVIEW";
 
-            await supabase.from("ingested_opportunities_queue").insert({
-                raw_payload_id: rawPayload.id,
+            const { error: queueErr } = await supabase.from("ingested_opportunities_queue").insert({
+                raw_payload_id: rawPayloadId,
                 source_id: source.id,
                 title: parsed.title,
                 organization_name: parsed.organization_name || "Unknown Organization",
@@ -98,7 +117,7 @@ export async function crawlOpportunitySource(sourceId: string) {
                 short_description: parsed.short_description || parsed.title,
                 category: parsed.category || "SCHOLARSHIP",
                 country: parsed.country || "Global",
-                location_type: parsed.country === "Global" ? "GLOBAL" : "IN_PERSON",
+                location_type: (parsed.country || "").toLowerCase() === "global" ? "GLOBAL" : "IN_PERSON",
                 application_url: parsed.application_url || ref.url,
                 deadline: parsed.deadline || null,
                 eligibility_requirements: parsed.eligibility_requirements || null,
@@ -111,14 +130,35 @@ export async function crawlOpportunitySource(sourceId: string) {
                 gender_eligibility: parsed.gender_eligibility || "ANY",
                 overall_confidence: parsed.confidence_score || 80,
                 status,
+                source_url_hash: urlHash,
                 duplicate_of_opportunity_id: duplicateCheck.isDuplicate ? duplicateCheck.existingId : null,
                 duplicate_similarity: duplicateCheck.confidence,
             });
 
-            await supabase
-                .from("ingested_raw_payloads")
-                .update({ processing_status: "PARSED", parsed_at: new Date().toISOString() })
-                .eq("id", rawPayload.id);
+            if (queueErr) {
+                console.error(`[OpportunityIngestion] Queue insert failed for "${parsed.title}":`, queueErr.message);
+                if (rawPayloadId) {
+                    await supabase
+                        .from("ingested_opportunity_raw_payloads")
+                        .update({ processing_status: "FAILED", error_log: queueErr.message })
+                        .eq("id", rawPayloadId);
+                }
+                errorCount++;
+                continue;
+            }
+
+            if (rawPayloadId) {
+                await supabase
+                    .from("ingested_opportunity_raw_payloads")
+                    .update({ processing_status: "PARSED", parsed_at: new Date().toISOString() })
+                    .eq("id", rawPayloadId);
+            }
+
+            newCount++;
+
+        } catch (itemErr: any) {
+            console.error(`[OpportunityIngestion] Error processing ref ${ref.url}:`, itemErr.message);
+            errorCount++;
         }
     }
 
@@ -134,13 +174,13 @@ export async function crawlOpportunitySource(sourceId: string) {
 
     await emitSystemEvent({
         category: "AUTOMATION",
-        severity: "INFO",
+        severity: newCount > 0 ? "SUCCESS" : "INFO",
         event: "OPPORTUNITY_INGESTION_CRAWL_COMPLETED",
-        message: `Crawl completed for ${source.name}: ${newCount} new opportunities, ${duplicateCount} duplicates`,
-        metadata: { sourceId, newCount, duplicateCount },
+        message: `Crawl completed for ${source.name}: ${newCount} new, ${duplicateCount} duplicates, ${errorCount} errors`,
+        metadata: { sourceId, sourceName: source.name, newCount, duplicateCount, errorCount },
     });
 
-    return { newCount, duplicateCount };
+    return { newCount, duplicateCount, errorCount };
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
