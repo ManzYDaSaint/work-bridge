@@ -14,11 +14,12 @@ const RequestSchema = z.object({
     rejectionReason: z.string().optional(),
 });
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: { id: string } | Promise<{ id: string }> }) {
     const supabase = getSupabaseAdminClient();
     if (!supabase) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const queueItemId = params.id;
+    const resolvedParams = await params;
+    const queueItemId = resolvedParams.id;
     const body = await req.json();
     const validation = RequestSchema.safeParse(body);
 
