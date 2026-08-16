@@ -49,14 +49,13 @@ export async function emitSystemEvent(payload: SystemEventPayload) {
         }
 
         const { error } = await supabase
-            .from("system_events")
+            .from("mission_control_events")
             .insert({
                 category: payload.category,
                 severity: severity,
                 event: payload.event,
                 message: payload.message,
                 actor_id: payload.actorId,
-                correlation_id: payload.correlationId,
                 metadata: payload.metadata || {},
             });
 
