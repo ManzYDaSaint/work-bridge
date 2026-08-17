@@ -26,6 +26,17 @@ const LOCATION_TYPES = [
     { value: "HYBRID", label: "Hybrid" },
 ];
 
+const SOURCES = [
+    { value: "MANUAL", label: "✍️ Manual Admin Entry" },
+    { value: "ORGANIZATION_WEBSITE", label: "🌐 Organization Website" },
+    { value: "UNIVERSITY", label: "🎓 University / Academic Institution" },
+    { value: "GOVERNMENT", label: "🏛️ Government Agency" },
+    { value: "NGO", label: "🤝 NGO / Non-Profit" },
+    { value: "LINKEDIN", label: "💼 LinkedIn" },
+    { value: "PARTNER", label: "🤝 Industry Partner" },
+    { value: "RSS_API", label: "⚡ RSS / API Automation Feed" },
+];
+
 const FUNDING_TYPES = [
     { value: "NOT_APPLICABLE", label: "Not applicable" },
     { value: "FULL_FUNDING", label: "Full funding" },
@@ -113,6 +124,7 @@ export default function EditOpportunityClient({ opportunity }: { opportunity: an
         experience_years_min: opportunity.experience_years_min?.toString() || "0",
         funding_type: opportunity.funding_type || "NOT_APPLICABLE",
         funding_amount: opportunity.funding_amount || "",
+        source: opportunity.source || "MANUAL",
         weight_education: opportunity.weight_education ?? 40,
         weight_certifications: opportunity.weight_certifications ?? 30,
         weight_skills: opportunity.weight_skills ?? 20,
@@ -258,7 +270,7 @@ export default function EditOpportunityClient({ opportunity }: { opportunity: an
                         </Field>
                     </div>
 
-                    <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="grid gap-5 sm:grid-cols-3">
                         <Field label="Organisation Name" required>
                             <input
                                 type="text"
@@ -275,6 +287,11 @@ export default function EditOpportunityClient({ opportunity }: { opportunity: an
                                 onChange={(e) => set("organization_logo", e.target.value)}
                                 className={inputCls}
                             />
+                        </Field>
+                        <Field label="Opportunity Source">
+                            <select value={form.source} onChange={(e) => set("source", e.target.value)} className={selectCls}>
+                                {SOURCES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                            </select>
                         </Field>
                     </div>
 

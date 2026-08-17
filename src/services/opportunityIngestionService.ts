@@ -13,7 +13,7 @@ import crypto from "crypto";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getConnector } from "@/lib/ingestion/connectors";
 import { parseOpportunityWithGemini } from "@/lib/ingestion/gemini-opportunity-service";
-import { createOpportunity, detectDuplicateOpportunity } from "@/services/opportunityService";
+import { createOpportunity, publishOpportunity, detectDuplicateOpportunity } from "@/services/opportunityService";
 import { emitSystemEvent } from "@/lib/mission-control";
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -235,8 +235,8 @@ export async function approveStagedOpportunity(stagedId: string, adminId: string
         .replace(/(^-|-$)+/g, "");
     const slug = `${rawSlug}-${crypto.randomBytes(3).toString("hex")}`;
 
-    // Publish into public.opportunities using existing opportunityService
-    const opportunity = await createOpportunity({
+    // Create opportunity record
+    const draftOpp = await createOpportunity({
         title: staged.title,
         slug,
         category: staged.category,
@@ -258,6 +258,9 @@ export async function approveStagedOpportunity(stagedId: string, adminId: string
         created_by_admin: adminId,
     });
 
+    // Publish opportunity (DRAFT -> PUBLISHED) to trigger AI matching & social posting
+    const publishedOpportunity = await publishOpportunity(draftOpp.id, false, adminId);
+
     // Update staged record to APPROVED & link published opportunity ID
     await supabase
         .from("ingested_opportunities_queue")
@@ -265,11 +268,11 @@ export async function approveStagedOpportunity(stagedId: string, adminId: string
             status: "APPROVED",
             reviewed_by: adminId,
             reviewed_at: new Date().toISOString(),
-            published_opportunity_id: opportunity.id,
+            published_opportunity_id: publishedOpportunity.id,
         })
         .eq("id", stagedId);
 
-    return opportunity;
+    return publishedOpportunity;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

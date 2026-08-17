@@ -67,12 +67,13 @@ export default function AdminOpportunitiesClient({
     analytics: any;
 }) {
     const router = useRouter();
+    const [opportunities, setOpportunities] = useState<any[]>(initialOpportunities);
     const [actioning, setActioning] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState("ALL");
     const [search, setSearch] = useState("");
     const [activeTab, setActiveTab] = useState<"active" | "ingestion">("active");
 
-    const filtered = initialOpportunities.filter((o) => {
+    const filtered = opportunities.filter((o) => {
         const matchesStatus = statusFilter === "ALL" || o.status === statusFilter;
         const matchesSearch =
             !search ||
@@ -91,6 +92,9 @@ export default function AdminOpportunitiesClient({
             });
             if (res.ok) {
                 toast.success(featured ? "Opportunity featured & published!" : "Opportunity published!");
+                setOpportunities((prev) =>
+                    prev.map((o) => (o.id === id ? { ...o, status: featured ? "FEATURED" : "PUBLISHED", featured } : o))
+                );
                 router.refresh();
             } else {
                 const err = await res.json();
@@ -112,6 +116,9 @@ export default function AdminOpportunitiesClient({
             });
             if (res.ok) {
                 toast.success("Opportunity archived.");
+                setOpportunities((prev) =>
+                    prev.map((o) => (o.id === id ? { ...o, status: "ARCHIVED" } : o))
+                );
                 router.refresh();
             } else {
                 toast.error("Archive failed.");
@@ -128,6 +135,7 @@ export default function AdminOpportunitiesClient({
             const res = await apiFetch(`/api/admin/opportunities/${id}`, { method: "DELETE" });
             if (res.ok) {
                 toast.success("Opportunity deleted.");
+                setOpportunities((prev) => prev.filter((o) => o.id !== id));
                 router.refresh();
             } else {
                 const err = await res.json();

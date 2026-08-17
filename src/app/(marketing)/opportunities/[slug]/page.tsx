@@ -2,8 +2,9 @@ import { getOpportunityBySlug, getPublicOpportunities } from "@/services/opportu
 import { notFound } from "next/navigation";
 import OpportunityDetailClient from "./OpportunityDetailClient";
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-    const opp = await getOpportunityBySlug(params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
+    const opp = await getOpportunityBySlug(slug);
     if (!opp) return { title: "Opportunity Not Found — Aganyu" };
 
     return {
@@ -17,8 +18,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     };
 }
 
-export default async function OpportunityDetailPage({ params }: { params: { slug: string } }) {
-    const opp = await getOpportunityBySlug(params.slug);
+export default async function OpportunityDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
+    const opp = await getOpportunityBySlug(slug);
     if (!opp) notFound();
 
     const similar = await getPublicOpportunities({ category: opp.category, limit: 3 });
