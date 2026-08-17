@@ -154,7 +154,7 @@ export async function getPublicOpportunities(opts?: {
         .select(
             "id, title, slug, category, organization_name, organization_logo, short_description, " +
             "country, location_type, application_url, deadline, funding_type, funding_amount, " +
-            "status, featured, published_at, source"
+            "status, featured, published_at, created_at, source"
         )
         .in("status", ["PUBLISHED", "FEATURED", "CLOSING_SOON"])
         .order("featured", { ascending: false })

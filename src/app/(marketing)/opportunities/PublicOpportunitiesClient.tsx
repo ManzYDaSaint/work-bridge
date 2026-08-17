@@ -62,10 +62,10 @@ export default function PublicOpportunitiesClient({ initialOpportunities }: { in
                 return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
             });
         } else {
-            // NEWEST by created_at or default order
+            // NEWEST by published_at or created_at
             result = [...result].sort((a, b) => {
-                const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-                const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                const timeA = a.published_at ? new Date(a.published_at).getTime() : (a.created_at ? new Date(a.created_at).getTime() : 0);
+                const timeB = b.published_at ? new Date(b.published_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : 0);
                 return timeB - timeA;
             });
         }

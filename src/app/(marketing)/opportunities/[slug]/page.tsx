@@ -2,6 +2,9 @@ import { getOpportunityBySlug, getPublicOpportunities } from "@/services/opportu
 import { notFound } from "next/navigation";
 import OpportunityDetailClient from "./OpportunityDetailClient";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
     const opp = await getOpportunityBySlug(slug);
