@@ -139,7 +139,9 @@ export default function RootLayout({
               gtag('config', 'G-MX0DH8CGG7');
             `,
           }}
+
         />
+        <meta name="facebook-domain-verification" content="eiuu2glxxi7zqigpr903y2dwdckkii" />
       </head>
       <body className={`${jakarta.className} antialiased min-h-screen flex flex-col`}>
         <Toaster position="top-right" richColors />
