@@ -152,8 +152,8 @@ export async function POST(request: Request) {
                 return NextResponse.json({
                     success: false,
                     verified: false,
-                    error: "Payment verification failed. Payment was not completed or was cancelled on PayChangu."
-                }, { status: 400 });
+                    error: "Payment verification pending or was not completed on PayChangu."
+                }, { status: 200 });
             }
 
             // Subscription Stacking Logic: extend from existing ends_at if subscription is currently active
@@ -269,24 +269,33 @@ export async function POST(request: Request) {
 
             try {
                 const { sendWhatsAppTemplate } = await import("@/lib/notification/worker");
-                await sendWhatsAppTemplate(phoneCheck.formatted, "job_match_alert", {
-                    parameters: [
-                        { type: "text", text: seeker.full_name || "Valued Seeker" },
-                        { type: "text", text: "Senior Software Engineer (Test Match)" },
-                        { type: "text", text: "95% Match Score" }
-                    ]
-                });
+
+                // Try Meta's pre-approved 'hello_world' test template first
+                try {
+                    await sendWhatsAppTemplate(phoneCheck.formatted, "hello_world", {
+                        languageCode: "en_US"
+                    });
+                } catch (firstErr: any) {
+                    console.warn("[WhatsApp Worker] hello_world template failed, trying job_match_alert fallback:", firstErr?.message);
+                    await sendWhatsAppTemplate(phoneCheck.formatted, "job_match_alert", {
+                        parameters: [
+                            { type: "text", text: seeker.full_name || "Valued Seeker" },
+                            { type: "text", text: "Senior Software Engineer" },
+                            { type: "text", text: "95% Match Score" }
+                        ]
+                    });
+                }
 
                 return NextResponse.json({
                     success: true,
-                    message: `Test WhatsApp job match alert sent to ${phoneCheck.formatted}!`
+                    message: `Test WhatsApp message sent successfully to ${phoneCheck.formatted}!`
                 });
             } catch (err: any) {
-                console.warn("[Test Alert Failed]:", err);
+                console.error("[Test Alert Error]:", err);
                 return NextResponse.json({
-                    success: true,
-                    message: `Test alert request registered for ${phoneCheck.formatted}. (WhatsApp API simulated)`
-                });
+                    success: false,
+                    error: err.message || "Failed to send WhatsApp test message. Check Meta WhatsApp API configuration."
+                }, { status: 400 });
             }
         }
 

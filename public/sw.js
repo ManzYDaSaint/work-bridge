@@ -38,11 +38,16 @@ self.addEventListener("fetch", (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Skip non-GET requests
+    // Skip non-GET requests and API calls
     if (request.method !== "GET") return;
 
-    // Strategy for API/Data (Stale-While-Revalidate)
-    if (url.origin === self.location.origin && (url.pathname.startsWith("/api/") || url.pathname === "/jobs")) {
+    // Do not cache API routes - allow direct browser network requests
+    if (url.origin === self.location.origin && url.pathname.startsWith("/api/")) {
+        return;
+    }
+
+    // Strategy for Public Job Listings Data (Stale-While-Revalidate)
+    if (url.origin === self.location.origin && url.pathname === "/jobs") {
         event.respondWith(
             caches.open(CACHE_NAME).then((cache) => {
                 return cache.match(request).then((cachedResponse) => {
