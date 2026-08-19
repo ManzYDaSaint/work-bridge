@@ -123,7 +123,7 @@ export async function POST(request: Request) {
                 await supabase.from("job_seekers").update({ phone: phoneCheck.formatted }).eq("id", seeker.id);
             }
 
-            const amountPerMonth = 500; // MWK 500 / month
+            const amountPerMonth = 1000; // MWK 1,000 / month
             const totalAmount = amountPerMonth * Number(durationMonths);
 
             const provider = new PayChanguProvider();
@@ -173,22 +173,39 @@ export async function POST(request: Request) {
             endsAt.setMonth(endsAt.getMonth() + Number(durationMonths));
             const amount = verification.amount || (500 * Number(durationMonths));
 
-            const { data: subData } = await supabase.from("premium_subscriptions").upsert({
+            const { data: subData, error: subErr } = await supabase.from("premium_subscriptions").upsert({
                 seeker_id: seeker.id,
                 status: "ACTIVE",
                 ends_at: endsAt.toISOString(),
                 payment_provider: "PAYCHANGU",
                 payment_reference: reference
-            }, { onConflict: "seeker_id" }).select("id").single();
+            }, { onConflict: "seeker_id" }).select("id").maybeSingle();
 
-            if (subData?.id) {
-                await supabase.from("subscription_payments").upsert({
-                    subscription_id: subData.id,
+            if (subErr) {
+                console.error("[Subscription API] premium_subscriptions upsert error:", subErr);
+            }
+
+            let subscriptionId = subData?.id;
+            if (!subscriptionId) {
+                const { data: existingSub } = await supabase
+                    .from("premium_subscriptions")
+                    .select("id")
+                    .eq("seeker_id", seeker.id)
+                    .maybeSingle();
+                subscriptionId = existingSub?.id;
+            }
+
+            if (subscriptionId) {
+                const { error: paymentErr } = await supabase.from("subscription_payments").insert({
+                    subscription_id: subscriptionId,
                     amount: amount,
                     currency: "MWK",
                     status: "PAID",
                     provider_reference: reference
-                }, { onConflict: "provider_reference" });
+                });
+                if (paymentErr) {
+                    console.error("[Subscription API] Failed to insert subscription_payments record:", paymentErr);
+                }
             }
 
             // Update user plan in users table

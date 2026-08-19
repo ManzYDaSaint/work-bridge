@@ -61,22 +61,39 @@ async function processPayChanguActivation(targetRef: string, durationMonths: num
     const endsAt = new Date(baseDate);
     endsAt.setMonth(endsAt.getMonth() + Number(durationMonths));
 
-    const { data: subData } = await supabase.from("premium_subscriptions").upsert({
+    const { data: subData, error: subErr } = await supabase.from("premium_subscriptions").upsert({
         seeker_id: actualSeekerId,
         status: "ACTIVE",
         ends_at: endsAt.toISOString(),
         payment_provider: "PAYCHANGU",
         payment_reference: targetRef
-    }, { onConflict: "seeker_id" }).select("id").single();
+    }, { onConflict: "seeker_id" }).select("id").maybeSingle();
 
-    if (subData?.id) {
-        await supabase.from("subscription_payments").upsert({
-            subscription_id: subData.id,
+    if (subErr) {
+        console.error("[PayChangu Webhook] premium_subscriptions upsert error:", subErr);
+    }
+
+    let subscriptionId = subData?.id;
+    if (!subscriptionId) {
+        const { data: existingSub } = await supabase
+            .from("premium_subscriptions")
+            .select("id")
+            .eq("seeker_id", actualSeekerId)
+            .maybeSingle();
+        subscriptionId = existingSub?.id;
+    }
+
+    if (subscriptionId) {
+        const { error: paymentErr } = await supabase.from("subscription_payments").insert({
+            subscription_id: subscriptionId,
             amount: verification.amount || (500 * Number(durationMonths)),
             currency: "MWK",
             status: "PAID",
             provider_reference: targetRef
-        }, { onConflict: "provider_reference" });
+        });
+        if (paymentErr) {
+            console.error("[PayChangu Webhook] Failed to insert subscription_payments record:", paymentErr);
+        }
     }
 
     if (seeker?.user_id) {

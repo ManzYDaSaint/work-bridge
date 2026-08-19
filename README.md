@@ -74,7 +74,7 @@ To ensure a safe and professional marketplace, Aganyu implements a multi-tier tr
 
 ### 💳 Payments & Aganyu Premium Engine
 
-- Powered by **PayChangu** (Airtel Money, TNM Mpamba, Card — MWK 500/month).
+- Powered by **PayChangu** (Airtel Money, TNM Mpamba, Card — MWK 1,000/month).
 - **Instant WhatsApp Alerts**: Direct-to-phone template delivery for matched job/opportunity alerts via Meta WhatsApp Cloud API.
 - **Human-in-the-Loop Admin Match Engine**:
   - **Manual Review Mode**: Admins inspect AI match scores & qualification alignment before dispatching WhatsApp alerts.

@@ -11,12 +11,12 @@ export default function PremiumShowcase() {
                 <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-teal-500/15 dark:bg-teal-500/10 blur-[100px] rounded-full pointer-events-none" />
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center relative z-10">
-                    
+
                     {/* Left Column: Value Proposition & Details */}
                     <div className="lg:col-span-7 space-y-6">
                         <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/20 dark:bg-emerald-500/15 px-4 py-1.5 text-xs font-bold text-emerald-300 dark:text-emerald-400 border border-emerald-400/30 dark:border-emerald-500/30 backdrop-blur">
                             <MessageSquare size={14} className="text-emerald-400" />
-                            <span>AGANYU PREMIUM — MWK 500 / MONTH</span>
+                            <span>AGANYU PREMIUM — MWK 1,000 / MONTH</span>
                         </div>
 
                         <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-[1.1]">
@@ -50,7 +50,7 @@ export default function PremiumShowcase() {
                                 href="/dashboard/seeker/subscription"
                                 className="w-full sm:w-auto inline-flex items-center justify-center gap-3 rounded-2xl bg-emerald-400 hover:bg-emerald-300 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-slate-950 px-6 sm:px-8 py-4 text-sm font-bold transition-all shadow-lg shadow-emerald-500/25 active:scale-95 group text-center"
                             >
-                                Get Instant WhatsApp Alerts — MWK 500
+                                Get Instant WhatsApp Alerts — MWK 1,000
                                 <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                             </Link>
 
