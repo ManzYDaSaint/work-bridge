@@ -22,15 +22,16 @@ export class PayChanguProvider implements IPaymentProvider {
         this.secretKey = process.env.PAYCHANGU_SECRET_KEY || "";
     }
 
-    async initiatePayment(seekerId: string, amount: number): Promise<{ paymentUrl: string; reference: string }> {
+    async initiatePayment(seekerId: string, amount: number): Promise<{ paymentUrl: string; reference: string; isSimulated?: boolean }> {
         const txRef = `aganyu_prem_${seekerId.slice(0, 8)}_${Date.now()}`;
-        const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aganyu.com";
+        const siteUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://aganyu.com";
 
         if (!this.secretKey) {
-            console.warn("[PayChangu] PAYCHANGU_SECRET_KEY missing. Returning simulated checkout URL.");
+            console.warn("[PayChangu] PAYCHANGU_SECRET_KEY missing. Returning simulated checkout URL for dev/testing.");
             return {
-                paymentUrl: `${siteUrl}/dashboard/seeker/subscription?reference=${txRef}&status=simulated`,
-                reference: txRef
+                paymentUrl: `${siteUrl}/dashboard/seeker/subscription?reference=${txRef}_simulated&status=simulated`,
+                reference: `${txRef}_simulated`,
+                isSimulated: true
             };
         }
 
@@ -50,7 +51,7 @@ export class PayChanguProvider implements IPaymentProvider {
                     return_url: `${siteUrl}/dashboard/seeker/subscription?reference=${txRef}`,
                     customization: {
                         title: "Aganyu Premium Subscription",
-                        description: "1 Month Premium WhatsApp Job Alerts & AI Matcher"
+                        description: "Instant WhatsApp Job Alerts & AI Matcher"
                     }
                 })
             });
@@ -59,7 +60,8 @@ export class PayChanguProvider implements IPaymentProvider {
             if (response.ok && data.data?.checkout_url) {
                 return {
                     paymentUrl: data.data.checkout_url,
-                    reference: txRef
+                    reference: txRef,
+                    isSimulated: false
                 };
             }
 
@@ -67,17 +69,19 @@ export class PayChanguProvider implements IPaymentProvider {
             throw new Error(data.message || "Failed to generate PayChangu checkout URL");
         } catch (error: any) {
             console.error("[PayChangu] Initiation error:", error);
-            // Fallback for seamless UX if PayChangu keys are pending activation
-            return {
-                paymentUrl: `${siteUrl}/dashboard/seeker/subscription?reference=${txRef}&status=simulated`,
-                reference: txRef
-            };
+            throw error;
         }
     }
 
     async verifyPayment(reference: string): Promise<{ success: boolean; amount: number }> {
         if (!this.secretKey) {
-            return { success: true, amount: 500 };
+            // Allow simulated testing ONLY if reference explicitly contains 'simulated'
+            if (reference.includes("simulated")) {
+                console.warn("[PayChangu] Simulating successful payment verification in development.");
+                return { success: true, amount: 500 };
+            }
+            console.warn("[PayChangu] PAYCHANGU_SECRET_KEY missing. Rejecting live payment verification for ref:", reference);
+            return { success: false, amount: 0 };
         }
 
         try {
@@ -90,13 +94,17 @@ export class PayChanguProvider implements IPaymentProvider {
             });
 
             const data = await response.json();
-            if (response.ok && data.data?.status === "success") {
+            const isSuccess = response.ok && (data.status === "success" || data.data?.status === "success");
+
+            if (isSuccess) {
+                const paidAmount = Number(data.data?.amount || data.amount || 500);
                 return {
                     success: true,
-                    amount: data.data.amount || 500
+                    amount: paidAmount
                 };
             }
 
+            console.warn(`[PayChangu] Payment verification returned negative for reference ${reference}:`, data);
             return { success: false, amount: 0 };
         } catch (error) {
             console.error("[PayChangu] Verification error:", error);
@@ -104,3 +112,4 @@ export class PayChanguProvider implements IPaymentProvider {
         }
     }
 }
+

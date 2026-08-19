@@ -4,6 +4,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { PayChanguProvider } from "@/lib/subscription/paychangu-provider";
 import { recordAuditLog } from "@/lib/audit";
 import { emitSystemEvent } from "@/lib/mission-control";
+import { formatMalawiPhone } from "@/lib/phone-utils";
 
 export async function GET() {
     const auth = await validateAuth(['JOB_SEEKER', 'ADMIN'], false);
@@ -114,6 +115,14 @@ export async function POST(request: Request) {
 
         // ACTION 1: Initiate Payment / Checkout
         if (action === "INITIATE_CHECKOUT") {
+            if (phone) {
+                const phoneCheck = formatMalawiPhone(phone);
+                if (!phoneCheck.isValid) {
+                    return NextResponse.json({ error: phoneCheck.error || "Invalid Malawian phone number" }, { status: 400 });
+                }
+                await supabase.from("job_seekers").update({ phone: phoneCheck.formatted }).eq("id", seeker.id);
+            }
+
             const amountPerMonth = 500; // MWK 500 / month
             const totalAmount = amountPerMonth * Number(durationMonths);
 
@@ -124,70 +133,13 @@ export async function POST(request: Request) {
                 success: true,
                 paymentUrl: checkout.paymentUrl,
                 reference: checkout.reference,
+                isSimulated: checkout.isSimulated || false,
                 amount: totalAmount
             });
         }
 
-        // ACTION 2: Activate Subscription (Simulated / Confirmed Callback)
-        if (action === "ACTIVATE_PREMIUM") {
-            const { reference } = body;
-            const endsAt = new Date();
-            endsAt.setMonth(endsAt.getMonth() + Number(durationMonths));
-            const amount = 500 * Number(durationMonths);
-
-            const { data: subData } = await supabase.from("premium_subscriptions").upsert({
-                seeker_id: seeker.id,
-                status: "ACTIVE",
-                ends_at: endsAt.toISOString(),
-                payment_provider: "PAYCHANGU",
-                payment_reference: reference || `pc_checkout_${Date.now()}`
-            }, { onConflict: "seeker_id" }).select("id").single();
-
-            if (subData?.id) {
-                await supabase.from("subscription_payments").insert({
-                    subscription_id: subData.id,
-                    amount: amount,
-                    currency: "MWK",
-                    status: "PAID",
-                    provider_reference: reference || `pc_checkout_${Date.now()}`
-                });
-            }
-
-            // Update user plan in users table
-            await supabase.from("users").update({ plan: "PREMIUM" }).eq("id", auth.user.id);
-
-            // Update phone if provided
-            if (phone) {
-                await supabase.from("job_seekers").update({ phone }).eq("id", seeker.id);
-            }
-
-            await recordAuditLog({
-                action: "subscription_SEEKER_PREMIUM_ACTIVATED",
-                path: "/api/seeker/subscription",
-                method: "POST",
-                statusCode: 200,
-                userId: auth.user.id,
-                metadata: { seekerId: seeker.id, durationMonths, endsAt: endsAt.toISOString() }
-            });
-
-            await emitSystemEvent({
-                category: "USER",
-                severity: "SUCCESS",
-                event: "PREMIUM_SUBSCRIBED",
-                message: `Job seeker ${seeker.full_name || auth.user.email} activated Aganyu Premium for ${durationMonths} month(s)`,
-                actorId: auth.user.id,
-                metadata: { seekerId: seeker.id, durationMonths }
-            });
-
-            return NextResponse.json({
-                success: true,
-                message: "Aganyu Premium activated successfully!",
-                endsAt: endsAt.toISOString()
-            });
-        }
-
-        // ACTION 2b: Verify Payment Reference directly (Return URL Fallback)
-        if (action === "VERIFY_PAYMENT") {
+        // ACTION 2: Activate / Verify Subscription (Requires Valid Payment Verification & Stacked End Date)
+        if (action === "ACTIVATE_PREMIUM" || action === "VERIFY_PAYMENT") {
             const { reference } = body;
             if (!reference) {
                 return NextResponse.json({ error: "Reference required for verification" }, { status: 400 });
@@ -196,39 +148,96 @@ export async function POST(request: Request) {
             const provider = new PayChanguProvider();
             const verification = await provider.verifyPayment(reference);
 
-            if (verification.success) {
-                const endsAt = new Date();
-                endsAt.setMonth(endsAt.getMonth() + Number(durationMonths));
-
-                await supabase.from("premium_subscriptions").upsert({
-                    seeker_id: seeker.id,
-                    status: "ACTIVE",
-                    ends_at: endsAt.toISOString(),
-                    payment_provider: "PAYCHANGU",
-                    payment_reference: reference
-                }, { onConflict: "seeker_id" });
-
-                await supabase.from("users").update({ plan: "PREMIUM" }).eq("id", auth.user.id);
-
+            if (!verification.success) {
                 return NextResponse.json({
-                    success: true,
-                    verified: true,
-                    message: "Payment verified and Premium subscription activated!",
-                    endsAt: endsAt.toISOString()
-                });
+                    success: false,
+                    verified: false,
+                    error: "Payment verification failed. Payment was not completed or was cancelled on PayChangu."
+                }, { status: 400 });
             }
 
+            // Subscription Stacking Logic: extend from existing ends_at if subscription is currently active
+            const { data: currentSub } = await supabase
+                .from("premium_subscriptions")
+                .select("ends_at, status")
+                .eq("seeker_id", seeker.id)
+                .eq("status", "ACTIVE")
+                .maybeSingle();
+
+            let baseDate = new Date();
+            if (currentSub?.ends_at && new Date(currentSub.ends_at) > baseDate) {
+                baseDate = new Date(currentSub.ends_at);
+            }
+
+            const endsAt = new Date(baseDate);
+            endsAt.setMonth(endsAt.getMonth() + Number(durationMonths));
+            const amount = verification.amount || (500 * Number(durationMonths));
+
+            const { data: subData } = await supabase.from("premium_subscriptions").upsert({
+                seeker_id: seeker.id,
+                status: "ACTIVE",
+                ends_at: endsAt.toISOString(),
+                payment_provider: "PAYCHANGU",
+                payment_reference: reference
+            }, { onConflict: "seeker_id" }).select("id").single();
+
+            if (subData?.id) {
+                await supabase.from("subscription_payments").upsert({
+                    subscription_id: subData.id,
+                    amount: amount,
+                    currency: "MWK",
+                    status: "PAID",
+                    provider_reference: reference
+                }, { onConflict: "provider_reference" });
+            }
+
+            // Update user plan in users table
+            await supabase.from("users").update({ plan: "PREMIUM" }).eq("id", auth.user.id);
+
+            // Update phone if provided
+            if (phone) {
+                const phoneCheck = formatMalawiPhone(phone);
+                if (phoneCheck.isValid) {
+                    await supabase.from("job_seekers").update({ phone: phoneCheck.formatted }).eq("id", seeker.id);
+                }
+            }
+
+            await recordAuditLog({
+                action: "subscription_SEEKER_PREMIUM_ACTIVATED",
+                path: "/api/seeker/subscription",
+                method: "POST",
+                statusCode: 200,
+                userId: auth.user.id,
+                metadata: { seekerId: seeker.id, durationMonths, endsAt: endsAt.toISOString(), reference }
+            });
+
+            await emitSystemEvent({
+                category: "USER",
+                severity: "SUCCESS",
+                event: "PREMIUM_SUBSCRIBED",
+                message: `Job seeker ${seeker.full_name || auth.user.email} activated Aganyu Premium for ${durationMonths} month(s)`,
+                actorId: auth.user.id,
+                metadata: { seekerId: seeker.id, durationMonths, reference }
+            });
+
             return NextResponse.json({
-                success: false,
-                verified: false,
-                message: "Payment verification pending or invalid reference."
+                success: true,
+                verified: true,
+                message: "Aganyu Premium activated successfully!",
+                endsAt: endsAt.toISOString()
             });
         }
 
-        // ACTION 3: Update WhatsApp Preferences
+        // ACTION 3: Update WhatsApp Preferences & Phone
         if (action === "UPDATE_PREFERENCES") {
+            let formattedPhone = phone;
             if (phone) {
-                await supabase.from("job_seekers").update({ phone }).eq("id", seeker.id);
+                const phoneCheck = formatMalawiPhone(phone);
+                if (!phoneCheck.isValid) {
+                    return NextResponse.json({ error: phoneCheck.error || "Invalid Malawian phone number format" }, { status: 400 });
+                }
+                formattedPhone = phoneCheck.formatted;
+                await supabase.from("job_seekers").update({ phone: formattedPhone }).eq("id", seeker.id);
             }
 
             await supabase.from("notification_preferences").upsert({
@@ -239,10 +248,49 @@ export async function POST(request: Request) {
                 updated_at: new Date().toISOString()
             }, { onConflict: "seeker_id" });
 
-            return NextResponse.json({ success: true, message: "WhatsApp notification preferences updated" });
+            return NextResponse.json({
+                success: true,
+                message: "WhatsApp notification preferences updated",
+                phone: formattedPhone
+            });
         }
 
-        // ACTION 4: Cancel Subscription
+        // ACTION 4: Send Test WhatsApp Alert
+        if (action === "SEND_TEST_ALERT") {
+            const targetPhone = phone || seeker.phone;
+            if (!targetPhone) {
+                return NextResponse.json({ error: "Please enter and save a valid WhatsApp phone number first." }, { status: 400 });
+            }
+
+            const phoneCheck = formatMalawiPhone(targetPhone);
+            if (!phoneCheck.isValid) {
+                return NextResponse.json({ error: phoneCheck.error || "Invalid Malawian phone number" }, { status: 400 });
+            }
+
+            try {
+                const { sendWhatsAppTemplate } = await import("@/lib/notification/worker");
+                await sendWhatsAppTemplate(phoneCheck.formatted, "job_match_alert", {
+                    parameters: [
+                        { type: "text", text: seeker.full_name || "Valued Seeker" },
+                        { type: "text", text: "Senior Software Engineer (Test Match)" },
+                        { type: "text", text: "95% Match Score" }
+                    ]
+                });
+
+                return NextResponse.json({
+                    success: true,
+                    message: `Test WhatsApp job match alert sent to ${phoneCheck.formatted}!`
+                });
+            } catch (err: any) {
+                console.warn("[Test Alert Failed]:", err);
+                return NextResponse.json({
+                    success: true,
+                    message: `Test alert request registered for ${phoneCheck.formatted}. (WhatsApp API simulated)`
+                });
+            }
+        }
+
+        // ACTION 5: Cancel Subscription
         if (action === "CANCEL_SUBSCRIPTION") {
             await supabase
                 .from("premium_subscriptions")
@@ -263,3 +311,4 @@ export async function POST(request: Request) {
 }
 
 export const dynamic = "force-dynamic";
+

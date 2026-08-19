@@ -26,7 +26,7 @@ export async function POST(request: Request) {
         const provider = new PayChanguProvider();
         const verification = await provider.verifyPayment(targetRef);
 
-        if (verification.success || status === "success") {
+        if (verification.success) {
             // Derive seekerId from tx_ref if missing: tx_ref format `aganyu_prem_${seekerId}_${timestamp}`
             let finalSeekerId = seeker_id;
             if (!finalSeekerId && targetRef.startsWith("aganyu_prem_")) {

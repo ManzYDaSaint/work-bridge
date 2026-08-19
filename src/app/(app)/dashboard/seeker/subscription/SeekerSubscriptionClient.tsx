@@ -5,24 +5,28 @@ import { apiFetch } from "@/lib/api";
 import { PageHeader } from "@/components/dashboard/ui";
 import {
     Crown, Sparkles, CheckCircle2, MessageSquare, Zap, ShieldCheck,
-    CreditCard, ArrowRight, Loader2, Phone, Bell, AlertCircle, RefreshCw, X
+    CreditCard, ArrowRight, Loader2, Phone, Bell, AlertCircle, RefreshCw, X, Send
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
+import { formatMalawiPhone } from "@/lib/phone-utils";
 
 export default function SeekerSubscriptionClient() {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<any>(null);
     const [selectedPlanMonths, setSelectedPlanMonths] = useState<number>(1);
     const [phone, setPhone] = useState<string>("");
+    const [phoneError, setPhoneError] = useState<string | undefined>(undefined);
     const [whatsappEnabled, setWhatsappEnabled] = useState<boolean>(true);
     const [minMatchScore, setMinMatchScore] = useState<number>(60);
     const [submitting, setSubmitting] = useState<boolean>(false);
     const [updatingPrefs, setUpdatingPrefs] = useState<boolean>(false);
+    const [testingAlert, setTestingAlert] = useState<boolean>(false);
     const [showCheckoutModal, setShowCheckoutModal] = useState<boolean>(false);
 
     const searchParams = useSearchParams();
-    const reference = searchParams.get("reference");
+    const reference = searchParams.get("reference") || searchParams.get("tx_ref");
+    const paymentStatus = searchParams.get("status");
 
     const fetchData = async () => {
         setLoading(true);
@@ -48,40 +52,68 @@ export default function SeekerSubscriptionClient() {
         fetchData();
     }, []);
 
+    const handlePhoneBlur = () => {
+        if (!phone) return;
+        const check = formatMalawiPhone(phone);
+        if (check.isValid) {
+            setPhone(check.formatted);
+            setPhoneError(undefined);
+        } else {
+            setPhoneError(check.error);
+        }
+    };
+
     // Handle return from PayChangu checkout callback
     useEffect(() => {
-        if (reference) {
-            handleActivateFromCallback(reference);
-        }
-    }, [reference]);
+        if (!reference) return;
 
-    const handleActivateFromCallback = async (ref: string) => {
+        // Check if user cancelled or payment failed on PayChangu redirect
+        if (paymentStatus === "failed" || paymentStatus === "cancelled" || paymentStatus === "canceled" || paymentStatus === "declined") {
+            toast.error("Payment was cancelled or failed on PayChangu.");
+            window.history.replaceState({}, document.title, window.location.pathname);
+            return;
+        }
+
+        handleVerifyPayment(reference);
+    }, [reference, paymentStatus]);
+
+    const handleVerifyPayment = async (ref: string) => {
         setSubmitting(true);
         try {
             const res = await apiFetch("/api/seeker/subscription", {
                 method: "POST",
                 body: JSON.stringify({
-                    action: "ACTIVATE_PREMIUM",
+                    action: "VERIFY_PAYMENT",
                     reference: ref,
-                    durationMonths: 1
+                    durationMonths: selectedPlanMonths
                 })
             });
 
             const resData = await res.json();
-            if (res.ok && resData.success) {
+            if (res.ok && resData.success && resData.verified) {
                 toast.success("Congratulations! Your Aganyu Premium is now active!");
                 fetchData();
+            } else {
+                toast.error(resData.error || resData.message || "Payment verification failed. Payment was not completed.");
             }
         } catch {
             toast.error("Payment confirmation error");
         } finally {
             setSubmitting(false);
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
     };
 
     const handleCheckout = async () => {
         if (!phone) {
             toast.error("Please enter a valid WhatsApp phone number first.");
+            return;
+        }
+
+        const phoneCheck = formatMalawiPhone(phone);
+        if (!phoneCheck.isValid) {
+            setPhoneError(phoneCheck.error);
+            toast.error(phoneCheck.error || "Please provide a valid Malawian phone number.");
             return;
         }
 
@@ -92,16 +124,15 @@ export default function SeekerSubscriptionClient() {
                 body: JSON.stringify({
                     action: "INITIATE_CHECKOUT",
                     durationMonths: selectedPlanMonths,
-                    phone
+                    phone: phoneCheck.formatted
                 })
             });
 
             const resData = await res.json();
             if (res.ok && resData.paymentUrl) {
-                // If live URL redirect to PayChangu payment gateway, else simulate activation
-                if (resData.paymentUrl.includes("simulated")) {
-                    // Activate simulated for immediate seamless trial testing
-                    await handleActivateFromCallback(resData.reference);
+                if (resData.isSimulated || resData.paymentUrl.includes("status=simulated")) {
+                    toast.info("Simulation mode: verifying test payment...");
+                    await handleVerifyPayment(resData.reference);
                 } else {
                     window.location.href = resData.paymentUrl;
                 }
@@ -116,13 +147,26 @@ export default function SeekerSubscriptionClient() {
     };
 
     const handleSavePreferences = async () => {
+        let formattedPhone = phone;
+        if (phone) {
+            const phoneCheck = formatMalawiPhone(phone);
+            if (!phoneCheck.isValid) {
+                setPhoneError(phoneCheck.error);
+                toast.error(phoneCheck.error || "Please enter a valid Malawian phone number.");
+                return;
+            }
+            formattedPhone = phoneCheck.formatted;
+            setPhone(formattedPhone);
+            setPhoneError(undefined);
+        }
+
         setUpdatingPrefs(true);
         try {
             const res = await apiFetch("/api/seeker/subscription", {
                 method: "POST",
                 body: JSON.stringify({
                     action: "UPDATE_PREFERENCES",
-                    phone,
+                    phone: formattedPhone,
                     whatsappEnabled,
                     minMatchScore
                 })
@@ -131,12 +175,49 @@ export default function SeekerSubscriptionClient() {
             if (res.ok) {
                 toast.success("WhatsApp alert preferences updated!");
             } else {
-                toast.error("Failed to update preferences");
+                const resData = await res.json();
+                toast.error(resData.error || "Failed to update preferences");
             }
         } catch {
             toast.error("Update error");
         } finally {
             setUpdatingPrefs(false);
+        }
+    };
+
+    const handleSendTestAlert = async () => {
+        if (!phone) {
+            toast.error("Please enter a WhatsApp phone number first.");
+            return;
+        }
+
+        const phoneCheck = formatMalawiPhone(phone);
+        if (!phoneCheck.isValid) {
+            setPhoneError(phoneCheck.error);
+            toast.error(phoneCheck.error || "Invalid Malawian phone number.");
+            return;
+        }
+
+        setTestingAlert(true);
+        try {
+            const res = await apiFetch("/api/seeker/subscription", {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "SEND_TEST_ALERT",
+                    phone: phoneCheck.formatted
+                })
+            });
+
+            const resData = await res.json();
+            if (res.ok && resData.success) {
+                toast.success(resData.message || "Test WhatsApp alert triggered!");
+            } else {
+                toast.error(resData.error || "Failed to send test WhatsApp alert");
+            }
+        } catch {
+            toast.error("Test alert request error");
+        } finally {
+            setTestingAlert(false);
         }
     };
 
@@ -180,8 +261,8 @@ export default function SeekerSubscriptionClient() {
 
             {/* Current Status Header Banner */}
             <div className={`rounded-3xl border p-6 shadow-sm transition-all ${isPremium
-                    ? "border-amber-200 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent dark:border-amber-900/40 dark:bg-slate-900"
-                    : "border-stone-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+                ? "border-amber-200 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent dark:border-amber-900/40 dark:bg-slate-900"
+                : "border-stone-200 bg-white dark:border-slate-800 dark:bg-slate-900"
                 }`}>
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div className="flex items-center gap-4">
@@ -213,7 +294,7 @@ export default function SeekerSubscriptionClient() {
                                 onClick={() => setShowCheckoutModal(true)}
                                 className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-amber-500/30 hover:bg-amber-600 transition-all"
                             >
-                                <Sparkles size={16} /> Upgrade for MWK 5,000/mo
+                                <Sparkles size={16} /> Upgrade for MWK 500/mo
                             </button>
                         ) : (
                             <button
@@ -278,13 +359,22 @@ export default function SeekerSubscriptionClient() {
                             <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                             <input
                                 type="text"
-                                placeholder="+265 99 353 3315"
+                                placeholder="+265 99 353 3315 or 0993533315"
                                 value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                className="w-full rounded-2xl border border-stone-200 bg-stone-50 pl-10 pr-4 py-2.5 text-sm outline-none focus:border-amber-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                onChange={(e) => {
+                                    setPhone(e.target.value);
+                                    if (phoneError) setPhoneError(undefined);
+                                }}
+                                onBlur={handlePhoneBlur}
+                                className={`w-full rounded-2xl border bg-stone-50 pl-10 pr-4 py-2.5 text-sm outline-none transition-all dark:bg-slate-800 dark:text-white ${phoneError ? "border-red-500 focus:border-red-500" : "border-stone-200 focus:border-amber-500 dark:border-slate-700"
+                                    }`}
                             />
                         </div>
-                        <p className="text-[11px] text-slate-400">Include Malawian country code (+265)</p>
+                        {phoneError ? (
+                            <p className="text-[11px] font-semibold text-red-500">{phoneError}</p>
+                        ) : (
+                            <p className="text-[11px] text-slate-400">Supported formats: +26599..., 099..., 088...</p>
+                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -303,7 +393,7 @@ export default function SeekerSubscriptionClient() {
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-2">
                     <label className="flex items-center gap-3 cursor-pointer">
                         <input
                             type="checkbox"
@@ -316,13 +406,23 @@ export default function SeekerSubscriptionClient() {
                         </span>
                     </label>
 
-                    <button
-                        onClick={handleSavePreferences}
-                        disabled={updatingPrefs}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2 text-xs font-bold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
-                    >
-                        {updatingPrefs ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Save Preferences
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleSendTestAlert}
+                            disabled={testingAlert}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-stone-100 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-stone-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                        >
+                            {testingAlert ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Test Alert
+                        </button>
+
+                        <button
+                            onClick={handleSavePreferences}
+                            disabled={updatingPrefs}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2 text-xs font-bold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+                        >
+                            {updatingPrefs ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Save Preferences
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -355,8 +455,8 @@ export default function SeekerSubscriptionClient() {
                                         type="button"
                                         onClick={() => setSelectedPlanMonths(p.months)}
                                         className={`rounded-2xl border p-3 text-center transition-all ${selectedPlanMonths === p.months
-                                                ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold shadow-sm"
-                                                : "border-stone-200 bg-stone-50/50 text-slate-600 dark:border-slate-800 dark:bg-slate-800/50"
+                                            ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold shadow-sm"
+                                            : "border-stone-200 bg-stone-50/50 text-slate-600 dark:border-slate-800 dark:bg-slate-800/50"
                                             }`}
                                     >
                                         <p className="text-xs">{p.label}</p>
