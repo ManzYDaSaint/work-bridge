@@ -123,8 +123,12 @@ export async function POST(request: Request) {
                 await supabase.from("job_seekers").update({ phone: phoneCheck.formatted }).eq("id", seeker.id);
             }
 
-            const amountPerMonth = 1000; // MWK 1,000 / month
-            const totalAmount = amountPerMonth * Number(durationMonths);
+            const getPlanTotal = (months: number) => {
+                if (months === 3) return 2700;
+                if (months === 6) return 5100;
+                return 1000 * months;
+            };
+            const totalAmount = getPlanTotal(Number(durationMonths));
 
             const provider = new PayChanguProvider();
             const checkout = await provider.initiatePayment(seeker.id, totalAmount);

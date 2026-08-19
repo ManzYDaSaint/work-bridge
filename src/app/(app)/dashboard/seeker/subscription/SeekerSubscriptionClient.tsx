@@ -481,15 +481,32 @@ export default function SeekerSubscriptionClient() {
                             />
                         </div>
 
-                        {/* Payment Providers Supported */}
-                        <div className="rounded-2xl bg-stone-50 p-4 dark:bg-slate-800/50 flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                                <CreditCard size={18} className="text-amber-500" /> Pay via PayChangu (Airtel Money / Mpamba / Card)
-                            </div>
-                            <span className="text-xs font-extrabold text-amber-600 dark:text-amber-400">
-                                MWK {(selectedPlanMonths * 1000).toLocaleString()}
-                            </span>
-                        </div>
+                        {/* Payment Summary */}
+                        {(() => {
+                            const planPricing: Record<number, { total: number; original: number; saved: number }> = {
+                                1: { total: 1000, original: 1000, saved: 0 },
+                                3: { total: 2700, original: 3000, saved: 300 },
+                                6: { total: 5100, original: 6000, saved: 900 },
+                            };
+                            const pricing = planPricing[selectedPlanMonths] || { total: selectedPlanMonths * 1000, original: selectedPlanMonths * 1000, saved: 0 };
+                            return (
+                                <div className="rounded-2xl bg-stone-50 p-4 dark:bg-slate-800/50 flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                        <CreditCard size={18} className="text-amber-500" /> Pay via PayChangu (Airtel Money / Mpamba / Card)
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs font-extrabold text-amber-600 dark:text-amber-400">
+                                            MWK {pricing.total.toLocaleString()}
+                                        </p>
+                                        {pricing.saved > 0 && (
+                                            <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                                Save MWK {pricing.saved.toLocaleString()}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
 
                         <div className="flex gap-3 pt-2">
