@@ -1,9 +1,6 @@
 -- =================================================================─────────────
--- Aganyu Premium Subscription & WhatsApp Schema Extension
--- =================================================================─────────────
-
--- =================================================================─────────────
--- Aganyu Premium Subscription & WhatsApp Schema Extension
+-- Consolidated Aganyu Premium & WhatsApp Integration Migration
+-- Single file combining schema, HITL approval controls, JSONB settings & RLS fixes
 -- =================================================================─────────────
 
 -- 1. ENUMS & TYPES (Idempotent creation)
@@ -19,7 +16,7 @@ DO $$ BEGIN
     END IF;
 END $$;
 
--- 2. PREMIUM TABLES
+-- 2. TABLES
 
 CREATE TABLE IF NOT EXISTS public.subscription_trials (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -77,6 +74,14 @@ CREATE TABLE IF NOT EXISTS public.notification_queue (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Ensure notification_queue status CHECK constraint supports HITL workflow
+ALTER TABLE public.notification_queue 
+DROP CONSTRAINT IF EXISTS notification_queue_status_check;
+
+ALTER TABLE public.notification_queue 
+ADD CONSTRAINT notification_queue_status_check 
+CHECK (status IN ('REQUIRES_APPROVAL', 'PENDING', 'PROCESSING', 'SENT', 'FAILED', 'REJECTED'));
+
 CREATE TABLE IF NOT EXISTS public.whatsapp_delivery_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     queue_id UUID REFERENCES public.notification_queue(id) ON DELETE SET NULL,
@@ -93,6 +98,20 @@ CREATE TABLE IF NOT EXISTS public.system_settings (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Ensure value column is JSONB if system_settings was created with TEXT previously
+DO $$ BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+          AND table_name = 'system_settings' 
+          AND column_name = 'value' 
+          AND data_type = 'text'
+    ) THEN
+        ALTER TABLE public.system_settings 
+        ALTER COLUMN value TYPE JSONB USING to_jsonb(value);
+    END IF;
+END $$;
+
 -- 3. INDEXES
 CREATE INDEX IF NOT EXISTS idx_premium_subs_seeker ON public.premium_subscriptions(seeker_id);
 CREATE INDEX IF NOT EXISTS idx_premium_subs_status ON public.premium_subscriptions(status);
@@ -108,19 +127,9 @@ ALTER TABLE public.notification_queue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.whatsapp_delivery_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 
--- RLS (Admins full access, Users own data)
+-- Admins full access
 DROP POLICY IF EXISTS "Admins full access" ON public.premium_subscriptions;
 CREATE POLICY "Admins full access" ON public.premium_subscriptions FOR ALL USING (public.is_admin());
-
-DROP POLICY IF EXISTS "Users view own subscription" ON public.premium_subscriptions;
-CREATE POLICY "Users view own subscription" ON public.premium_subscriptions FOR SELECT USING (
-    auth.uid() = seeker_id
-);
-
-DROP POLICY IF EXISTS "Users manage own preferences" ON public.notification_preferences;
-CREATE POLICY "Users manage own preferences" ON public.notification_preferences FOR ALL USING (
-    auth.uid() = seeker_id
-);
 
 DROP POLICY IF EXISTS "Admins view all logs" ON public.whatsapp_delivery_logs;
 CREATE POLICY "Admins view all logs" ON public.whatsapp_delivery_logs FOR SELECT USING (public.is_admin());
@@ -128,5 +137,24 @@ CREATE POLICY "Admins view all logs" ON public.whatsapp_delivery_logs FOR SELECT
 DROP POLICY IF EXISTS "Admins full access system_settings" ON public.system_settings;
 CREATE POLICY "Admins full access system_settings" ON public.system_settings FOR ALL USING (public.is_admin());
 
+-- Seeker own data access (auth.uid() maps to seeker_id)
+DROP POLICY IF EXISTS "Users view own subscription" ON public.premium_subscriptions;
+CREATE POLICY "Users view own subscription" ON public.premium_subscriptions 
+FOR SELECT USING (
+    auth.uid() = seeker_id
+);
 
+DROP POLICY IF EXISTS "Users manage own preferences" ON public.notification_preferences;
+CREATE POLICY "Users manage own preferences" ON public.notification_preferences 
+FOR ALL USING (
+    auth.uid() = seeker_id
+);
 
+-- 5. DEFAULT SYSTEM SETTINGS SEED
+INSERT INTO public.system_settings (key, value)
+VALUES 
+    ('ADMIN_MATCH_DISPATCH_MODE', '"MANUAL"'::jsonb),
+    ('MATCH_SCORE_THRESHOLD', '"50"'::jsonb),
+    ('BULK_APPROVE_MIN_SCORE', '"80"'::jsonb),
+    ('WHATSAPP_DAILY_CAP', '"100"'::jsonb)
+ON CONFLICT (key) DO NOTHING;
