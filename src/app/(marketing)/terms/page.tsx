@@ -24,9 +24,9 @@ const sections = [
         content: `Aganyu employs an intelligent matching engine to connect users based on professional compatibility and "Professional DNA". This system provides recommendations and discovers talent by analyzing skills and experience. While our system suggests "Perfect Fit" matches to increase efficiency, these are recommendations only. Aganyu does not guarantee employment, and all final hiring decisions remain the sole responsibility of the employer.`
     },
     {
-        title: "4. Subscription Billing & Mobile Money",
+        title: "4. Premium Subscriptions & PayChangu Mobile Billing",
         icon: <Briefcase className="text-indigo-500" size={24} />,
-        content: `Employers may be subject to subscription fees to access premium features like expanded listing capacity and faster candidate workflow tools. Payments are processed securely via PayChangu, supporting local methods including Airtel Money and TNM Mpamba. All transactions are billed in Malawian Kwacha (MWK) unless stated otherwise. Subscriptions are strictly non-refundable once the billing cycle initiates.`
+        content: `Both Employers and Job Seekers may subscribe to premium platform tiers (such as Aganyu Premium for Seekers offering instant WhatsApp job alerts and AI match prioritization). Subscription payments are processed securely via PayChangu, supporting Malawian Kwacha (MWK) payment methods including Airtel Money, TNM Mpamba, and local bank cards. Subscriptions are billed on a recurring monthly cycle and are non-refundable once activated. Users may cancel renewals at any time via their dashboard.`
     },
     {
         title: "5. Platform Moderation & Audit Registry",

@@ -284,7 +284,7 @@ export const adminService = {
 
         let query = supabase
             .from("users")
-            .select("*, job_seekers(full_name, location), employers(company_name, location)")
+            .select("*, job_seekers(id, full_name, location, phone, premium_subscriptions(id, status, ends_at, payment_provider)), employers(company_name, location)")
             .order("created_at", { ascending: false });
 
         if (params.search) {

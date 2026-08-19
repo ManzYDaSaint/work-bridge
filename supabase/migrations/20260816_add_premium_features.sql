@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS public.notification_queue (
     template_id TEXT NOT NULL,
     payload JSONB NOT NULL,
     scheduled_for TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PROCESSING', 'SENT', 'FAILED')),
+    status TEXT DEFAULT 'REQUIRES_APPROVAL' CHECK (status IN ('REQUIRES_APPROVAL', 'PENDING', 'PROCESSING', 'SENT', 'FAILED', 'REJECTED')),
     attempts INTEGER DEFAULT 0,
     last_error TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -72,6 +72,12 @@ CREATE TABLE IF NOT EXISTS public.whatsapp_delivery_logs (
     status TEXT NOT NULL,
     error_details JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.system_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- 3. INDEXES
@@ -87,11 +93,17 @@ ALTER TABLE public.subscription_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_queue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.whatsapp_delivery_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 
--- Simple RLS (Admins full access, Users own data)
+-- RLS (Admins full access, Users own data)
 CREATE POLICY "Admins full access" ON public.premium_subscriptions FOR ALL USING (public.is_admin());
-CREATE POLICY "Users view own subscription" ON public.premium_subscriptions FOR SELECT USING (auth.uid() = seeker_id);
+CREATE POLICY "Users view own subscription" ON public.premium_subscriptions FOR SELECT USING (
+    auth.uid() IN (SELECT user_id FROM public.job_seekers WHERE id = seeker_id)
+);
 
--- (Add similar policies for other tables as needed)
-CREATE POLICY "Users manage own preferences" ON public.notification_preferences FOR ALL USING (auth.uid() = seeker_id);
+CREATE POLICY "Users manage own preferences" ON public.notification_preferences FOR ALL USING (
+    auth.uid() IN (SELECT user_id FROM public.job_seekers WHERE id = seeker_id)
+);
 CREATE POLICY "Admins view all logs" ON public.whatsapp_delivery_logs FOR SELECT USING (public.is_admin());
+CREATE POLICY "Admins full access system_settings" ON public.system_settings FOR ALL USING (public.is_admin());
+

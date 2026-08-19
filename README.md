@@ -72,11 +72,23 @@ To ensure a safe and professional marketplace, Aganyu implements a multi-tier tr
 
 ---
 
-### 💳 Payments & Subscriptions
+### 💳 Payments & Aganyu Premium Engine
 
-- Powered by **PayChangu** (Airtel Money, TNM Mpamba, Card — MWK)
-- **Aganyu Badge** — seeker credibility badge
-- **Aganyu Plus** — premium seeker plan
+- Powered by **PayChangu** (Airtel Money, TNM Mpamba, Card — MWK 500/month).
+- **Instant WhatsApp Alerts**: Direct-to-phone template delivery for matched job/opportunity alerts via Meta WhatsApp Cloud API.
+- **Human-in-the-Loop Admin Match Engine**:
+  - **Manual Review Mode**: Admins inspect AI match scores & qualification alignment before dispatching WhatsApp alerts.
+  - **Auto-Pilot Dispatch Mode**: Automatic instant delivery for high-affinity candidate job matches.
+- **Automated Lifecycle & Verification**: Real-time webhook processing, return-URL verification fallback, and daily cron job subscription expiry handling.
+
+---
+
+### 👩‍💼 Admin Dashboard
+
+- **Human-in-the-Loop Match Approval**: Full UI to review, approve single/batch, or reject candidate notification matches before dispatch.
+- **Premium Subscription Management**: Grant, revoke, monitor revenue, active subscriber counts, and audit logs.
+- **Verification Center**: Dedicated tools to verify employers and candidate certificates.
+- **System Management**: Full control over users, jobs, opportunities, and a comprehensive audit log for all systemic mutations.
 
 ---
 
@@ -90,10 +102,11 @@ To ensure a safe and professional marketplace, Aganyu implements a multi-tier tr
 | Forms | React Hook Form + Zod |
 | Database | Supabase (PostgreSQL + pgvector) |
 | AI/Embeddings | HuggingFace Inference API (`all-MiniLM-L6-v2`) |
+| Messaging | Meta WhatsApp Cloud API |
 | Auth | Supabase Auth |
 | Storage | Supabase Storage (avatars, resumes) |
 | Realtime | Supabase Realtime (messages, notifications) |
-| Payments | PayChangu |
+| Payments | PayChangu (MWK Mobile Money & Cards) |
 | Email | Resend |
 
 ---
@@ -105,52 +118,26 @@ src/
 ├── app/
 │   ├── (marketing)/          # Public pages: landing, jobs, pricing, terms
 │   ├── (app)/dashboard/
-│   │   ├── seeker/           # Seeker dashboard (Gamified), profile, applications
+│   │   ├── seeker/           # Seeker dashboard (Gamified), profile, subscription
 │   │   ├── employer/         # Employer dashboard, semantic discover, job management
-│   │   └── admin/            # Admin verification center, user/job management
+│   │   └── admin/            # Admin verification center, notifications, premium hub
 │   ├── api/
-│   │   ├── profile/          # Profile updates + Embedding sync
-│   │   ├── jobs/             # Job CRUD + Embedding sync
-│   │   └── ...               # Other API endpoints
+│   │   ├── webhooks/         # PayChangu, Supabase, & WhatsApp webhooks
+│   │   ├── cron/             # Subscription expiry & recurring task automation
+│   │   ├── seeker/           # Seeker subscription initiation & management
+│   │   └── admin/            # Admin match approval, subscriptions, settings
 │   └── onboarding/           # Multi-step onboarding
 ├── components/
-│   ├── profile/              # SeekerProfile form
-│   ├── dashboard/            # Shared UI (VerifiedBadge, SectionCard, etc.)
+│   ├── dashboard/            # Premium cards, status widgets, section cards
 │   └── layout/               # DashboardLayout, sidebar navigation
 ├── lib/
-│   ├── embedding-service.ts  # HuggingFace vector generation
-│   ├── sync-embeddings.ts    # Database vector synchronization
+│   ├── subscription/         # PayChangu payment provider & subscription service
+│   ├── notification/         # Orchestrator, WhatsApp worker, & dispatch settings
 │   ├── candidate-match.ts    # Hybrid AI scoring logic
 │   ├── auth-guard.ts         # Server-side auth helper
 │   └── ...                   # Other utilities
 supabase/
 └── schema.sql                # Full canonical schema (source of truth)
-```
-
----
-
-## Database Schema Highlights
-
-### `job_seekers` table (key fields)
-```sql
-embedding        vector(384) -- AI Professional DNA for semantic search
-search_intent    TEXT  -- ACTIVELY_LOOKING | OPEN_TO_OFFERS | ...
-profile_visibility TEXT -- PUBLIC | ANONYMOUS | HIDDEN
-portfolio_links  TEXT[]
-```
-
-### `jobs` table (key fields)
-```sql
-embedding        vector(384) -- AI Job Requirement DNA
-must_have_skills TEXT[]
-nice_to_have_skills TEXT[]
-status           TEXT -- ACTIVE | FILLED | ARCHIVED
-```
-
-### `certificates` table
-```sql
-is_verified      BOOLEAN -- Admin-verified status
-verification_tier INTEGER -- Level of vetting (0: None, 1: Link, 2: Manual)
 ```
 
 ---
@@ -178,15 +165,12 @@ Copy `.env.example` to `.env.local` and fill in:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+PAYCHANGU_SECRET_KEY=
+WHATSAPP_API_TOKEN=
+WHATSAPP_PHONE_NUMBER_ID=
+CRON_SECRET=
 HUGGINGFACE_TOKEN=
 RESEND_API_KEY=
-```
-
-### 3. Apply the database schema
-
-```bash
-# Apply the full canonical schema
-psql -h <host> -U postgres -d postgres -f supabase/schema.sql
 ```
 
 ---
@@ -198,6 +182,10 @@ psql -h <host> -U postgres -d postgres -f supabase/schema.sql
 | Feature | Status |
 |---|---|
 | AI Semantic Matchmaking (HuggingFace + pgvector) | Working |
+| Aganyu Premium WhatsApp Alerts Engine | Working |
+| PayChangu Payment Gateway Integration (Airtel/TNM/Card MWK) | Working |
+| Admin Human-in-the-Loop Match Approval & Dispatch Mode Switcher | Working |
+| Automated Subscription Expiry Cron & Return-URL Verification | Working |
 | Opportunities Module (Scholarships, Grants, Fellowships, Training) | Working |
 | Opportunity AI Matchmaking & Candidate Notifications | Working |
 | Automated Social Media Sharing (LinkedIn & Facebook via Buffer API) | Working |

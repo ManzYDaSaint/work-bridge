@@ -39,6 +39,11 @@ const principles = [
         content: `Aganyu encourages robust authentication. Backup recovery codes are hashed cryptographically upon generation. Staff members within the Admin Dashboard cannot view your plaintext passwords or your raw generated MFA seeds.`
     },
     {
+        title: "WhatsApp Notification Privacy",
+        icon: <Bot className="text-emerald-500" size={24} />,
+        content: `Seekers opting into Aganyu Premium agree to receive verified job alerts and system notifications on WhatsApp via the Meta WhatsApp Cloud API. Your phone number is strictly used to deliver transactional alerts and account verifications. We do not share phone numbers with third-party marketers or spam networks.`
+    },
+    {
         title: "Data Deletion & Extraction",
         icon: <RefreshCw className="text-indigo-500" size={24} />,
         content: `You possess the right to erasure. When you delete a certificate, the asset is removed from our storage buckets and instantly decoupled from the database. Should you choose to delete your account, your profile is purged, and any associated job applications are marked abandoned.`

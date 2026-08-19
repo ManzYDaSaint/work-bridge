@@ -1,4 +1,4 @@
-import { Sparkles, Search, Bookmark, Send, Shield, Award, BarChart2, Share2 } from "lucide-react";
+import { Sparkles, Search, Bookmark, Send, Shield, Award, BarChart2, Share2, MessageSquare } from "lucide-react";
 
 const features = [
     {

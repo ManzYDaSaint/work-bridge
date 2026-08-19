@@ -1,19 +1,19 @@
 import { Suspense } from "react";
-import NotificationReviewClient from "./NotificationReviewClient";
+import SeekerSubscriptionClient from "./SeekerSubscriptionClient";
 
 export const metadata = {
-    title: "Match Approvals & WhatsApp Queue | Admin Dashboard",
-    description: "Review and approve job matches before dispatching WhatsApp alerts."
+    title: "Aganyu Premium & WhatsApp Alerts | Job Seeker",
+    description: "Manage your Aganyu Premium membership and WhatsApp job match alert preferences."
 };
 
-export default function NotificationReviewPage() {
+export default function SeekerSubscriptionPage() {
     return (
         <Suspense fallback={
             <div className="flex h-64 items-center justify-center">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent"></div>
             </div>
         }>
-            <NotificationReviewClient />
+            <SeekerSubscriptionClient />
         </Suspense>
     );
 }

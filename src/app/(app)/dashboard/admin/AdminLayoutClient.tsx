@@ -1,7 +1,7 @@
 "use client";
 
 import { User } from "@/types";
-import { BrainCircuit, Briefcase, ClipboardList, LayoutDashboard, ShieldCheck, Users, Activity, Sparkles, Zap } from "lucide-react";
+import { BrainCircuit, Briefcase, ClipboardList, LayoutDashboard, ShieldCheck, Users, Activity, Sparkles, Zap, Crown, BarChart3 } from "lucide-react";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
 import { UserProvider } from "@/context/UserContext";
 import { signOutAndRedirect } from "@/lib/auth-utils";
@@ -14,11 +14,24 @@ const adminNavGroups: NavGroup[] = [
             { label: "Job Ingestion", href: "/dashboard/admin/ingestion", icon: Zap },
             { label: "Market Moderation", href: "/dashboard/admin/jobs", icon: Briefcase },
             { label: "User Management", href: "/dashboard/admin/users", icon: Users },
-            { label: "Employer Verification", href: "/dashboard/admin/employers", icon: ShieldCheck },
+            { label: "Match Approvals", href: "/dashboard/admin/notifications", icon: ShieldCheck },
+        ]
+    },
+    {
+        title: "Premium",
+        items: [
+            { label: "Subscriptions", href: "/dashboard/admin/premium", icon: Crown },
+            { label: "Analytics & Settings", href: "/dashboard/admin/premium-hub", icon: BarChart3 },
+        ]
+    },
+    {
+        title: "Platform",
+        items: [
+            { label: "Employer Verification", href: "/dashboard/admin/employers", icon: Users },
             { label: "Employer CRM", href: "/dashboard/admin/crm", icon: ClipboardList },
             { label: "Opportunities", href: "/dashboard/admin/opportunities", icon: Sparkles },
             { label: "AI Health", href: "/dashboard/admin/ai-health", icon: BrainCircuit },
-            { label: "Mission Control", href: "/dashboard/admin/notifications", icon: Activity },
+            { label: "Mission Control", href: "/dashboard/admin/ai-health", icon: Activity },
         ]
     },
 ];

@@ -12,6 +12,7 @@ import {
 // Lazy load heavier sections — they are already "use client" internally
 const HowItWorks = dynamic(() => import("@/components/marketing/HowItWorks"), { ssr: true });
 const Features = dynamic(() => import("@/components/marketing/Features"), { ssr: true });
+const PremiumShowcase = dynamic(() => import("@/components/marketing/PremiumShowcase"), { ssr: true });
 const FAQ = dynamic(() => import("@/components/marketing/FAQ"), { ssr: true });
 
 export const metadata: Metadata = {
@@ -58,6 +59,7 @@ export default function LandingPage() {
             <PlatformHighlights />
             <HowItWorks />
             <Features />
+            <PremiumShowcase />
             <StudentCallout />
             
             {/* Concierge Posting Section */}

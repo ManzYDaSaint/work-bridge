@@ -21,11 +21,13 @@ export async function GET(req: Request) {
         'expire-jobs',
         'resync-embeddings',
         'process-delayed-matches',
+        'process-whatsapp-matches',
         'process-automation',
         'queue-retention-reminders',
         'prune-notifications',
         'process-ingestion',
         'process-opportunity-ingestion',
+        'subscriptions-expiry',
         'cleanup-system'
     ];
 

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
 export default function BillingPage() {
-    redirect("/dashboard/seeker");
+    redirect("/dashboard/seeker/subscription");
 }
+

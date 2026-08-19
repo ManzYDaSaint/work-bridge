@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { User, JobSeeker } from "@/types";
 import {
-    LayoutDashboard, Briefcase, BookmarkCheck, UserCircle2, Sparkles, GraduationCap
+    LayoutDashboard, Briefcase, BookmarkCheck, UserCircle2, Sparkles, GraduationCap, Crown
 } from "lucide-react";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
 import { UserProvider, useUser } from "@/context/UserContext";
@@ -50,6 +50,7 @@ function SeekerLayoutInner({ children }: { children: React.ReactNode }) {
         },
         {
             items: [
+                { label: "Aganyu Premium", href: "/dashboard/seeker/subscription", icon: Crown },
                 { label: "Profile", href: "/dashboard/seeker/profile", icon: UserCircle2 },
             ]
         }

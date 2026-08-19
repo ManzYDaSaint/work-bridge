@@ -1,14 +1,14 @@
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 
 /**
  * Worker to process the notification_queue and send via WhatsApp
  */
 export async function processNotificationQueue() {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) {
+    console.error("[WhatsApp Worker] Admin Supabase client not initialized.");
+    return;
+  }
   // 1. Fetch pending notifications
   const { data: queueItems } = await supabase
     .from("notification_queue")
@@ -49,11 +49,82 @@ export async function processNotificationQueue() {
   }
 }
 
-async function sendWhatsAppTemplate(to: string, templateId: string, payload: any) {
-  // Implementation for calling Meta WhatsApp API
-  console.log(`Sending WhatsApp template ${templateId} to ${to} with payload:`, payload);
-  
-  // Example API call structure:
-  // const response = await fetch(`https://graph.facebook.com/...`, { ... });
-  // if (!response.ok) throw new Error("WhatsApp API Error");
+export async function sendWhatsAppTemplate(to: string, templateId: string, payload: any) {
+  const token = process.env.WHATSAPP_API_TOKEN && !process.env.WHATSAPP_API_TOKEN.includes("your_meta")
+    ? process.env.WHATSAPP_API_TOKEN
+    : process.env.PERMANENT_TOKEN || process.env.ACCESS_TOKEN;
+
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+  if (!token) {
+    throw new Error("Missing Meta WhatsApp Access Token (WHATSAPP_API_TOKEN, PERMANENT_TOKEN, or ACCESS_TOKEN)");
+  }
+  if (!phoneNumberId) {
+    throw new Error("Missing WHATSAPP_PHONE_NUMBER_ID in environment variables");
+  }
+
+  // Format recipient phone number (remove +, spaces, hyphens)
+  const formattedTo = to ? to.replace(/[^\d]/g, "") : "";
+  if (!formattedTo) {
+    throw new Error("Invalid or empty destination phone number");
+  }
+
+  const apiVersion = process.env.WHATSAPP_API_VERSION || "v20.0";
+  const url = `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`;
+
+  // Build template components based on payload structure
+  let components: any[] = [];
+  if (payload?.components && Array.isArray(payload.components)) {
+    components = payload.components;
+  } else if (payload?.parameters && Array.isArray(payload.parameters)) {
+    components = [{ type: "body", parameters: payload.parameters }];
+  } else if (payload) {
+    // Extract standard job match parameters (jobTitle, company, matchScore)
+    const params: Array<{ type: string; text: string }> = [];
+    if (payload.jobTitle) params.push({ type: "text", text: String(payload.jobTitle) });
+    if (payload.company) params.push({ type: "text", text: String(payload.company) });
+    if (payload.matchScore) params.push({ type: "text", text: `${payload.matchScore}%` });
+
+    if (params.length > 0) {
+      components.push({
+        type: "body",
+        parameters: params
+      });
+    }
+  }
+
+  const body = {
+    messaging_product: "whatsapp",
+    to: formattedTo,
+    type: "template",
+    template: {
+      name: templateId,
+      language: {
+        code: payload?.languageCode || "en"
+      },
+      ...(components.length > 0 ? { components } : {})
+    }
+  };
+
+  console.log(`[WhatsApp Worker] Dispatching template '${templateId}' to ${formattedTo}...`);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+
+  const responseData = await response.json();
+
+  if (!response.ok) {
+    const errorMsg = responseData?.error?.message || response.statusText;
+    console.error("[WhatsApp Worker] Meta API error details:", responseData);
+    throw new Error(`WhatsApp API Error (${response.status}): ${errorMsg}`);
+  }
+
+  console.log(`[WhatsApp Worker] Successfully dispatched message ID: ${responseData?.messages?.[0]?.id}`);
+  return responseData;
 }

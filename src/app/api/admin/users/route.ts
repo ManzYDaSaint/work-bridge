@@ -30,20 +30,33 @@ export async function GET(request: Request) {
 
         // Simplify user object for frontend
         const formattedUsers = users.map(u => {
-            const seeker = u.job_seeker;
-            const employer = u.employer;
+            const seeker = u.job_seekers || u.job_seeker;
+            const employer = u.employers || u.employer;
+            const subs = seeker?.premium_subscriptions || [];
+            const activeSub = Array.isArray(subs) 
+                ? subs.find((s: any) => s.status === 'ACTIVE' && new Date(s.ends_at) > new Date())
+                : (subs?.status === 'ACTIVE' ? subs : null);
 
             return {
                 id: u.id,
                 email: u.email,
                 role: u.role,
+                plan: u.plan || (activeSub ? 'PREMIUM' : 'FREE'),
                 createdAt: u.created_at,
                 name: u.role === 'JOB_SEEKER'
                     ? seeker?.full_name
                     : (u.role === 'EMPLOYER' ? employer?.company_name : 'Admin'),
                 location: u.role === 'JOB_SEEKER'
                     ? seeker?.location
-                    : employer?.location
+                    : employer?.location,
+                seekerId: seeker?.id || null,
+                phone: seeker?.phone || null,
+                subscription: activeSub ? {
+                    id: activeSub.id,
+                    status: activeSub.status,
+                    endsAt: activeSub.ends_at,
+                    provider: activeSub.payment_provider
+                } : null
             };
         });
 

@@ -314,25 +314,39 @@ export default function DashboardLayout({
                                                 </div>
                                             </div>
 
-                                            {/* Overflow nav items */}
-                                            <div className="py-1">
-                                                {overflowItems.map((item) => {
-                                                    const isActive = pathname === item.href;
+                                            {/* Overflow nav items with group headers */}
+                                            <div className="max-h-[60vh] overflow-y-auto py-1">
+                                                {navGroups.map((group, gi) => {
+                                                    const groupOverflowItems = group.items.filter(item => overflowItems.some(o => o.href === item.href));
+                                                    if (groupOverflowItems.length === 0) return null;
+
                                                     return (
-                                                        <Link
-                                                            key={item.href}
-                                                            href={item.href}
-                                                            onClick={() => setShowOverflow(false)}
-                                                            className={cn(
-                                                                "flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition-colors",
-                                                                isActive
-                                                                    ? "bg-stone-50 text-[#16324f] dark:bg-slate-900 dark:text-white"
-                                                                    : "text-slate-600 hover:bg-stone-50 dark:hover:bg-slate-900"
+                                                        <div key={gi} className="py-1">
+                                                            {group.title && (
+                                                                <p className="px-4 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                                                                    {group.title}
+                                                                </p>
                                                             )}
-                                                        >
-                                                            <item.icon size={17} strokeWidth={isActive ? 2.5 : 2} />
-                                                            {item.label}
-                                                        </Link>
+                                                            {groupOverflowItems.map((item) => {
+                                                                const isActive = pathname === item.href;
+                                                                return (
+                                                                    <Link
+                                                                        key={item.href}
+                                                                        href={item.href}
+                                                                        onClick={() => setShowOverflow(false)}
+                                                                        className={cn(
+                                                                            "flex items-center gap-3 px-4 py-2 text-xs font-semibold transition-colors",
+                                                                            isActive
+                                                                                ? "bg-stone-100 text-[#16324f] dark:bg-slate-900 dark:text-white"
+                                                                                : "text-slate-600 hover:bg-stone-50 dark:text-slate-300 dark:hover:bg-slate-900"
+                                                                        )}
+                                                                    >
+                                                                        <item.icon size={16} strokeWidth={isActive ? 2.5 : 2} />
+                                                                        {item.label}
+                                                                    </Link>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     );
                                                 })}
                                             </div>

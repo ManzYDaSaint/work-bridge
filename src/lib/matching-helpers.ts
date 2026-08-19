@@ -43,11 +43,79 @@ export interface StructuredMatchResult {
 }
 
 export const DEFAULT_MATCH_WEIGHTS: MatchWeights = {
-  qualification: 30,
+  qualification: 50,
   experience: 30,
-  skills: 30,
-  certifications: 10,
+  skills: 15,
+  certifications: 5,
 };
+
+/**
+ * Educational Hierarchy Levels for Malawian Recruitment Context:
+ * 7: PhD / Doctorate
+ * 6: Master's / MSc / MA / MBA
+ * 5: Bachelor's Degree / Degree / BSc / BA / BCom
+ * 4: Advanced Diploma / Higher Diploma
+ * 3: Diploma
+ * 2: Certificate
+ * 1: MSCE / High School / O-Level
+ */
+export function getQualificationRank(qualString?: string | null): number {
+  if (!qualString || !qualString.trim()) return 0;
+  const q = qualString.toLowerCase();
+
+  if (q.includes("phd") || q.includes("doctorate")) return 7;
+  if (q.includes("master") || q.includes("msc") || q.includes("mba") || q.includes("ma ")) return 6;
+  if (q.includes("bachelor") || q.includes("degree") || q.includes("bsc") || q.includes("bcom") || q.includes("ba ")) return 5;
+  if (q.includes("advanced diploma") || q.includes("higher diploma") || q.includes("adv. diploma")) return 4;
+  if (q.includes("diploma")) return 3;
+  if (q.includes("certificate") || q.includes("cert ")) return 2;
+  if (q.includes("msce") || q.includes("high school") || q.includes("o-level") || q.includes("secondary")) return 1;
+
+  return 0;
+}
+
+export function evaluateQualificationMatch(
+  jobQualification?: string | null,
+  seekerQualification?: string | null
+): { passed: boolean; score: number } {
+  if (!jobQualification || !jobQualification.trim()) {
+    return { passed: true, score: 100 };
+  }
+  if (!seekerQualification || !seekerQualification.trim()) {
+    return { passed: false, score: 0 };
+  }
+
+  const jobQualLower = jobQualification.toLowerCase().trim();
+  const seekerQualLower = seekerQualification.toLowerCase().trim();
+
+  // 1. Direct or Substring match check
+  if (seekerQualLower.includes(jobQualLower) || jobQualLower.includes(seekerQualLower)) {
+    return { passed: true, score: 100 };
+  }
+
+  // 2. Malawian Hierarchy Rank Evaluation
+  const jobRank = getQualificationRank(jobQualification);
+  const seekerRank = getQualificationRank(seekerQualification);
+
+  if (jobRank > 0 && seekerRank > 0) {
+    if (seekerRank >= jobRank) {
+      // Candidate holds equal or higher qualification (e.g. Master's for a Bachelor's job)
+      return { passed: true, score: 100 };
+    }
+    if (seekerRank === jobRank - 1) {
+      // 1 level below (e.g. Diploma for a Bachelor's job) -> Partial match (40%)
+      return { passed: false, score: 40 };
+    }
+    // 2+ levels below -> Knockout (0%)
+    return { passed: false, score: 0 };
+  }
+
+  return { passed: false, score: 0 };
+}
+
+export function qualificationMatches(jobQualification?: string | null, seekerQualification?: string | null): boolean {
+  return evaluateQualificationMatch(jobQualification, seekerQualification).passed;
+}
 
 export function normalizeStringArray(raw?: string[] | string | null): string[] {
   if (!raw) return [];
@@ -71,16 +139,6 @@ export function calculateYearsExperience(experience?: any[] | null): number {
   return Math.round(yearsExperience * 10) / 10;
 }
 
-export function qualificationMatches(jobQualification?: string | null, seekerQualification?: string | null): boolean {
-  if (!jobQualification || !jobQualification.trim()) return true;
-  if (!seekerQualification || !seekerQualification.trim()) return false;
-
-  const jobQual = jobQualification.toLowerCase().trim();
-  const seekerQual = seekerQualification.toLowerCase().trim();
-
-  return seekerQual.includes(jobQual) || jobQual.includes(seekerQual);
-}
-
 export function requiredSkillsMatch(required?: string[] | string | null, seekerSkills?: string[] | string | null) {
   const requiredList = normalizeStringArray(required);
   const seekerList = normalizeStringArray(seekerSkills);
@@ -102,8 +160,9 @@ export function scoreJobSeekerMatch(
   seeker: SeekerProfile,
   weights: MatchWeights = DEFAULT_MATCH_WEIGHTS
 ): StructuredMatchResult {
-  const qualificationPassed = qualificationMatches(job.qualification, seeker.qualification);
-  const qualificationScore = qualificationPassed ? 100 : 0;
+  const qualEval = evaluateQualificationMatch(job.qualification, seeker.qualification);
+  const qualificationPassed = qualEval.passed;
+  const qualificationScore = qualEval.score;
 
   const yearsExperience = calculateYearsExperience(seeker.experience);
   const experienceRequired = job.minimum_years_experience || 0;
