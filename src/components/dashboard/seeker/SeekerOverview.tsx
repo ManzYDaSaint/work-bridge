@@ -12,6 +12,8 @@ import { ScreeningAnswer } from "@/types";
 import { Application, SavedJob } from "@/types";
 import { calculateProfileStrength } from "@/lib/profile-strength";
 
+import { useOptionalUser } from "@/context/UserContext";
+
 interface SeekerOverviewProps {
     user: any;
     applications: Application[];
@@ -25,6 +27,9 @@ export default function SeekerOverview({
     savedJobs, 
     appliedJobIds 
 }: SeekerOverviewProps) {
+    const userContext = useOptionalUser();
+    const activeUser = userContext?.user || user;
+
     const [selectedJob, setSelectedJob] = useState<ExtendedJob | null>(null);
 
     const handleApply = async (jobId: string, screeningAnswers?: Record<string, ScreeningAnswer>) => {
@@ -46,11 +51,11 @@ export default function SeekerOverview({
         }
     };
 
-    const fullName = user?.jobSeeker?.full_name || user?.email?.split("@")[0] || "User";
-    const isPremium = user?.plan === "PREMIUM" || user?.jobSeeker?.isSubscribed === true;
+    const fullName = activeUser?.jobSeeker?.full_name || activeUser?.email?.split("@")[0] || "User";
+    const isPremium = activeUser?.plan === "PREMIUM" || activeUser?.jobSeeker?.isSubscribed === true;
     
     // Use the new Profile Strength engine
-    const strength = calculateProfileStrength(user?.jobSeeker);
+    const strength = calculateProfileStrength(activeUser?.jobSeeker);
 
     return (
         <div className="space-y-6 pb-20">

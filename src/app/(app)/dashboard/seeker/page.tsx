@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { fetchSeekerApplications, fetchSeekerSavedJobs } from "@/lib/seeker-data";
+import { UserService } from "@/services/user.service";
 import SeekerOverview from "@/components/dashboard/seeker/SeekerOverview";
 import SeekerPaymentToast from "@/components/dashboard/seeker/PaymentToast";
 
@@ -13,7 +14,8 @@ export default async function SeekerDashboardPage() {
     const supabase = await createSupabaseServerClient();
 
     // 2. Parallel data fetching (employers fetched separately to avoid RLS join issues)
-    const [appResult, savedResult] = await Promise.all([
+    const [{ profile: fullUser }, appResult, savedResult] = await Promise.all([
+        UserService.buildMeProfile(supabase, auth.userId),
         fetchSeekerApplications(supabase, auth.userId),
         fetchSeekerSavedJobs(supabase, auth.userId),
     ]);
@@ -42,7 +44,7 @@ export default async function SeekerDashboardPage() {
         <>
             <SeekerPaymentToast />
             <SeekerOverview 
-                user={auth.user} 
+                user={fullUser || auth.user} 
                 applications={applications} 
                 savedJobs={savedJobs} 
                 appliedJobIds={appliedJobIds} 
