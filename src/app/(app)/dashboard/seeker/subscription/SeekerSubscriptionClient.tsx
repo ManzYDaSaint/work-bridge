@@ -294,7 +294,7 @@ export default function SeekerSubscriptionClient() {
                                 onClick={() => setShowCheckoutModal(true)}
                                 className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-amber-500/30 hover:bg-amber-600 transition-all"
                             >
-                                <Sparkles size={16} /> Upgrade for MWK 500/mo
+                                <Sparkles size={16} /> Upgrade for MWK 1,000/mo
                             </button>
                         ) : (
                             <button
@@ -446,9 +446,9 @@ export default function SeekerSubscriptionClient() {
                             </label>
                             <div className="grid grid-cols-3 gap-3">
                                 {[
-                                    { months: 1, label: "1 Month", price: "MWK 500" },
-                                    { months: 3, label: "3 Months", price: "MWK 1,350", badge: "Save 10%" },
-                                    { months: 6, label: "6 Months", price: "MWK 2,550", badge: "Save 15%" },
+                                    { months: 1, label: "1 Month", price: "MWK 1,000" },
+                                    { months: 3, label: "3 Months", price: "MWK 2,700", badge: "Save 10%" },
+                                    { months: 6, label: "6 Months", price: "MWK 5,100", badge: "Save 15%" },
                                 ].map((p) => (
                                     <button
                                         key={p.months}

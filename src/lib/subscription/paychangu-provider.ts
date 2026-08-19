@@ -23,7 +23,7 @@ export class PayChanguProvider implements IPaymentProvider {
     }
 
     async initiatePayment(seekerId: string, amount: number): Promise<{ paymentUrl: string; reference: string; isSimulated?: boolean }> {
-        const txRef = `aganyu_prem_${seekerId.slice(0, 8)}_${Date.now()}`;
+        const txRef = `aganyu_prem_${seekerId}_${Date.now()}`;
         const siteUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://aganyu.com";
 
         if (!this.secretKey) {
