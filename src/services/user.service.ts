@@ -81,13 +81,32 @@ export const UserService = {
 
         if (profile.jobSeeker) {
             const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-            const { count } = await supabase
-                .from("applications")
-                .select("id", { count: "exact", head: true })
-                .eq("user_id", userId)
-                .gte("created_at", startOfMonth);
+            const nowIso = new Date().toISOString();
 
-            profile.jobSeeker.applicationsThisMonth = count || 0;
+            const [appCountRes, subRes] = await Promise.all([
+                supabase
+                    .from("applications")
+                    .select("id", { count: "exact", head: true })
+                    .eq("user_id", userId)
+                    .gte("created_at", startOfMonth),
+                supabase
+                    .from("premium_subscriptions")
+                    .select("id, status, ends_at")
+                    .eq("seeker_id", profile.jobSeeker.id)
+                    .eq("status", "ACTIVE")
+                    .gt("ends_at", nowIso)
+                    .maybeSingle()
+            ]);
+
+            profile.jobSeeker.applicationsThisMonth = appCountRes.count || 0;
+
+            const hasActiveSub = !!subRes.data;
+            profile.jobSeeker.isSubscribed = hasActiveSub;
+            if (hasActiveSub) {
+                profile.plan = "PREMIUM";
+            } else if (profile.plan === "PREMIUM" && !hasActiveSub) {
+                profile.plan = "FREE";
+            }
         }
 
         profile.onboardingComplete = isOnboardingComplete({
