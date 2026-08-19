@@ -133,14 +133,25 @@ export async function POST(request: Request) {
             const { reference } = body;
             const endsAt = new Date();
             endsAt.setMonth(endsAt.getMonth() + Number(durationMonths));
+            const amount = 500 * Number(durationMonths);
 
-            await supabase.from("premium_subscriptions").upsert({
+            const { data: subData } = await supabase.from("premium_subscriptions").upsert({
                 seeker_id: seeker.id,
                 status: "ACTIVE",
                 ends_at: endsAt.toISOString(),
                 payment_provider: "PAYCHANGU",
                 payment_reference: reference || `pc_checkout_${Date.now()}`
-            }, { onConflict: "seeker_id" });
+            }, { onConflict: "seeker_id" }).select("id").single();
+
+            if (subData?.id) {
+                await supabase.from("subscription_payments").insert({
+                    subscription_id: subData.id,
+                    amount: amount,
+                    currency: "MWK",
+                    status: "PAID",
+                    provider_reference: reference || `pc_checkout_${Date.now()}`
+                });
+            }
 
             // Update user plan in users table
             await supabase.from("users").update({ plan: "PREMIUM" }).eq("id", auth.user.id);

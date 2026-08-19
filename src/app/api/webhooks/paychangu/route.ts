@@ -39,13 +39,23 @@ export async function POST(request: Request) {
                 endsAt.setMonth(endsAt.getMonth() + Number(duration_months));
 
                 // Activate premium subscription
-                await supabase.from("premium_subscriptions").upsert({
+                const { data: subData } = await supabase.from("premium_subscriptions").upsert({
                     seeker_id: finalSeekerId,
                     status: "ACTIVE",
                     ends_at: endsAt.toISOString(),
                     payment_provider: "PAYCHANGU",
                     payment_reference: targetRef
-                }, { onConflict: "seeker_id" });
+                }, { onConflict: "seeker_id" }).select("id").single();
+
+                if (subData?.id) {
+                    await supabase.from("subscription_payments").insert({
+                        subscription_id: subData.id,
+                        amount: verification.amount || (500 * Number(duration_months)),
+                        currency: "MWK",
+                        status: "PAID",
+                        provider_reference: targetRef
+                    });
+                }
 
                 // Find user associated with seeker to update plan & phone
                 const { data: seeker } = await supabase
