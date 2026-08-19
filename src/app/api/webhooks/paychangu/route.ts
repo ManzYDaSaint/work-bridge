@@ -84,15 +84,23 @@ async function processPayChanguActivation(targetRef: string, durationMonths: num
     }
 
     if (subscriptionId) {
-        const { error: paymentErr } = await supabase.from("subscription_payments").insert({
-            subscription_id: subscriptionId,
-            amount: verification.amount || (500 * Number(durationMonths)),
-            currency: "MWK",
-            status: "PAID",
-            provider_reference: targetRef
-        });
-        if (paymentErr) {
-            console.error("[PayChangu Webhook] Failed to insert subscription_payments record:", paymentErr);
+        const { data: existingPayment } = await supabase
+            .from("subscription_payments")
+            .select("id")
+            .eq("provider_reference", targetRef)
+            .maybeSingle();
+
+        if (!existingPayment) {
+            const { error: paymentErr } = await supabase.from("subscription_payments").insert({
+                subscription_id: subscriptionId,
+                amount: verification.amount || (1000 * Number(durationMonths)),
+                currency: "MWK",
+                status: "PAID",
+                provider_reference: targetRef
+            });
+            if (paymentErr) {
+                console.error("[PayChangu Webhook] Failed to insert subscription_payments record:", paymentErr);
+            }
         }
     }
 

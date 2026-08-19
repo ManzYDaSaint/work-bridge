@@ -200,15 +200,23 @@ export async function POST(request: Request) {
             }
 
             if (subscriptionId) {
-                const { error: paymentErr } = await supabase.from("subscription_payments").insert({
-                    subscription_id: subscriptionId,
-                    amount: amount,
-                    currency: "MWK",
-                    status: "PAID",
-                    provider_reference: reference
-                });
-                if (paymentErr) {
-                    console.error("[Subscription API] Failed to insert subscription_payments record:", paymentErr);
+                const { data: existingPayment } = await supabase
+                    .from("subscription_payments")
+                    .select("id")
+                    .eq("provider_reference", reference)
+                    .maybeSingle();
+
+                if (!existingPayment) {
+                    const { error: paymentErr } = await supabase.from("subscription_payments").insert({
+                        subscription_id: subscriptionId,
+                        amount: amount,
+                        currency: "MWK",
+                        status: "PAID",
+                        provider_reference: reference
+                    });
+                    if (paymentErr) {
+                        console.error("[Subscription API] Failed to insert subscription_payments record:", paymentErr);
+                    }
                 }
             }
 

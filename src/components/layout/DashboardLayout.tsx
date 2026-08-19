@@ -34,6 +34,7 @@ interface DashboardLayoutProps {
     userAvatar?: string;
     showUpgradeCTA?: boolean;
     upgradeLink?: string;
+    isPremium?: boolean;
 }
 
 /** Flatten all nav items from all groups into a single list */
@@ -55,6 +56,7 @@ export default function DashboardLayout({
     sidebarFooter,
     showUpgradeCTA,
     upgradeLink = "/upgrade",
+    isPremium = false,
 }: DashboardLayoutProps) {
     const pathname = usePathname();
     const allItems = flattenNav(navGroups);
@@ -153,7 +155,13 @@ export default function DashboardLayout({
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{userFullName}</p>
-                        <p className="truncate text-xs font-medium text-slate-400">{userRoleLabel}</p>
+                        {isPremium ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20">
+                                PREMIUM MEMBER
+                            </span>
+                        ) : (
+                            <p className="truncate text-xs font-medium text-slate-400">{userRoleLabel}</p>
+                        )}
                     </div>
                     <button
                         onClick={onLogout}

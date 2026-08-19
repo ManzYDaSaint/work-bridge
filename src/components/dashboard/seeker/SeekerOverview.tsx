@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Briefcase, BookmarkCheck, CheckCircle2, Copy, AlertCircle } from "lucide-react";
+import { Briefcase, BookmarkCheck, CheckCircle2, Copy, AlertCircle, Crown, Sparkles, MessageSquare } from "lucide-react";
 import { PageHeader, StatCard, SectionCard, Badge } from "@/components/dashboard/ui";
 import JobAlertsManager from "@/components/dashboard/seeker/JobAlertsManager";
 import { toast } from "sonner";
@@ -35,8 +35,6 @@ export default function SeekerOverview({
                 body: JSON.stringify({ screeningAnswers: screeningAnswers || {} }),
             });
             if (res.ok) {
-                // We can't easily update the server-fetched state without a refresh
-                // but we can toast and trigger a router refresh
                 toast.success("Application sent.");
                 window.location.reload(); 
             } else {
@@ -49,6 +47,7 @@ export default function SeekerOverview({
     };
 
     const fullName = user?.jobSeeker?.full_name || user?.email?.split("@")[0] || "User";
+    const isPremium = user?.plan === "PREMIUM" || user?.jobSeeker?.isSubscribed === true;
     
     // Use the new Profile Strength engine
     const strength = calculateProfileStrength(user?.jobSeeker);
@@ -56,6 +55,65 @@ export default function SeekerOverview({
     return (
         <div className="space-y-6 pb-20">
             <PageHeader title={`Hello, ${fullName}`} subtitle="Focus on three things: keep your profile ready, apply to good roles, and track responses." />
+
+            {/* VIP Premium Active Hero Banner */}
+            {isPremium ? (
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-950 via-slate-900 to-emerald-950 border border-amber-500/30 p-6 sm:p-7 text-white shadow-xl">
+                    <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-amber-500/10 blur-2xl pointer-events-none" />
+                    <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
+                    
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+                        <div className="space-y-2">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/20 px-3.5 py-1 text-xs font-extrabold text-amber-300 border border-amber-400/30 backdrop-blur">
+                                <Crown size={14} className="text-amber-400 shrink-0" />
+                                <span>AGANYU PREMIUM ACTIVE</span>
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+                            </div>
+                            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+                                Priority AI Job Matching &amp; Direct WhatsApp Alerts
+                            </h2>
+                            <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
+                                Your profile is actively prioritized for AI matching. Direct WhatsApp alerts will reach your phone as soon as new matching vacancies are posted.
+                            </p>
+                        </div>
+                        
+                        <div className="flex flex-wrap items-center gap-3 shrink-0">
+                            <div className="flex items-center gap-2.5 rounded-2xl bg-white/10 border border-white/15 px-4 py-3 backdrop-blur text-xs font-semibold">
+                                <MessageSquare size={16} className="text-emerald-400" />
+                                <div>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase">WhatsApp Dispatch</p>
+                                    <p className="text-white font-bold">{user?.jobSeeker?.phone || "Phone Linked"}</p>
+                                </div>
+                            </div>
+                            <Link
+                                href="/dashboard/seeker/subscription"
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-500 hover:bg-amber-400 px-5 py-3 text-xs font-bold text-slate-950 transition-all shadow-lg shadow-amber-500/20 active:scale-95"
+                            >
+                                <Sparkles size={14} /> Subscription Details
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-950 border border-emerald-500/30 p-6 text-white shadow-lg">
+                    <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="space-y-1">
+                            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+                                <Sparkles size={14} /> GET INSTANT WHATSAPP JOB ALERTS
+                            </div>
+                            <p className="text-sm font-semibold text-slate-200">
+                                Never miss a job opening in Malawi. Get high-matching vacancies delivered straight to your WhatsApp.
+                            </p>
+                        </div>
+                        <Link
+                            href="/dashboard/seeker/subscription"
+                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-5 py-3 text-xs font-bold transition-all shadow-md shrink-0 active:scale-95"
+                        >
+                            Upgrade for MWK 1,000/mo
+                        </Link>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <StatCard label="Applications" value={applications.length} icon={Briefcase} iconBg="bg-stone-100 dark:bg-slate-800" iconColor="text-[#16324f]" />
