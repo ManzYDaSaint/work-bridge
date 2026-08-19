@@ -31,7 +31,7 @@ const adminNavGroups: NavGroup[] = [
             { label: "Employer CRM", href: "/dashboard/admin/crm", icon: ClipboardList },
             { label: "Opportunities", href: "/dashboard/admin/opportunities", icon: Sparkles },
             { label: "AI Health", href: "/dashboard/admin/ai-health", icon: BrainCircuit },
-            { label: "Mission Control", href: "/dashboard/admin/ai-health", icon: Activity },
+            { label: "Mission Control", href: "/dashboard/admin/mission-control", icon: Activity },
         ]
     },
 ];

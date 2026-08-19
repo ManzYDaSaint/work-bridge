@@ -113,13 +113,13 @@ function ModerationBanner({
     );
 }
 
-export default function AdminOverviewClient({ 
-    initialStats, 
-    initialActivity, 
-    initialCloseRequests 
-}: { 
-    initialStats: any; 
-    initialActivity: any[]; 
+export default function AdminOverviewClient({
+    initialStats,
+    initialActivity,
+    initialCloseRequests
+}: {
+    initialStats: any;
+    initialActivity: any[];
     initialCloseRequests: any[];
 }) {
     const [stats, setStats] = useState(initialStats);
