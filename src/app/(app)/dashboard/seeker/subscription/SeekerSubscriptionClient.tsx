@@ -487,9 +487,10 @@ export default function SeekerSubscriptionClient() {
                                 <CreditCard size={18} className="text-amber-500" /> Pay via PayChangu (Airtel Money / Mpamba / Card)
                             </div>
                             <span className="text-xs font-extrabold text-amber-600 dark:text-amber-400">
-                                MWK {(selectedPlanMonths * 500).toLocaleString()}
+                                MWK {(selectedPlanMonths * 1000).toLocaleString()}
                             </span>
                         </div>
+
 
                         <div className="flex gap-3 pt-2">
                             <button
