@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { PageHeader } from "@/components/dashboard/ui";
-import { 
-    Crown, Sparkles, CheckCircle2, MessageSquare, Zap, ShieldCheck, 
+import {
+    Crown, Sparkles, CheckCircle2, MessageSquare, Zap, ShieldCheck,
     CreditCard, ArrowRight, Loader2, Phone, Bell, AlertCircle, RefreshCw, X
 } from "lucide-react";
 import { toast } from "sonner";
@@ -179,16 +179,14 @@ export default function SeekerSubscriptionClient() {
             />
 
             {/* Current Status Header Banner */}
-            <div className={`rounded-3xl border p-6 shadow-sm transition-all ${
-                isPremium 
-                    ? "border-amber-200 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent dark:border-amber-900/40 dark:bg-slate-900" 
+            <div className={`rounded-3xl border p-6 shadow-sm transition-all ${isPremium
+                    ? "border-amber-200 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent dark:border-amber-900/40 dark:bg-slate-900"
                     : "border-stone-200 bg-white dark:border-slate-800 dark:bg-slate-900"
-            }`}>
+                }`}>
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div className="flex items-center gap-4">
-                        <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${
-                            isPremium ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30" : "bg-stone-100 text-slate-400 dark:bg-slate-800"
-                        }`}>
+                        <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${isPremium ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30" : "bg-stone-100 text-slate-400 dark:bg-slate-800"
+                            }`}>
                             <Crown size={28} />
                         </div>
                         <div>
@@ -196,14 +194,13 @@ export default function SeekerSubscriptionClient() {
                                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                                     {isPremium ? "Aganyu Premium Active" : "Free Plan Account"}
                                 </h3>
-                                <span className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold ${
-                                    isPremium ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" : "bg-slate-100 text-slate-600 dark:bg-slate-800"
-                                }`}>
+                                <span className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold ${isPremium ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" : "bg-slate-100 text-slate-600 dark:bg-slate-800"
+                                    }`}>
                                     {isPremium ? "PREMIUM" : "FREE"}
                                 </span>
                             </div>
                             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                {isPremium 
+                                {isPremium
                                     ? `Your premium subscription is valid until ${new Date(subscription?.ends_at).toLocaleDateString()}.`
                                     : "Upgrade to receive instant AI-matched WhatsApp job alerts before public listing."}
                             </p>
@@ -349,19 +346,18 @@ export default function SeekerSubscriptionClient() {
                             </label>
                             <div className="grid grid-cols-3 gap-3">
                                 {[
-                                    { months: 1, label: "1 Month", price: "MWK 5,000" },
-                                    { months: 3, label: "3 Months", price: "MWK 13,500", badge: "Save 10%" },
-                                    { months: 6, label: "6 Months", price: "MWK 25,000", badge: "Save 16%" },
+                                    { months: 1, label: "1 Month", price: "MWK 500" },
+                                    { months: 3, label: "3 Months", price: "MWK 1,350", badge: "Save 10%" },
+                                    { months: 6, label: "6 Months", price: "MWK 2,550", badge: "Save 15%" },
                                 ].map((p) => (
                                     <button
                                         key={p.months}
                                         type="button"
                                         onClick={() => setSelectedPlanMonths(p.months)}
-                                        className={`rounded-2xl border p-3 text-center transition-all ${
-                                            selectedPlanMonths === p.months
+                                        className={`rounded-2xl border p-3 text-center transition-all ${selectedPlanMonths === p.months
                                                 ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold shadow-sm"
                                                 : "border-stone-200 bg-stone-50/50 text-slate-600 dark:border-slate-800 dark:bg-slate-800/50"
-                                        }`}
+                                            }`}
                                     >
                                         <p className="text-xs">{p.label}</p>
                                         <p className="text-sm font-extrabold mt-1">{p.price}</p>
@@ -380,7 +376,7 @@ export default function SeekerSubscriptionClient() {
                                 type="text"
                                 value={phone}
                                 onChange={(e) => setPhone(e.target.value)}
-                                placeholder="+265 99 353 3315"
+                                placeholder="+265 99 xxx xxxx"
                                 className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-sm outline-none focus:border-amber-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                             />
                         </div>

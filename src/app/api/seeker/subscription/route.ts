@@ -13,15 +13,30 @@ export async function GET() {
     if (!supabase) return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
 
     try {
-        // Fetch job_seeker record
-        const { data: seeker } = await supabase
+        // Fetch job_seeker record (id is the primary key and auth user foreign key)
+        let { data: seeker } = await supabase
             .from("job_seekers")
-            .select("id, full_name, phone, user_id")
-            .eq("user_id", auth.user.id)
-            .single();
+            .select("id, full_name, phone")
+            .or(`id.eq.${auth.user.id},user_id.eq.${auth.user.id}`)
+            .maybeSingle();
 
         if (!seeker) {
-            return NextResponse.json({ error: "Job seeker profile not found" }, { status: 404 });
+            // Auto-create basic seeker profile if missing
+            const fallbackName = auth.user.email?.split("@")[0] || "Seeker";
+            const { data: newSeeker, error: createError } = await supabase
+                .from("job_seekers")
+                .upsert({
+                    id: auth.user.id,
+                    full_name: fallbackName,
+                    location: "To be updated"
+                })
+                .select("id, full_name, phone")
+                .single();
+
+            if (createError || !newSeeker) {
+                return NextResponse.json({ error: "Job seeker profile not found" }, { status: 404 });
+            }
+            seeker = newSeeker;
         }
 
         // Fetch active premium subscription
@@ -72,15 +87,29 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { action, durationMonths = 1, phone, whatsappEnabled, minMatchScore } = body;
 
-        // Fetch seeker profile
-        const { data: seeker } = await supabase
+        // Fetch seeker profile (id is primary key and auth user FK)
+        let { data: seeker } = await supabase
             .from("job_seekers")
             .select("id, full_name, phone")
-            .eq("user_id", auth.user.id)
-            .single();
+            .or(`id.eq.${auth.user.id},user_id.eq.${auth.user.id}`)
+            .maybeSingle();
 
         if (!seeker) {
-            return NextResponse.json({ error: "Job seeker profile not found" }, { status: 404 });
+            const fallbackName = auth.user.email?.split("@")[0] || "Seeker";
+            const { data: newSeeker, error: createError } = await supabase
+                .from("job_seekers")
+                .upsert({
+                    id: auth.user.id,
+                    full_name: fallbackName,
+                    location: "To be updated"
+                })
+                .select("id, full_name, phone")
+                .single();
+
+            if (createError || !newSeeker) {
+                return NextResponse.json({ error: "Job seeker profile not found" }, { status: 404 });
+            }
+            seeker = newSeeker;
         }
 
         // ACTION 1: Initiate Payment / Checkout
