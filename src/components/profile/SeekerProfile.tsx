@@ -12,6 +12,7 @@ import { Badge, PageHeader, SectionCard } from "@/components/dashboard/ui";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { EmailPreferences } from "@/components/dashboard/EmailPreferences";
+import { useOptionalUser } from "@/context/UserContext";
 
 interface SeekerProfileData extends JobSeeker {
     completion: number;
@@ -52,6 +53,9 @@ export default function SeekerProfile({
     const [addingCert, setAddingCert] = useState(false);
 
     const router = useRouter();
+    // Access the global user context so we can push fresh profile data into it
+    // without triggering the SSR re-render cycle that overwrites updated values.
+    const userContext = useOptionalUser();
 
     const {
         register,
@@ -78,7 +82,7 @@ export default function SeekerProfile({
             searchIntent: profile.searchIntent ?? "ACTIVELY_LOOKING",
             profileVisibility: profile.profileVisibility ?? "HIDDEN",
             portfolioLinks: profile.portfolioLinks ?? [],
-            employmentStatus: (profile as any).employment_status ?? "",
+            employmentStatus: (profile as any).employment_status ?? profile.employmentStatus ?? "",
         } : undefined,
     });
 
@@ -199,7 +203,13 @@ export default function SeekerProfile({
         setSaving(true);
         try {
             await apiFetchJson("/api/profile", { method: "PUT", body: JSON.stringify(data) });
-            router.refresh();
+            // Refresh the global UserContext directly from /api/me so the dashboard
+            // header/name updates immediately without going through the SSR re-render
+            // cycle (router.refresh() would re-propagate stale initialUser and overwrite
+            // the fresh data we just saved).
+            if (userContext?.refreshUser) {
+                await userContext.refreshUser();
+            }
             toast.success("Profile updated");
         } finally {
             setSaving(false);

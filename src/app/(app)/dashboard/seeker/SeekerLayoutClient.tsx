@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
 import { UserProvider, useUser } from "@/context/UserContext";
-import { useEffect } from "react";
 import { signOutAndRedirect } from "@/lib/auth-utils";
 
 
@@ -26,12 +25,7 @@ export default function SeekerLayoutClient({
 }
 
 function SeekerLayoutInner({ children }: { children: React.ReactNode }) {
-    const { user, refreshUser } = useUser();
-    
-    // Sync with DB on mount to fix stale SSR data
-    useEffect(() => {
-        refreshUser();
-    }, [refreshUser]);
+    const { user } = useUser();
 
     if (!user) return null;
 

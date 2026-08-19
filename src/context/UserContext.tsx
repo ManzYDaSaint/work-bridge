@@ -23,6 +23,11 @@ export function UserProvider({
 }) {
     const [user, setUserState] = useState<User | null>(initialUser);
     const [loading, setLoading] = useState(false);
+    // Track whether we have ever received a fresh response from /api/me.
+    // Once we do, we stop overwriting the context with SSR data — this prevents
+    // router.refresh() from re-propagating stale server-rendered values on top
+    // of data that was already freshly fetched.
+    const hasRefreshedRef = React.useRef(false);
 
     const setUser = useCallback((newUser: User | null) => {
         setUserState(newUser);
@@ -34,6 +39,7 @@ export function UserProvider({
             const res = await apiFetch("/api/me");
             if (res.ok) {
                 const data = await res.json();
+                hasRefreshedRef.current = true;
                 setUserState(data);
             }
         } catch (error) {
@@ -43,9 +49,11 @@ export function UserProvider({
         }
     }, []);
 
-    // Also update local state if initialUser changes (e.g. on navigation)
+    // Sync the SSR-provided initialUser into state only while we have not yet
+    // fetched a fresh copy from /api/me. After the first successful refresh,
+    // navigation-triggered re-renders must NOT overwrite the live client state.
     useEffect(() => {
-        if (initialUser) {
+        if (initialUser && !hasRefreshedRef.current) {
             setUserState(initialUser);
         }
     }, [initialUser]);
