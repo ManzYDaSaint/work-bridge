@@ -38,7 +38,7 @@ export async function runJobMatchingOrchestration() {
     // 3. Fetch detailed Seeker Profiles for Rule-Based Verification
     const { data: seekers } = await supabase
       .from("job_seekers")
-      .select("id, user_id, qualification, skills, experience, certifications")
+      .select("id, user_id, full_name, qualification, skills, experience, certifications")
       .in("id", candidateIds);
 
     if (!seekers || seekers.length === 0) continue;
@@ -84,18 +84,22 @@ export async function runJobMatchingOrchestration() {
       const dispatchMode = await getMatchDispatchMode();
       const initialStatus = dispatchMode === "AUTO" ? "PENDING" : "REQUIRES_APPROVAL";
 
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aganyu.com";
+      const seekerFirstName = seeker.full_name ? seeker.full_name.trim().split(" ")[0] : "Seeker";
+
       // Only queue alert if hybrid score meets minimum relevance threshold (50%)
       if (finalScore >= 50) {
         await supabase.from("notification_queue").insert({
           seeker_id: seeker.id,
           job_id: job.id,
-          template_id: "new_job_match",
+          template_id: "aganyu_job_alert_utility_v1",
           payload: {
+            seekerName: seekerFirstName,
             jobTitle: job.title,
-            company: job.display_company_name || "Direct Employer",
-            matchScore: finalScore,
-            ruleScore,
-            vectorScore
+            company: job.display_company_name || job.company_name || "Direct Employer",
+            location: job.location || "Malawi",
+            jobUrl: `${baseUrl}/jobs/${job.id}`,
+            matchScore: finalScore
           },
           status: initialStatus
         });

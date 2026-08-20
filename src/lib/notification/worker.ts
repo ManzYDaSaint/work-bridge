@@ -22,8 +22,8 @@ export async function processNotificationQueue() {
     try {
       // 2. Send via WhatsApp API
       await sendWhatsAppTemplate(
-        item.job_seekers.phone, 
-        item.template_id, 
+        item.job_seekers.phone,
+        item.template_id,
         item.payload
       );
 
@@ -32,11 +32,11 @@ export async function processNotificationQueue() {
         .from("notification_queue")
         .update({ status: "SENT" })
         .eq("id", item.id);
-        
+
       // 4. Log delivery
       await supabase.from("whatsapp_delivery_logs").insert({
-          queue_id: item.id,
-          status: "SUCCESS"
+        queue_id: item.id,
+        status: "SUCCESS"
       });
 
     } catch (error: any) {
@@ -79,11 +79,20 @@ export async function sendWhatsAppTemplate(to: string, templateId: string, paylo
   } else if (payload?.parameters && Array.isArray(payload.parameters)) {
     components = [{ type: "body", parameters: payload.parameters }];
   } else if (payload) {
-    // Extract standard job match parameters (jobTitle, company, matchScore)
     const params: Array<{ type: string; text: string }> = [];
-    if (payload.jobTitle) params.push({ type: "text", text: String(payload.jobTitle) });
-    if (payload.company) params.push({ type: "text", text: String(payload.company) });
-    if (payload.matchScore) params.push({ type: "text", text: `${payload.matchScore}%` });
+
+    if (templateId === "aganyu_job_match_alert_v1") {
+      params.push({ type: "text", text: String(payload.seekerName || "Seeker") });
+      params.push({ type: "text", text: String(payload.jobTitle || "Job Opportunity") });
+      params.push({ type: "text", text: String(payload.company || "Employer") });
+      params.push({ type: "text", text: String(payload.location || "Malawi") });
+      params.push({ type: "text", text: String(payload.jobUrl || "https://aganyu.com") });
+    } else {
+      // Legacy or custom template fallback
+      if (payload.jobTitle) params.push({ type: "text", text: String(payload.jobTitle) });
+      if (payload.company) params.push({ type: "text", text: String(payload.company) });
+      if (payload.matchScore) params.push({ type: "text", text: `${payload.matchScore}%` });
+    }
 
     if (params.length > 0) {
       components.push({

@@ -26,6 +26,11 @@ export interface SystemEventPayload {
     metadata?: Record<string, any>;
 }
 
+const isValidUUID = (id?: string): boolean => {
+    if (!id || typeof id !== "string") return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+};
+
 /**
  * Centralized Mission Control Event Service
  * Fire-and-forget logging for all significant platform actions.
@@ -48,15 +53,36 @@ export async function emitSystemEvent(payload: SystemEventPayload) {
             console.log(`${logPrefix} ${payload.event}: ${payload.message}`);
         }
 
+        const metadata = { ...(payload.metadata || {}) };
+
+        let validActorId: string | null = null;
+        if (payload.actorId) {
+            if (isValidUUID(payload.actorId)) {
+                validActorId = payload.actorId;
+            } else {
+                metadata.raw_actor_id = payload.actorId;
+            }
+        }
+
+        let validCorrelationId: string | null = null;
+        if (payload.correlationId) {
+            if (isValidUUID(payload.correlationId)) {
+                validCorrelationId = payload.correlationId;
+            } else {
+                metadata.raw_correlation_id = payload.correlationId;
+            }
+        }
+
         const { error } = await supabase
-            .from("mission_control_events")
+            .from("system_events")
             .insert({
                 category: payload.category,
                 severity: severity,
                 event: payload.event,
                 message: payload.message,
-                actor_id: payload.actorId,
-                metadata: payload.metadata || {},
+                actor_id: validActorId,
+                correlation_id: validCorrelationId,
+                metadata: metadata,
             });
 
         if (error) {

@@ -15,19 +15,45 @@ export async function GET() {
         const now = new Date().toISOString();
         const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-        // All premium subscriptions with seeker info
-        const { data: subs } = await supabase
+        // 1. Fetch all premium subscriptions
+        const { data: subs, error: subsError } = await supabase
             .from("premium_subscriptions")
-            .select(`
-                id, status, ends_at, payment_provider, payment_reference, created_at,
-                job_seekers (
-                    id, full_name, phone, qualification,
-                    users ( id, email, plan )
-                )
-            `)
+            .select("id, seeker_id, status, ends_at, payment_provider, payment_reference, created_at")
             .order("created_at", { ascending: false });
 
-        const allSubs = subs || [];
+        if (subsError) {
+            console.error("[api/admin/premium] Error fetching subscriptions:", subsError);
+        }
+
+        const rawSubs = subs || [];
+        const seekerIds = Array.from(new Set(rawSubs.map(s => s.seeker_id).filter(Boolean)));
+
+        // 2. Fetch corresponding job_seekers & users in parallel
+        let seekersMap: Record<string, any> = {};
+        let usersMap: Record<string, any> = {};
+
+        if (seekerIds.length > 0) {
+            const [{ data: seekerList }, { data: userList }] = await Promise.all([
+                supabase.from("job_seekers").select("id, full_name, phone, qualification").in("id", seekerIds),
+                supabase.from("users").select("id, email, plan").in("id", seekerIds),
+            ]);
+
+            (seekerList || []).forEach(s => { seekersMap[s.id] = s; });
+            (userList || []).forEach(u => { usersMap[u.id] = u; });
+        }
+
+        // 3. Attach seeker and user profile objects
+        const allSubs = rawSubs.map(s => {
+            const seekerObj = seekersMap[s.seeker_id] || null;
+            const userObj = usersMap[s.seeker_id] || null;
+            return {
+                ...s,
+                job_seekers: seekerObj ? {
+                    ...seekerObj,
+                    users: userObj,
+                } : null,
+            };
+        });
 
         const active = allSubs.filter(s => s.status === "ACTIVE" && new Date(s.ends_at) > new Date());
         const expiringSoon = active.filter(s => new Date(s.ends_at) <= new Date(sevenDaysFromNow));
