@@ -102,43 +102,65 @@ export default function EmployerVerificationClient({
                 subtitle="Review company access and account closure requests."
             />
 
-            <Tabs 
-                activeTab={activeTab} 
-                onChange={(tab) => updateFilters({ tab })}
-                tabs={[
-                    { id: "employers", label: `All Employers ${pendingCount > 0 ? `(${pendingCount})` : ""}` },
-                    { id: "close-requests", label: `Close Requests ${pendingCloseCount > 0 ? `(${pendingCloseCount})` : ""}` }
-                ]}
-            />
+            {/* Main Tabs Navigation */}
+            <div className="flex border-b border-stone-200 dark:border-slate-800">
+                <button
+                    onClick={() => updateFilters({ tab: "employers" })}
+                    className={`inline-flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-semibold transition-colors ${
+                        activeTab === "employers"
+                            ? "border-amber-500 text-amber-600 dark:text-amber-400"
+                            : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                    }`}
+                >
+                    <Building2 size={14} /> All Employers {pendingCount > 0 && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-bold">{pendingCount}</span>}
+                </button>
+                <button
+                    onClick={() => updateFilters({ tab: "close-requests" })}
+                    className={`inline-flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-semibold transition-colors ${
+                        activeTab === "close-requests"
+                            ? "border-amber-500 text-amber-600 dark:text-amber-400"
+                            : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                    }`}
+                >
+                    <XCircle size={14} /> Close Requests {pendingCloseCount > 0 && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-800 dark:bg-red-950 dark:text-red-300 font-bold">{pendingCloseCount}</span>}
+                </button>
+            </div>
 
             {activeTab === "employers" ? (
-                <>
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Search company or industry"
-                                value={searchTerm}
-                                onChange={(e) => updateFilters({ search: e.target.value })}
-                                className="w-full rounded-2xl border border-stone-200 bg-white px-12 py-3 text-sm outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900"
-                            />
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {(["PENDING", "APPROVED", "REJECTED", "ALL"] as const).map((status) => (
+                <div className="space-y-4">
+                    {/* Status Filter Tabs & Search */}
+                    <div className="flex items-center justify-between border-b border-stone-200 dark:border-slate-800">
+                        <div className="flex overflow-x-auto">
+                            {[
+                                { key: "ALL", label: "All Statuses" },
+                                { key: "PENDING", label: "Pending Review", count: pendingCount },
+                                { key: "APPROVED", label: "Approved" },
+                                { key: "REJECTED", label: "Rejected" },
+                            ].map((s) => (
                                 <button
-                                    key={status}
-                                    onClick={() => updateFilters({ status })}
-                                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                                        statusFilter === status
-                                            ? "border-[#16324f] bg-[#16324f] text-white"
-                                            : "border-stone-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                                    key={s.key}
+                                    onClick={() => updateFilters({ status: s.key })}
+                                    className={`inline-flex items-center gap-1.5 border-b-2 px-4 py-2 text-xs font-semibold transition-colors whitespace-nowrap ${
+                                        statusFilter === s.key
+                                            ? "border-amber-500 text-amber-600 dark:text-amber-400 font-bold"
+                                            : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
                                     }`}
                                 >
-                                    {status}
+                                    {s.label} {s.count !== undefined && s.count > 0 && <span className="rounded-full bg-stone-100 px-1.5 text-[11px] dark:bg-slate-800">{s.count}</span>}
                                 </button>
                             ))}
                         </div>
+                    </div>
+
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Search company or industry..."
+                            value={searchTerm}
+                            onChange={(e) => updateFilters({ search: e.target.value })}
+                            className="w-full rounded-2xl border border-stone-200 bg-white px-12 py-3 text-sm outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900"
+                        />
                     </div>
 
                     <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
@@ -201,7 +223,7 @@ export default function EmployerVerificationClient({
                             ))
                         )}
                     </div>
-                </>
+                </div>
             ) : (
                 <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
                     <div className="grid grid-cols-1 gap-2 border-b border-stone-200/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:border-slate-800 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]">

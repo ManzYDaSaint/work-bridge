@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
-import { Briefcase, CheckCircle, XCircle, Trash2, Search, Eye, RefreshCw, Clock, AlertTriangle, FileText, Download } from "lucide-react";
+import { Briefcase, CheckCircle, XCircle, Trash2, Search, Eye, RefreshCw, Clock, AlertTriangle, FileText, Download, CalendarX } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import JobDetailModal from "@/components/jobs/JobDetailModal";
@@ -138,12 +138,14 @@ export default function AdminJobsClient({
     const activeCount = initialJobs.filter(j => j.status === "ACTIVE").length;
     const pendingCount = initialJobs.filter(j => j.status === "PENDING").length;
     const rejectedCount = initialJobs.filter(j => j.status === "REJECTED").length;
+    const expiredCount = initialJobs.filter(j => j.status === "EXPIRED").length;
 
     const tabs = [
         { key: "ALL", label: "All Listings", icon: <FileText size={14} /> },
         { key: "ACTIVE", label: "Active", icon: <CheckCircle size={14} /> },
         { key: "PENDING", label: "Pending Review", icon: <Clock size={14} /> },
         { key: "REJECTED", label: "Rejected", icon: <XCircle size={14} /> },
+        { key: "EXPIRED", label: "Expired", icon: <CalendarX size={14} /> },
     ] as const;
 
     return (
@@ -163,7 +165,7 @@ export default function AdminJobsClient({
             </div>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
                 <StatCard 
                     label="Total Listings" 
                     value={initialTotal} 
@@ -188,6 +190,12 @@ export default function AdminJobsClient({
                     icon={<XCircle size={20} className="text-rose-500" />} 
                     color="border-rose-200 bg-rose-50/60 text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-100" 
                 />
+                <StatCard 
+                    label="Expired Jobs" 
+                    value={expiredCount} 
+                    icon={<CalendarX size={20} className="text-purple-500" />} 
+                    color="border-purple-200 bg-purple-50/60 text-purple-900 dark:border-purple-900/40 dark:bg-purple-950/30 dark:text-purple-100" 
+                />
             </div>
 
             {/* Pending Alert Banner if any pending jobs */}
@@ -203,12 +211,12 @@ export default function AdminJobsClient({
             {/* Tabs Navigation & Search Toolbar */}
             <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-stone-200 dark:border-slate-800">
-                    <div className="flex">
+                    <div className="flex overflow-x-auto">
                         {tabs.map(t => (
                             <button
                                 key={t.key}
                                 onClick={() => updateFilters({ status: t.key })}
-                                className={`inline-flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-semibold transition-colors ${
+                                className={`inline-flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-semibold transition-colors whitespace-nowrap ${
                                     statusFilter === t.key
                                         ? "border-amber-500 text-amber-600 dark:text-amber-400"
                                         : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
@@ -221,7 +229,7 @@ export default function AdminJobsClient({
 
                     <button 
                         onClick={handleDownloadCSV} 
-                        className="mb-2 inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                        className="mb-2 inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 shrink-0"
                     >
                         <Download size={14} /> Export CSV
                     </button>
@@ -267,6 +275,11 @@ export default function AdminJobsClient({
                                     <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{job.title}</p>
                                     <p className="mt-0.5 text-[11px] text-slate-400">
                                         {job.companyName} · {job.location || "Location unlisted"}
+                                        {job.deadline && (
+                                            <span className="ml-2 inline-flex items-center gap-1 font-mono text-[10px] text-slate-400">
+                                                (Deadline: {job.deadline})
+                                            </span>
+                                        )}
                                     </p>
                                 </div>
 
@@ -276,6 +289,8 @@ export default function AdminJobsClient({
                                             ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                                             : job.status === "REJECTED"
                                             ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
+                                            : job.status === "EXPIRED"
+                                            ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
                                             : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                                     }`}>
                                         {job.status}
@@ -308,6 +323,16 @@ export default function AdminJobsClient({
                                             title="Reject Listing"
                                         >
                                             <XCircle size={16} />
+                                        </button>
+                                    )}
+                                    {job.status !== "EXPIRED" && (
+                                        <button
+                                            onClick={() => handleStatusUpdate(job.id, "EXPIRED")}
+                                            disabled={actioning === job.id}
+                                            className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-purple-600 dark:border-slate-700 dark:text-slate-300"
+                                            title="Expire Listing"
+                                        >
+                                            <CalendarX size={16} />
                                         </button>
                                     )}
                                     <button

@@ -29,6 +29,7 @@ export default function MatchAnalyticsClient() {
     const [settings, setSettings] = useState<any>(null);
     const [savingKey, setSavingKey] = useState<string | null>(null);
     const [settingValues, setSettingValues] = useState<Record<string, string>>({});
+    const [forceEmbeddingLoading, setForceEmbeddingLoading] = useState(false);
 
     const fetchAll = async () => {
         setLoading(true);
@@ -52,6 +53,32 @@ export default function MatchAnalyticsClient() {
     };
 
     useEffect(() => { fetchAll(); }, []);
+
+    const handleForceEmbeddings = async (jobId?: string) => {
+        setForceEmbeddingLoading(true);
+        const { toast } = await import("sonner");
+        toast.loading("Generating AI embeddings...");
+        try {
+            const res = await apiFetch("/api/admin/job-health", {
+                method: "POST",
+                body: JSON.stringify({ jobId }),
+                headers: { "Content-Type": "application/json" },
+            });
+            toast.dismiss();
+            if (res.ok) {
+                const result = await res.json();
+                toast.success(result.message || "Embeddings generated!");
+                fetchAll();
+            } else {
+                toast.error("Failed to generate embeddings.");
+            }
+        } catch {
+            toast.dismiss();
+            toast.error("Failed to generate embeddings.");
+        } finally {
+            setForceEmbeddingLoading(false);
+        }
+    };
 
     const saveSetting = async (key: string) => {
         setSavingKey(key);
@@ -210,11 +237,30 @@ export default function MatchAnalyticsClient() {
                             </div>
                             {(jobHealth.noEmbedding || []).length > 0 && (
                                 <div className="rounded-2xl border border-red-200 bg-white dark:border-red-900/40 dark:bg-slate-900 overflow-hidden">
-                                    <div className="border-b border-stone-100 px-5 py-3 dark:border-slate-800"><p className="text-sm font-bold text-red-700 dark:text-red-400">Active Jobs Missing Embedding (won't match)</p></div>
+                                    <div className="border-b border-stone-100 px-5 py-3 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
+                                        <p className="text-sm font-bold text-red-700 dark:text-red-400">Active Jobs Missing Embedding (won't match)</p>
+                                        <button
+                                            onClick={() => handleForceEmbeddings()}
+                                            disabled={forceEmbeddingLoading}
+                                            className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-amber-600 disabled:opacity-60 shrink-0"
+                                        >
+                                            {forceEmbeddingLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                                            Force Embedding Sync
+                                        </button>
+                                    </div>
                                     {jobHealth.noEmbedding.map((j: any) => (
                                         <div key={j.id} className="flex items-center justify-between border-b border-stone-100 px-5 py-3 last:border-0 dark:border-slate-800">
                                             <div><p className="text-xs font-semibold text-slate-900 dark:text-white">{j.title}</p><p className="text-[11px] text-slate-400">{j.display_company_name}</p></div>
-                                            <span className="text-[11px] text-slate-400">{new Date(j.created_at).toLocaleDateString()}</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-[11px] text-slate-400">{new Date(j.created_at).toLocaleDateString()}</span>
+                                                <button
+                                                    onClick={() => handleForceEmbeddings(j.id)}
+                                                    disabled={forceEmbeddingLoading}
+                                                    className="rounded-lg border border-stone-200 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 disabled:opacity-50"
+                                                >
+                                                    Generate
+                                                </button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

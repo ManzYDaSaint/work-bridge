@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
-import { Users, Search, Loader2, UserX, Crown, Sparkles, X, CheckCircle2 } from "lucide-react";
+import { Users, Search, Loader2, UserX, Crown, Sparkles, X, CheckCircle2, UserCheck, Building2, Shield, Download } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
@@ -134,6 +134,13 @@ export default function UserManagementClient({
         }
     };
 
+    const tabs = [
+        { key: "ALL", label: "All Users", icon: <Users size={14} /> },
+        { key: "JOB_SEEKER", label: "Job Seekers", icon: <UserCheck size={14} /> },
+        { key: "EMPLOYER", label: "Employers", icon: <Building2 size={14} /> },
+        { key: "ADMIN", label: "Admins", icon: <Shield size={14} /> },
+    ] as const;
+
     return (
         <div className="space-y-6 pb-20">
             <PageHeader
@@ -141,35 +148,40 @@ export default function UserManagementClient({
                 subtitle="Search user directory, manage roles, and grant Aganyu Premium access."
             />
 
-            <div className="flex flex-col gap-4 md:flex-row md:items-center">
-                <div className="relative flex-1">
+            {/* Tabs Navigation & Search Toolbar */}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-stone-200 dark:border-slate-800">
+                    <div className="flex overflow-x-auto">
+                        {tabs.map(t => (
+                            <button
+                                key={t.key}
+                                onClick={() => updateFilters({ role: t.key, page: 1 })}
+                                className={`inline-flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-semibold transition-colors whitespace-nowrap ${
+                                    roleFilter === t.key
+                                        ? "border-amber-500 text-amber-600 dark:text-amber-400"
+                                        : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                                }`}
+                            >
+                                {t.icon} {t.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <button onClick={handleDownloadCSV} className="mb-2 inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 shrink-0">
+                        <Download size={14} /> Export CSV
+                    </button>
+                </div>
+
+                <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input
                         type="text"
-                        placeholder="Search by name or email"
+                        placeholder="Search by name or email..."
                         defaultValue={searchTerm}
                         onChange={(e) => updateFilters({ search: e.target.value, page: 1 })}
                         onKeyDown={(e) => e.key === 'Enter' && updateFilters({ search: (e.target as HTMLInputElement).value, page: 1 })}
                         className="w-full rounded-2xl border border-stone-200 bg-white px-12 py-3 text-sm outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900"
                     />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    {["ALL", "JOB_SEEKER", "EMPLOYER", "ADMIN"].map((role) => (
-                        <button
-                            key={role}
-                            onClick={() => updateFilters({ role: role, page: 1 })}
-                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                                roleFilter === role
-                                    ? "border-[#16324f] bg-[#16324f] text-white"
-                                    : "border-stone-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-                            }`}
-                        >
-                            {role.replace("_", " ")}
-                        </button>
-                    ))}
-                    <button onClick={handleDownloadCSV} className="rounded-full border border-stone-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
-                        Export CSV
-                    </button>
                 </div>
             </div>
 

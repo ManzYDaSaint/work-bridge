@@ -5,7 +5,7 @@ import { withAudit } from "@/lib/api-utils";
 import { NextResponse } from "next/server";
 import { emitSystemEvent } from "@/lib/mission-control";
 
-const ALLOWED_JOB_STATUSES = new Set(["ACTIVE", "PENDING", "EXPIRED", "FILLED", "ARCHIVED"]);
+const ALLOWED_JOB_STATUSES = new Set(["ACTIVE", "PENDING", "REJECTED", "EXPIRED", "FILLED", "ARCHIVED"]);
 
 export const GET = withAudit(async (request: Request) => {
     const auth = await validateAuth(['ADMIN'], false);

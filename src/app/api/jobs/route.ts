@@ -19,10 +19,12 @@ export async function GET(request: Request) {
     const offset = (page - 1) * limit;
 
     // Step 1: Fetch jobs (without join — RLS on employers blocks relational joins)
+    const today = new Date().toISOString().split('T')[0];
     let dbQuery = supabase
         .from("jobs")
         .select("*", { count: "exact" })
         .eq("status", "ACTIVE")
+        .gte("deadline", today)
         .order("created_at", { ascending: false });
 
     if (query) {

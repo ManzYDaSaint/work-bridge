@@ -8,7 +8,7 @@ import { PageHeader, Badge, StatCard, EmptyState } from "@/components/dashboard/
 import {
     Sparkles, Plus, Eye, Edit, Archive, Star, Send,
     GraduationCap, DollarSign, BookOpen, Briefcase, Award, Globe, Building2, Rocket,
-    BarChart3, MousePointerClick, Users
+    BarChart3, MousePointerClick, Users, Search
 } from "lucide-react";
 import Link from "next/link";
 import OpportunityIngestionQueue from "./OpportunityIngestionQueue";
@@ -162,89 +162,101 @@ export default function AdminOpportunitiesClient({
             <div className="flex border-b border-stone-200 dark:border-slate-800">
                 <button
                     onClick={() => setActiveTab("active")}
-                    className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+                    className={`inline-flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-semibold transition-colors ${
                         activeTab === "active"
-                            ? "border-[#16324f] text-[#16324f] dark:border-blue-400 dark:text-blue-400"
-                            : "border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400"
+                            ? "border-amber-500 text-amber-600 dark:text-amber-400"
+                            : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
                     }`}
                 >
                     <GraduationCap className="h-4 w-4" /> Published & Draft Opportunities
                 </button>
                 <button
                     onClick={() => setActiveTab("ingestion")}
-                    className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+                    className={`inline-flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-semibold transition-colors ${
                         activeTab === "ingestion"
-                            ? "border-[#16324f] text-[#16324f] dark:border-blue-400 dark:text-blue-400"
-                            : "border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400"
+                            ? "border-amber-500 text-amber-600 dark:text-amber-400"
+                            : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
                     }`}
                 >
-                    <Sparkles className="h-4 w-4 text-blue-600" /> Automated Ingestion Queue
+                    <Sparkles className="h-4 w-4 text-amber-500" /> Automated Ingestion Queue
                 </button>
             </div>
 
             {activeTab === "ingestion" ? (
                 <OpportunityIngestionQueue />
             ) : (
-                <>
+                <div className="space-y-5">
                     {/* Analytics cards */}
-            {analytics && (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <StatCard
-                        label="Total Published"
-                        value={(analytics.byStatus.PUBLISHED ?? 0) + (analytics.byStatus.FEATURED ?? 0)}
-                        icon={Sparkles}
-                        iconBg="bg-blue-50"
-                        iconColor="text-blue-600"
-                    />
-                    <StatCard
-                        label="AI Matches"
-                        value={analytics.totalMatches ?? 0}
-                        icon={Users}
-                        iconBg="bg-purple-50"
-                        iconColor="text-purple-600"
-                    />
-                    <StatCard
-                        label="Total Views"
-                        value={analytics.totalViews ?? 0}
-                        icon={BarChart3}
-                        iconBg="bg-emerald-50"
-                        iconColor="text-emerald-600"
-                    />
-                    <StatCard
-                        label="Apply Clicks"
-                        value={analytics.totalApplyClicks ?? 0}
-                        icon={MousePointerClick}
-                        iconBg="bg-amber-50"
-                        iconColor="text-amber-600"
-                    />
-                </div>
-            )}
+                    {analytics && (
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            <StatCard
+                                label="Total Published"
+                                value={(analytics.byStatus.PUBLISHED ?? 0) + (analytics.byStatus.FEATURED ?? 0)}
+                                icon={Sparkles}
+                                iconBg="bg-blue-50"
+                                iconColor="text-blue-600"
+                            />
+                            <StatCard
+                                label="AI Matches"
+                                value={analytics.totalMatches ?? 0}
+                                icon={Users}
+                                iconBg="bg-purple-50"
+                                iconColor="text-purple-600"
+                            />
+                            <StatCard
+                                label="Total Views"
+                                value={analytics.totalViews ?? 0}
+                                icon={BarChart3}
+                                iconBg="bg-emerald-50"
+                                iconColor="text-emerald-600"
+                            />
+                            <StatCard
+                                label="Apply Clicks"
+                                value={analytics.totalApplyClicks ?? 0}
+                                icon={MousePointerClick}
+                                iconBg="bg-amber-50"
+                                iconColor="text-amber-600"
+                            />
+                        </div>
+                    )}
 
-            {/* Filters */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <input
-                    type="text"
-                    placeholder="Search by title or organisation…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="flex-1 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#16324f] dark:border-slate-700 dark:bg-slate-900"
-                />
-                <div className="flex flex-wrap gap-2">
-                    {["ALL", "DRAFT", "PUBLISHED", "FEATURED", "CLOSING_SOON", "EXPIRED", "ARCHIVED"].map((s) => (
-                        <button
-                            key={s}
-                            onClick={() => setStatusFilter(s)}
-                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                                statusFilter === s
-                                    ? "border-[#16324f] bg-[#16324f] text-white"
-                                    : "border-stone-200 bg-white text-slate-600 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-                            }`}
-                        >
-                            {s === "ALL" ? "All" : s.replace("_", " ")}
-                        </button>
-                    ))}
-                </div>
-            </div>
+                    {/* Status Filter Tabs */}
+                    <div className="flex items-center justify-between border-b border-stone-200 dark:border-slate-800">
+                        <div className="flex overflow-x-auto">
+                            {[
+                                { key: "ALL", label: "All Opportunities" },
+                                { key: "PUBLISHED", label: "Published" },
+                                { key: "FEATURED", label: "Featured" },
+                                { key: "CLOSING_SOON", label: "Closing Soon" },
+                                { key: "DRAFT", label: "Drafts" },
+                                { key: "EXPIRED", label: "Expired" },
+                                { key: "ARCHIVED", label: "Archived" },
+                            ].map((s) => (
+                                <button
+                                    key={s.key}
+                                    onClick={() => setStatusFilter(s.key)}
+                                    className={`inline-flex items-center gap-1.5 border-b-2 px-3.5 py-2 text-xs font-semibold transition-colors whitespace-nowrap ${
+                                        statusFilter === s.key
+                                            ? "border-amber-500 text-amber-600 dark:text-amber-400 font-bold"
+                                            : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                                    }`}
+                                >
+                                    {s.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Search by title or organisation..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full rounded-2xl border border-stone-200 bg-white px-12 py-3 text-sm outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900"
+                        />
+                    </div>
 
             {/* Opportunities table */}
             <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
@@ -375,7 +387,7 @@ export default function AdminOpportunitiesClient({
                     })
                 )}
             </div>
-            </>
+            </div>
             )}
         </div>
     );

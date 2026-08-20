@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { validateAuth } from "@/lib/auth-guard";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
+import { syncJobEmbedding } from "@/lib/sync-embeddings";
 
 export async function GET() {
     const auth = await validateAuth(['ADMIN'], false);
@@ -61,6 +62,52 @@ export async function GET() {
             pastDeadline: (pastDeadline || []).slice(0, 20),
             noApplications: noApps.slice(0, 20),
             pendingJobs: (pendingJobs || []).slice(0, 20),
+        });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function POST(request: Request) {
+    const auth = await validateAuth(['ADMIN'], false);
+    if (auth.error) return auth.error;
+
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) return NextResponse.json({ error: "Admin client unavailable" }, { status: 500 });
+
+    try {
+        const body = await request.json().catch(() => ({}));
+        const targetJobId = body.jobId;
+
+        let query = supabase.from("jobs").select("*").eq("status", "ACTIVE");
+        if (targetJobId) {
+            query = query.eq("id", targetJobId);
+        } else {
+            query = query.is("embedding", null);
+        }
+
+        const { data: jobs, error } = await query.limit(50);
+        if (error) throw error;
+
+        let syncedCount = 0;
+        const errors: string[] = [];
+
+        if (jobs && jobs.length > 0) {
+            for (const job of jobs) {
+                try {
+                    await syncJobEmbedding(job.id, job);
+                    syncedCount++;
+                } catch (e: any) {
+                    errors.push(`Job ${job.id}: ${e.message}`);
+                }
+            }
+        }
+
+        return NextResponse.json({
+            success: true,
+            syncedCount,
+            errors,
+            message: `Successfully generated embeddings for ${syncedCount} job(s).`
         });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
