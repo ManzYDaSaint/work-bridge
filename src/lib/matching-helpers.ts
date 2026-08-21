@@ -78,10 +78,93 @@ export function getQualificationRank(qualString?: string | null): number {
   return 0;
 }
 
+/**
+ * Discipline domain groups for field-of-study matching.
+ * A seeker and a job requirement must share the same domain to avoid
+ * a cross-discipline penalty. "General" domains (any discipline) are
+ * left unpenalised so broad postings (e.g. "any relevant degree") still pass.
+ */
+const DISCIPLINE_DOMAINS: Record<string, string[]> = {
+  computing: [
+    "computing", "computer science", "information technology",
+    "software engineering", "software development", "computer engineering",
+    "information systems", "ict", "data science", "cybersecurity",
+    "artificial intelligence", "programming", "computer studies",
+    "network engineering", "telecommunications",
+  ],
+  nursing_health: [
+    "nursing", "midwif", "clinical medicine", "clinical science",
+    "medical laboratory", "pharmacy", "pharmaceutical", "laboratory sciences",
+    "biomedical", "public health", "occupational health", "health science",
+    "clinical medicine", "physiotherapy", "radiography", "environmental health",
+    "medical imaging", "optometry", "dentistry",
+  ],
+  education: [
+    "education", "teaching", "pedagogy", "curriculum",
+    "early childhood", "primary education", "secondary education",
+  ],
+  finance_accounting: [
+    "accountancy", "accounting", "finance", "economics", "commerce",
+    "financial management", "banking", "actuarial",
+  ],
+  engineering: [
+    "engineering", "civil engineering", "mechanical engineering",
+    "electrical engineering", "structural engineering",
+    "chemical engineering", "materials science",
+  ],
+  agriculture: [
+    "agriculture", "agronomy", "soil science", "agribusiness",
+    "horticulture", "veterinary", "fisheries", "food science",
+    "natural resources", "forestry",
+  ],
+  law: ["law", "legal studies", "jurisprudence"],
+  social_science: [
+    "social science", "sociology", "psychology", "social work",
+    "anthropology", "political science", "development studies",
+  ],
+  business: [
+    "business administration", "business management",
+    "procurement", "supply chain management", "logistics management",
+    "marketing management", "human resource management",
+  ],
+};
+
+/**
+ * Broad/flexible phrases in job qualifications that indicate the employer
+ * accepts any relevant discipline. When present, discipline checking is skipped.
+ */
+const GENERIC_QUAL_PHRASES = [
+  "or related field",
+  "or equivalent",
+  "or relevant",
+  "any relevant",
+  "related discipline",
+  "relevant qualification",
+  "relevant field",
+];
+
+/**
+ * Returns the domain key for a qualification string, or null if no
+ * specific domain is detected (meaning it's a general/broad requirement).
+ * Also returns null for broad postings that explicitly accept "any relevant field".
+ */
+export function getQualificationDomain(qualString?: string | null): string | null {
+  if (!qualString) return null;
+  const q = qualString.toLowerCase();
+
+  // If the job uses a broad/flexible phrase, treat it as domain-agnostic
+  if (GENERIC_QUAL_PHRASES.some((phrase) => q.includes(phrase))) return null;
+
+  for (const [domain, keywords] of Object.entries(DISCIPLINE_DOMAINS)) {
+    if (keywords.some((kw) => q.includes(kw))) return domain;
+  }
+  return null; // no specific domain → treat as general
+}
+
 export function evaluateQualificationMatch(
   jobQualification?: string | null,
   seekerQualification?: string | null
-): { passed: boolean; score: number } {
+): { passed: boolean; score: number; mismatchedDomain?: boolean } {
   if (!jobQualification || !jobQualification.trim()) {
     return { passed: true, score: 100 };
   }
@@ -102,8 +185,25 @@ export function evaluateQualificationMatch(
   const seekerRank = getQualificationRank(seekerQualification);
 
   if (jobRank > 0 && seekerRank > 0) {
+    // 3. Discipline / field-of-study check
+    //    If the job specifies a particular domain AND the seeker's degree
+    //    is in a *different* specific domain, apply a cross-field penalty.
+    const jobDomain = getQualificationDomain(jobQualification);
+    const seekerDomain = getQualificationDomain(seekerQualification);
+
+    const hasDomainMismatch =
+      jobDomain !== null &&
+      seekerDomain !== null &&
+      jobDomain !== seekerDomain;
+
+    if (hasDomainMismatch) {
+      // Cross-discipline: fail the qualification gate and give a low score
+      // so the job is ranked well below genuinely relevant matches.
+      return { passed: false, score: 20, mismatchedDomain: true };
+    }
+
     if (seekerRank >= jobRank) {
-      // Equal or higher qualification (e.g. Master's for a Bachelor's job)
+      // Equal or higher qualification, same/compatible domain
       return { passed: true, score: 100 };
     }
     if (seekerRank === jobRank - 1) {
@@ -203,7 +303,13 @@ export function scoreJobSeekerMatch(
     certMatch.passed;
 
   const reasons: string[] = [];
-  if (!qualificationPassed) reasons.push(`Qualification requirement not met: ${job.qualification}`);
+  if (!qualificationPassed) {
+    if ((qualEval as any).mismatchedDomain) {
+      reasons.push(`Field of study mismatch: your degree is not in the required discipline for this role`);
+    } else {
+      reasons.push(`Qualification level not met — requires: ${job.qualification}`);
+    }
+  }
   if (experienceRequired > 0 && yearsExperience < experienceRequired) {
     reasons.push(`Needs ${experienceRequired} years experience, seeker has ${yearsExperience}`);
   }

@@ -71,8 +71,8 @@ export default function RecommendedJobsClient({
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                     <div className="rounded-2xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                        <p className="font-bold text-slate-900 dark:text-white">Semantic AI Score</p>
-                        <p className="text-sm font-black text-slate-800 dark:text-slate-200">{semanticPct}%</p>
+                        <p className="font-bold text-slate-900 dark:text-white">Qualification Fit</p>
+                        <p className="text-sm font-black text-slate-800 dark:text-slate-200">{Math.round(job.similarity * 100)}%</p>
                     </div>
                     <div className="rounded-2xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                         <p className="font-bold text-slate-900 dark:text-white">Matched Skills</p>
@@ -96,7 +96,7 @@ export default function RecommendedJobsClient({
 
                 {job.hard_match_reasons.length > 0 && (
                     <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50/70 p-3 text-xs text-amber-900 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-200">
-                        <p className="font-bold mb-0.5">Match reasoning</p>
+                        <p className="font-bold mb-0.5">Why you may not meet requirements</p>
                         <p className="leading-relaxed">{job.hard_match_reasons.join(" · ")}</p>
                     </div>
                 )}

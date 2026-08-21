@@ -112,7 +112,7 @@ export class RecommendationService {
       .select('id')
       .eq('status', 'ACTIVE')
       .order('created_at', { ascending: false })
-      .limit(60);
+      .limit(100);
 
     if (activeErr || !activeJobs || activeJobs.length === 0) {
       return [];
@@ -129,19 +129,40 @@ export class RecommendationService {
     const scoredJobs: RecommendedJob[] = jobsList
       .map((job: any) => {
         const structuredMatch = scoreJobSeekerMatch(job, seekerProfile);
+        // similarity = qualification score (0-1), the primary match signal.
+        // hard_match_score = weighted composite (qual 80% + exp 10% + skills 10%).
+        const qualScore = structuredMatch.breakdown.qualification.score / 100;
         return {
           ...job,
-          similarity: structuredMatch.score / 100,
+          similarity: qualScore,
           hard_match_score: structuredMatch.score,
           hard_match_breakdown: structuredMatch.breakdown,
           hard_match_passed: structuredMatch.passed,
           hard_match_reasons: structuredMatch.reasons,
         } as RecommendedJob;
-      })
+      });
+
+    const MIN_RELEVANCE_SCORE = 50;
+
+    // First pass: jobs that actually pass all hard requirements
+    const passedJobs = scoredJobs.filter(
+      (j) => j.hard_match_passed && j.hard_match_score >= MIN_RELEVANCE_SCORE
+    );
+
+    // Second pass fallback: if not enough passed jobs, include high-scoring
+    // failed jobs (e.g. missing experience but right qualification/field)
+    const fallbackJobs =
+      passedJobs.length < 3
+        ? scoredJobs.filter(
+            (j) => !j.hard_match_passed && j.hard_match_score >= MIN_RELEVANCE_SCORE
+          )
+        : [];
+
+    const result = [...passedJobs, ...fallbackJobs]
       .sort((a, b) => b.hard_match_score - a.hard_match_score)
       .slice(0, limit);
 
-    return scoredJobs;
+    return result;
   }
 
   /**
