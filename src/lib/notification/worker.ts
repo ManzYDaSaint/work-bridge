@@ -82,23 +82,40 @@ export async function sendWhatsAppTemplate(to: string, templateId: string, paylo
     const params: Array<{ type: string; text: string }> = [];
 
     if (templateId === "aganyu_job_match_alert_v1") {
+      // Template param order: {{1}}=seekerName, {{2}}=jobTitle, {{3}}=company, {{4}}=matchScore, {{5}}=location
       params.push({ type: "text", text: String(payload.seekerName || "Seeker") });
       params.push({ type: "text", text: String(payload.jobTitle || "Job Opportunity") });
       params.push({ type: "text", text: String(payload.company || "Employer") });
+      params.push({ type: "text", text: `${String(payload.matchScore || 0)}` });
       params.push({ type: "text", text: String(payload.location || "Malawi") });
-      params.push({ type: "text", text: String(payload.jobUrl || "https://aganyu.com") });
+
+      components.push({
+        type: "body",
+        parameters: params
+      });
+
+      // Button: dynamic URL suffix (job ID only, base URL is fixed in template)
+      const buttonParam = payload.jobId || (payload.jobUrl ? payload.jobUrl.split("/").pop() : "");
+      if (buttonParam) {
+        components.push({
+          type: "button",
+          sub_type: "url",
+          index: "0",
+          parameters: [{ type: "text", text: String(buttonParam) }]
+        });
+      }
     } else {
       // Legacy or custom template fallback
       if (payload.jobTitle) params.push({ type: "text", text: String(payload.jobTitle) });
       if (payload.company) params.push({ type: "text", text: String(payload.company) });
       if (payload.matchScore) params.push({ type: "text", text: `${payload.matchScore}%` });
-    }
 
-    if (params.length > 0) {
-      components.push({
-        type: "body",
-        parameters: params
-      });
+      if (params.length > 0) {
+        components.push({
+          type: "body",
+          parameters: params
+        });
+      }
     }
   }
 

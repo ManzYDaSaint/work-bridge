@@ -1,12 +1,7 @@
-import PremiumHubClient from "./PremiumHubClient";
-
-export const metadata = {
-    title: "Analytics, Templates & Settings | Admin Dashboard",
-    description: "Match precision insights, WhatsApp templates, job board health, and system settings."
-};
+import { redirect } from "next/navigation";
 
 export default function PremiumHubPage() {
-    return <PremiumHubClient />;
+    redirect("/dashboard/admin/premium");
 }
 
 export const dynamic = "force-dynamic";

@@ -291,7 +291,11 @@ export const adminService = {
             query = query.or(`email.ilike.%${params.search}%,job_seekers.full_name.ilike.%${params.search}%,employers.company_name.ilike.%${params.search}%`);
         }
         if (params.role && params.role !== "ALL") {
-            query = query.eq("role", params.role);
+            if (params.role === "PREMIUM") {
+                query = query.eq("job_seekers.is_subscribed", true);
+            } else {
+                query = query.eq("role", params.role);
+            }
         }
 
         const { data, error, count } = await query.range(offset, offset + limit - 1);

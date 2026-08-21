@@ -42,11 +42,15 @@ export interface StructuredMatchResult {
   };
 }
 
+/**
+ * New scoring weights — Qualification is the primary gate in Malawian recruitment.
+ * Skills evaluated semantically via Gemini LLM in the orchestrator.
+ */
 export const DEFAULT_MATCH_WEIGHTS: MatchWeights = {
-  qualification: 50,
-  experience: 30,
-  skills: 15,
-  certifications: 5,
+  qualification: 80,
+  experience: 10,
+  skills: 10,
+  certifications: 0,
 };
 
 /**
@@ -99,14 +103,14 @@ export function evaluateQualificationMatch(
 
   if (jobRank > 0 && seekerRank > 0) {
     if (seekerRank >= jobRank) {
-      // Candidate holds equal or higher qualification (e.g. Master's for a Bachelor's job)
+      // Equal or higher qualification (e.g. Master's for a Bachelor's job)
       return { passed: true, score: 100 };
     }
     if (seekerRank === jobRank - 1) {
-      // 1 level below (e.g. Diploma for a Bachelor's job) -> Partial match (40%)
+      // 1 level below (e.g. Diploma for a Bachelor's job) → Partial (40%)
       return { passed: false, score: 40 };
     }
-    // 2+ levels below -> Knockout (0%)
+    // 2+ levels below → Knockout (0%)
     return { passed: false, score: 0 };
   }
 
@@ -149,12 +153,17 @@ export function requiredSkillsMatch(required?: string[] | string | null, seekerS
 
 export function requiredCertificationsMatch(required?: string[] | string | null, seekerCerts?: string[] | string | null) {
   const requiredList = normalizeStringArray(required);
-  const seekerList = normalizeStringArray(seekerCerts);
+  const seekerList = normalizeStringArray(seekerCerts || []);
 
   const missing = requiredList.filter((cert) => !seekerList.includes(cert));
   return { passed: missing.length === 0, missing, required: requiredList, seeker: seekerList };
 }
 
+/**
+ * Rule-based scoring only (no LLM).
+ * Weights: Qualification=80%, Experience=10%, Skills=10%
+ * Skills here are exact/normalized matches — for semantic LLM scoring use scoreJobSeekerMatchWithLLM.
+ */
 export function scoreJobSeekerMatch(
   job: JobRequirements,
   seeker: SeekerProfile,

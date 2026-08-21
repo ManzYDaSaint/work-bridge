@@ -47,6 +47,12 @@ export function calculateProfileStrength(profile: any): ProfileStrengthResult {
             suggestion: "Add your educational background and qualifications.",
         },
         {
+            id: "qualification",
+            label: "Highest Qualification",
+            check: () => !!profile.qualification && profile.qualification.trim().length > 0,
+            suggestion: "Select your highest qualification level (Bachelor's, Master's, Diploma, etc.) for AI job matching.",
+        },
+        {
             id: "portfolio",
             label: "Portfolio Links",
             check: () => Array.isArray(profile.portfolio_links) && profile.portfolio_links.length > 0,

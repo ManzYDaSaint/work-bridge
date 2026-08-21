@@ -27,18 +27,31 @@ export default async function UserManagementPage({
         users = result.users.map(u => {
             const seeker = Array.isArray(u.job_seekers) ? u.job_seekers[0] : u.job_seekers;
             const employer = Array.isArray(u.employers) ? u.employers[0] : u.employers;
+            const subs = seeker?.premium_subscriptions || [];
+            const activeSub = Array.isArray(subs) 
+                ? subs.find((s: any) => s.status === 'ACTIVE' && new Date(s.ends_at) > new Date())
+                : (subs?.status === 'ACTIVE' ? subs : null);
 
             return {
                 id: u.id,
                 email: u.email,
                 role: u.role,
+                plan: u.plan || (activeSub ? 'PREMIUM' : (seeker?.is_subscribed ? 'PREMIUM' : 'FREE')),
                 createdAt: u.created_at,
                 name: u.role === 'JOB_SEEKER'
                     ? seeker?.full_name
                     : (u.role === 'EMPLOYER' ? employer?.company_name : 'Admin'),
                 location: u.role === 'JOB_SEEKER'
                     ? seeker?.location
-                    : employer?.location
+                    : employer?.location,
+                seekerId: seeker?.id || null,
+                phone: seeker?.phone || null,
+                subscription: activeSub ? {
+                    id: activeSub.id,
+                    status: activeSub.status,
+                    endsAt: activeSub.ends_at,
+                    provider: activeSub.payment_provider
+                } : null
             };
         });
         total = result.total;
@@ -63,6 +76,5 @@ export default async function UserManagementPage({
         />
     );
 }
-
 
 export const dynamic = "force-dynamic";

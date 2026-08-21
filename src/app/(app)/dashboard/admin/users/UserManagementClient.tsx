@@ -136,6 +136,7 @@ export default function UserManagementClient({
 
     const tabs = [
         { key: "ALL", label: "All Users", icon: <Users size={14} /> },
+        { key: "PREMIUM", label: "Premium Subscribers", icon: <Crown size={14} className="text-amber-500" /> },
         { key: "JOB_SEEKER", label: "Job Seekers", icon: <UserCheck size={14} /> },
         { key: "EMPLOYER", label: "Employers", icon: <Building2 size={14} /> },
         { key: "ADMIN", label: "Admins", icon: <Shield size={14} /> },
@@ -192,14 +193,22 @@ export default function UserManagementClient({
                     <span className="sm:text-right">Actions</span>
                 </div>
 
-                {initialUsers.length === 0 ? (
-                    <div className="px-6 py-16 text-center">
-                        <Users className="mx-auto text-slate-300 dark:text-slate-700" size={32} />
-                        <p className="mt-4 text-sm font-semibold text-slate-900 dark:text-white">No matching users.</p>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Try broadening the search or clearing the role filter.</p>
-                    </div>
-                ) : (
-                    initialUsers.map((user) => {
+                {(() => {
+                    const displayedUsers = roleFilter === "PREMIUM"
+                        ? initialUsers.filter(u => u.plan === "PREMIUM" || u.plan === "PRO" || u.subscription?.status === "ACTIVE")
+                        : initialUsers;
+
+                    if (displayedUsers.length === 0) {
+                        return (
+                            <div className="px-6 py-16 text-center">
+                                <Users className="mx-auto text-slate-300 dark:text-slate-700" size={32} />
+                                <p className="mt-4 text-sm font-semibold text-slate-900 dark:text-white">No matching users.</p>
+                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Try broadening the search or clearing the role filter.</p>
+                            </div>
+                        );
+                    }
+
+                    return displayedUsers.map((user) => {
                         const isPremium = user.plan === "PREMIUM" || user.plan === "PRO" || user.subscription?.status === "ACTIVE";
 
                         return (
@@ -249,8 +258,8 @@ export default function UserManagementClient({
                                 </div>
                             </div>
                         );
-                    })
-                )}
+                    });
+                })()}
             </div>
             
             {initialTotal > limit && (

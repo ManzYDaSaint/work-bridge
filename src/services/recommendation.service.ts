@@ -27,7 +27,15 @@ export interface RecommendedCandidate extends Record<string, any> {
 
 export class RecommendationService {
   private static async getSupabase() {
-    return createSupabaseServerClient();
+    try {
+      const { getSupabaseAdminClient } = await import("@/lib/supabase-admin");
+      const admin = getSupabaseAdminClient();
+      if (admin) return admin as any;
+      return await createSupabaseServerClient();
+    } catch {
+      const { getSupabaseAdminClient } = await import("@/lib/supabase-admin");
+      return getSupabaseAdminClient() as any;
+    }
   }
 
   /**
@@ -54,75 +62,86 @@ export class RecommendationService {
    * Get personalized job recommendations for a seeker.
    */
   static async getRecommendedJobs(userId: string, options: RecommendationOptions = {}) {
-    const { limit = 10, threshold = 0.3 } = options;
-    const matchCount = Math.max(limit * 2, 50);
+    const { limit = 12 } = options;
 
-    // 1. No quota gate for seekers — recommendations are always unlimited
-    // (Seekers are the product; gating them hurts the talent pool)
-
-    // 2. Get Seeker's embedding and profile fields needed for hard filtering
     const supabase = await this.getSupabase();
     const { data: seeker, error: seekerError } = await supabase
       .from('job_seekers')
-      .select('embedding, skills, experience, qualification, certifications')
+      .select('id, full_name, bio, location, skills, experience, qualification, embedding')
       .eq('id', userId)
       .single();
 
-    if (seekerError || !seeker?.embedding) {
-      throw new Error("Seeker profile embedding not found. Please complete your profile.");
-    }
-
-    // 3. Call pgvector matching function
-    const { data: recommendations, error: recError } = await supabase.rpc('match_jobs_for_seeker', {
-      query_embedding: seeker.embedding,
-      match_threshold: threshold,
-      match_count: matchCount,
-    });
-
-    if (recError) throw recError;
-
-    const candidateJobs = Array.isArray(recommendations) ? recommendations : [];
-    const jobIds = candidateJobs.map((item: any) => item.id);
-
-    if (jobIds.length === 0) {
+    if (seekerError || !seeker) {
       return [];
     }
 
-    const { data: jobs, error: jobsError } = await fetchJobsWithEmployers(supabase, jobIds, { status: "ACTIVE" });
+    let seekerEmbedding = seeker.embedding;
 
-    if (jobsError || !jobs) {
-      throw jobsError || new Error('Failed to fetch candidate jobs');
+    // Auto-generate missing seeker embedding on-the-fly if needed
+    if (!seekerEmbedding) {
+      try {
+        const { constructSeekerDNA, generateEmbedding } = await import("@/lib/embedding-service");
+        const dna = constructSeekerDNA(seeker);
+        seekerEmbedding = await generateEmbedding(dna);
+
+        if (seekerEmbedding) {
+          const { getSupabaseAdminClient } = await import("@/lib/supabase-admin");
+          const adminClient = getSupabaseAdminClient();
+          if (adminClient) {
+            await adminClient
+              .from('job_seekers')
+              .update({ embedding: seekerEmbedding })
+              .eq('id', userId);
+          }
+        }
+      } catch (err: any) {
+        console.warn(`[RecommendationService] On-the-fly embedding generation skipped: ${err.message}`);
+      }
     }
 
     const seekerProfile: SeekerProfile = {
       skills: seeker.skills || [],
       experience: seeker.experience || [],
       qualification: seeker.qualification || null,
-      certifications: seeker.certifications || [],
+      certifications: [],
     };
 
-    const jobMap = new Map((jobs || []).map((job: any) => [job.id, job]));
+    // Fetch active jobs for recommendation scoring
+    const { data: activeJobs, error: activeErr } = await supabase
+      .from('jobs')
+      .select('id')
+      .eq('status', 'ACTIVE')
+      .order('created_at', { ascending: false })
+      .limit(60);
 
-    const filtered: RecommendedJob[] = candidateJobs
-      .map((match: any) => {
-        const job = jobMap.get(match.id);
-        if (!job) return null;
+    if (activeErr || !activeJobs || activeJobs.length === 0) {
+      return [];
+    }
 
+    const jobIds = activeJobs.map((j: any) => j.id);
+    const jobsRes = await fetchJobsWithEmployers(supabase, jobIds, { status: "ACTIVE" });
+    const jobsList = jobsRes.data || [];
+
+    if (jobsList.length === 0) {
+      return [];
+    }
+
+    const scoredJobs: RecommendedJob[] = jobsList
+      .map((job: any) => {
         const structuredMatch = scoreJobSeekerMatch(job, seekerProfile);
         return {
           ...job,
-          similarity: match.similarity || 0,
+          similarity: structuredMatch.score / 100,
           hard_match_score: structuredMatch.score,
           hard_match_breakdown: structuredMatch.breakdown,
           hard_match_passed: structuredMatch.passed,
           hard_match_reasons: structuredMatch.reasons,
         } as RecommendedJob;
       })
-      .filter((item): item is RecommendedJob => item !== null && item.hard_match_passed)
-      .sort((a, b) => b.similarity - a.similarity)
+      .sort((a, b) => b.hard_match_score - a.hard_match_score)
       .slice(0, limit);
 
-    return filtered;
+    return scoredJobs;
   }
 
   /**
@@ -164,7 +183,7 @@ export class RecommendationService {
 
     const { data: seekerRows, error: seekerRowsError } = await supabase
       .from('job_seekers')
-      .select('id, full_name, bio, location, skills, completion, experience, qualification, certifications, seniority_level, employment_status, profile_visibility, avatar_url')
+      .select('id, full_name, bio, location, skills, completion, experience, qualification, seniority_level, employment_status, profile_visibility, avatar_url')
       .in('id', candidateSeekerIds);
 
     if (seekerRowsError) {
@@ -186,11 +205,12 @@ export class RecommendationService {
         const seeker = seekerMap.get(match.id);
         if (!seeker) return null;
 
+        const s = seeker as any;
         const seekerProfile: SeekerProfile = {
-          skills: seeker.skills || [],
-          experience: seeker.experience || [],
-          qualification: seeker.qualification || null,
-          certifications: seeker.certifications || [],
+          skills: s.skills || [],
+          experience: s.experience || [],
+          qualification: s.qualification || null,
+          certifications: [],
         };
 
         const structuredMatch = scoreJobSeekerMatch(job, seekerProfile);

@@ -305,6 +305,65 @@ export default function AdminOverviewClient({
                 </div>
             </SectionCard>
 
+            {/* ── WhatsApp Premium Match Telemetry Card ── */}
+            {(() => {
+                return (
+                    <div className="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-100 dark:border-slate-800/80">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+                                    <Crown className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-base font-bold text-slate-900 dark:text-white">WhatsApp Match Alerts Telemetry</h3>
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse mr-1" /> Active
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                        Three-stage hybrid match engine (Qualification 80% + LLM Skills + Vector Boost)
+                                    </p>
+                                </div>
+                            </div>
+
+                            <Link
+                                href="/dashboard/admin/notifications"
+                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition"
+                            >
+                                Open Approval Queue <ExternalLink size={12} />
+                            </Link>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-5">
+                            <div className="bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/50 p-4 rounded-xl">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">Pending Review</span>
+                                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">Live Queue</p>
+                                <span className="text-[11px] text-slate-500 mt-1 block">Awaiting admin dispatch</span>
+                            </div>
+
+                            <div className="bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/50 p-4 rounded-xl">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Qualification Gate</span>
+                                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">80% Weight</p>
+                                <span className="text-[11px] text-slate-500 mt-1 block">Strict knockout floor</span>
+                            </div>
+
+                            <div className="bg-sky-50/60 dark:bg-sky-950/20 border border-sky-200/60 dark:border-sky-900/50 p-4 rounded-xl">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-sky-700 dark:text-sky-400">Skills Evaluator</span>
+                                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">Gemini LLM</p>
+                                <span className="text-[11px] text-slate-500 mt-1 block">Semantic skill understanding</span>
+                            </div>
+
+                            <div className="bg-violet-50/60 dark:bg-violet-950/20 border border-violet-200/60 dark:border-violet-900/50 p-4 rounded-xl">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-violet-700 dark:text-violet-400">Dispatch Channel</span>
+                                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">WhatsApp API</p>
+                                <span className="text-[11px] text-slate-500 mt-1 block">aganyu_job_match_alert_v1</span>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
             {/* ── Modern Extraction Accuracy Telemetry Card ── */}
             {(() => {
                 const ing = stats?.ingestionMetrics || { avgConfidence: 88, highCount: 15, medCount: 3, repairCount: 1, total: 19 };

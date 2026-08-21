@@ -25,6 +25,7 @@ export default function SeekerOpportunitiesClient({
     allOpportunities: any[];
 }) {
     const [tab, setTab] = useState<"RECOMMENDED" | "ALL">(initialMatches.length > 0 ? "RECOMMENDED" : "ALL");
+    const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
 
     const trackApplyClick = async (opportunityId: string) => {
         try {
@@ -38,6 +39,26 @@ export default function SeekerOpportunitiesClient({
         }
     };
 
+    const filterByCategory = (list: any[]) => {
+        if (selectedCategory === "ALL") return list;
+        return list.filter((item) => {
+            const cat = item.opportunity ? item.opportunity.category : item.category;
+            return cat === selectedCategory;
+        });
+    };
+
+    const filteredMatches = filterByCategory(initialMatches);
+    const filteredAll = filterByCategory(allOpportunities);
+
+    const categories = [
+        { id: "ALL", label: "All Categories" },
+        { id: "SCHOLARSHIP", label: "🎓 Scholarships" },
+        { id: "GRANT", label: "💰 Grants" },
+        { id: "FUNDING", label: "💸 Funding" },
+        { id: "FELLOWSHIP", label: "🌍 Fellowships" },
+        { id: "TRAINING", label: "📚 Training" },
+    ];
+
     return (
         <div className="space-y-6 pb-20">
             <PageHeader
@@ -45,42 +66,60 @@ export default function SeekerOpportunitiesClient({
                 subtitle="Scholarships, grants, funding, and career growth programs matched to your professional profile."
             />
 
-            {/* Tabs */}
-            <div className="flex w-fit rounded-2xl border border-stone-200 bg-stone-50 p-1 dark:border-slate-700/50 dark:bg-slate-800/50">
-                <button
-                    onClick={() => setTab("RECOMMENDED")}
-                    className={`px-4 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all ${
-                        tab === "RECOMMENDED"
-                            ? "bg-white dark:bg-slate-700 text-[#16324f] dark:text-white shadow-sm"
-                            : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-                    }`}
-                >
-                    ✨ Recommended For You ({initialMatches.length})
-                </button>
-                <button
-                    onClick={() => setTab("ALL")}
-                    className={`px-4 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all ${
-                        tab === "ALL"
-                            ? "bg-white dark:bg-slate-700 text-[#16324f] dark:text-white shadow-sm"
-                            : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-                    }`}
-                >
-                    🌐 All Opportunities ({allOpportunities.length})
-                </button>
+            {/* Tabs & Category Filter */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex w-fit rounded-2xl border border-stone-200 bg-stone-50 p-1 dark:border-slate-700/50 dark:bg-slate-800/50">
+                    <button
+                        onClick={() => setTab("RECOMMENDED")}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                            tab === "RECOMMENDED"
+                                ? "bg-white dark:bg-slate-700 text-[#16324f] dark:text-white shadow-sm"
+                                : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                        }`}
+                    >
+                        ✨ Recommended ({initialMatches.length})
+                    </button>
+                    <button
+                        onClick={() => setTab("ALL")}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                            tab === "ALL"
+                                ? "bg-white dark:bg-slate-700 text-[#16324f] dark:text-white shadow-sm"
+                                : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                        }`}
+                    >
+                        🌐 All Opportunities ({allOpportunities.length})
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                    {categories.map((cat) => (
+                        <button
+                            key={cat.id}
+                            onClick={() => setSelectedCategory(cat.id)}
+                            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all shrink-0 ${
+                                selectedCategory === cat.id
+                                    ? "bg-amber-500 text-white shadow-sm"
+                                    : "bg-stone-100 text-slate-600 hover:bg-stone-200 dark:bg-slate-800 dark:text-slate-300"
+                            }`}
+                        >
+                            {cat.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* Content */}
             {tab === "RECOMMENDED" ? (
-                initialMatches.length === 0 ? (
+                filteredMatches.length === 0 ? (
                     <EmptyState
                         icon={Sparkles}
-                        title="No personalized matches yet"
-                        description="Complete your education, certifications, and skills in your profile to trigger instant AI opportunity matches."
-                        action={{ label: "Browse All Opportunities", onClick: () => setTab("ALL") }}
+                        title="No opportunities in this category"
+                        description="Try selecting a different category filter or browse all opportunities."
+                        action={{ label: "Show All Categories", onClick: () => setSelectedCategory("ALL") }}
                     />
                 ) : (
                     <div className="grid gap-4 sm:grid-cols-2">
-                        {initialMatches.map((m) => {
+                        {filteredMatches.map((m) => {
                             const opp = m.opportunity;
                             if (!opp) return null;
                             const emoji = CATEGORY_EMOJI[opp.category] || "✨";
@@ -166,8 +205,16 @@ export default function SeekerOpportunitiesClient({
                     </div>
                 )
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                    {allOpportunities.map((opp) => {
+                filteredAll.length === 0 ? (
+                    <EmptyState
+                        icon={Sparkles}
+                        title="No opportunities found"
+                        description="There are currently no opportunities listed in this category."
+                        action={{ label: "Show All Categories", onClick: () => setSelectedCategory("ALL") }}
+                    />
+                ) : (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        {filteredAll.map((opp) => {
                         const emoji = CATEGORY_EMOJI[opp.category] || "✨";
 
                         return (
@@ -233,8 +280,9 @@ export default function SeekerOpportunitiesClient({
                                 </div>
                             </div>
                         );
-                    })}
-                </div>
+                        })}
+                    </div>
+                )
             )}
         </div>
     );

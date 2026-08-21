@@ -410,9 +410,9 @@ export default function SeekerSubscriptionClient() {
                         <button
                             onClick={handleSendTestAlert}
                             disabled={testingAlert}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-stone-100 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-stone-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300"
                         >
-                            {testingAlert ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Test Alert
+                            {testingAlert ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Test WhatsApp Alert
                         </button>
 
                         <button
@@ -422,6 +422,28 @@ export default function SeekerSubscriptionClient() {
                         >
                             {updatingPrefs ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Save Preferences
                         </button>
+                    </div>
+                </div>
+
+                {/* WhatsApp Connection Telemetry Status Banner */}
+                <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/60 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                                <MessageSquare size={16} />
+                            </div>
+                            <div>
+                                <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                    WhatsApp Dispatch Line
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1" /> Active
+                                    </span>
+                                </p>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                    Linked Number: <strong className="text-slate-700 dark:text-slate-300">{phone || "Not Set"}</strong> · Template: <span className="font-mono text-slate-600 dark:text-slate-400">aganyu_job_match_alert_v1</span>
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

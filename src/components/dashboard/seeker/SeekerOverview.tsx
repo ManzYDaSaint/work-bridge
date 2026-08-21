@@ -200,28 +200,59 @@ export default function SeekerOverview({
                 </div>
 
                 <div className="space-y-6">
-                    <SectionCard title="Profile">
-                        <div className="space-y-2 p-6">
-                            <p className="text-md font-semibold text-slate-900 dark:text-white">{fullName}</p>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">{user?.jobSeeker?.location || "Location not added"}</p>
+                    {/* Enhanced Seeker DNA & Qualification Card */}
+                    <SectionCard title="Professional Profile">
+                        <div className="space-y-4 p-6">
+                            <div className="flex items-center gap-3.5">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 font-black text-lg shrink-0">
+                                    {fullName.slice(0, 2).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-base font-bold text-slate-900 dark:text-white truncate">{fullName}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.jobSeeker?.location || "Location not specified"}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 border-t border-stone-100 dark:border-slate-800 pt-3 text-xs">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-slate-400 font-medium">Qualification:</span>
+                                    <span className="font-bold text-slate-800 dark:text-slate-200 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 px-2.5 py-0.5 rounded-md border border-amber-200/60 dark:border-amber-900/40">
+                                        {user?.jobSeeker?.qualification || "Not set"}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <span className="text-slate-400 font-medium">WhatsApp Status:</span>
+                                    <span className={`font-bold px-2 py-0.5 rounded-md ${user?.jobSeeker?.phone ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-stone-100 text-slate-500"}`}>
+                                        {user?.jobSeeker?.phone ? "Connected" : "Unlinked"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <Link
+                                href="/dashboard/seeker/profile"
+                                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-stone-200 bg-stone-50 py-2.5 text-xs font-bold text-slate-700 hover:bg-stone-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition"
+                            >
+                                Edit Profile &amp; Qualifications →
+                            </Link>
                         </div>
                     </SectionCard>
 
                     <SectionCard title="Refer a Friend">
                         <div className="space-y-4 p-6">
-                            <p className="text-sm text-slate-600 dark:text-slate-400">
-                                Get 5 extra application credits for every friend who signs up and completes their profile using your link.
+                            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                Get extra application priority credits for every friend who signs up and completes their profile using your invite link.
                             </p>
                             {user?.jobSeeker?.publicSlug && (
                                 <button
                                     onClick={() => {
                                         navigator.clipboard.writeText(`${window.location.origin}/register?ref=${user.jobSeeker?.publicSlug}`);
-                                        toast.success("Referral link copied!");
+                                        toast.success("Referral link copied to clipboard!");
                                     }}
-                                    className="flex w-full items-center justify-between gap-2 rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-stone-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                                    className="flex w-full items-center justify-between gap-2 rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-xs font-bold text-slate-700 transition hover:bg-stone-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 active:scale-95"
                                 >
                                     Copy Invite Link
-                                    <Copy size={16} className="text-slate-400" />
+                                    <Copy size={14} className="text-slate-400" />
                                 </button>
                             )}
                         </div>
@@ -230,7 +261,7 @@ export default function SeekerOverview({
                     <SectionCard title="Saved jobs" action={savedJobs.length ? { label: "Open saved", href: "/dashboard/seeker/saved" } : undefined}>
                         <div className="space-y-3 p-6">
                             {savedJobs.length === 0 ? (
-                                <p className="text-sm text-slate-500 dark:text-slate-400">No saved jobs yet.</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">No saved jobs yet.</p>
                             ) : (
                                 savedJobs.slice(0, 4).map((saved) => (
                                     <div key={saved.id} className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
@@ -240,8 +271,8 @@ export default function SeekerOverview({
                                             className="w-full text-left hover:opacity-75 transition-opacity"
                                             disabled={!saved.job}
                                         >
-                                            <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{saved.job?.title || "Job"}</p>
-                                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{(saved.job?.employer as any)?.companyName || (saved.job?.employer as any)?.company_name || "Company"}</p>
+                                            <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{saved.job?.title || "Job"}</p>
+                                            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{(saved.job?.employer as any)?.companyName || (saved.job?.employer as any)?.company_name || "Company"}</p>
                                         </button>
                                         <div className="mt-2 flex justify-end">
                                             {appliedJobIds.has(saved.job?.id || "") ? (

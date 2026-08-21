@@ -17,6 +17,7 @@ interface SavedJobsOverviewProps {
 
 export default function SavedJobsOverview({ savedEntries, appliedJobIds }: SavedJobsOverviewProps) {
     const [selectedJob, setSelectedJob] = useState<ExtendedJob | null>(null);
+    const [searchQuery, setSearchQuery] = useState<string>("");
     const router = useRouter();
 
     const handleRemove = async (jobId: string) => {
@@ -53,22 +54,55 @@ export default function SavedJobsOverview({ savedEntries, appliedJobIds }: Saved
         }
     };
 
+    const filteredEntries = savedEntries.filter(({ job }) => {
+        if (!job) return true;
+        const query = searchQuery.toLowerCase();
+        const title = job.title?.toLowerCase() || "";
+        const company = (job.display_company_name || job.employer?.companyName || "").toLowerCase();
+        return title.includes(query) || company.includes(query);
+    });
+
+    const getUrgencyBadge = (deadline?: string) => {
+        if (!deadline) return null;
+        const now = new Date();
+        const end = new Date(deadline);
+        const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) {
+            return <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">🔴 Closed</span>;
+        }
+        if (diffDays <= 3) {
+            return <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 animate-pulse">⏳ {diffDays} {diffDays === 1 ? "day" : "days"} left</span>;
+        }
+        return <span className="text-[10px] font-medium text-slate-500">Closes in {diffDays}d</span>;
+    };
+
     return (
         <div className="space-y-6 pb-20">
             <PageHeader title="Saved jobs" subtitle="A simple shortlist of roles you want to revisit." />
 
-            {savedEntries.length === 0 ? (
+            <div className="flex justify-end">
+                <input
+                    type="text"
+                    placeholder="Search saved jobs..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full sm:w-72 rounded-2xl border border-stone-200/80 bg-white px-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:border-amber-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                />
+            </div>
+
+            {filteredEntries.length === 0 ? (
                 <div className="rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
-                    <EmptyState icon={Bookmark} title="No saved jobs" description="Use the public board to bookmark roles for later." action={{ label: "Browse jobs", href: "/jobs" }} iconColor="text-[#16324f]" />
+                    <EmptyState icon={Bookmark} title="No saved jobs found" description="Bookmark roles from recommendations or the job board to revisit later." action={{ label: "Browse jobs", href: "/jobs" }} iconColor="text-[#16324f]" />
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
                     <div className="grid grid-cols-1 gap-2 border-b border-stone-200/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:border-slate-800 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]">
-                        <span>Role</span>
-                        <span>State</span>
+                        <span>Role &amp; Details</span>
+                        <span>Application Status</span>
                         <span className="sm:text-right">Action</span>
                     </div>
-                    {savedEntries.map(({ id, job_id, job }) => (
+                    {filteredEntries.map(({ id, job_id, job }) => (
                         <div key={id} className="grid grid-cols-1 gap-4 border-b border-stone-200/70 px-4 py-4 last:border-b-0 dark:border-slate-800 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] sm:items-center">
                             <button
                                 type="button"
@@ -76,10 +110,13 @@ export default function SavedJobsOverview({ savedEntries, appliedJobIds }: Saved
                                 className={cn("min-w-0 text-left", !job && "cursor-default")}
                                 disabled={!job}
                             >
-                                <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
-                                    {job?.title || "Job no longer active"}
-                                </p>
-                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                <div className="flex items-center gap-2">
+                                    <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
+                                        {job?.title || "Job no longer active"}
+                                    </p>
+                                    {job && getUrgencyBadge((job as any).deadline)}
+                                </div>
+                                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                                     {job ? `${job.display_company_name || job.employer?.companyName || "Company"} · ${job.location}` : "This position has been filled or removed."}
                                 </p>
                             </button>
@@ -95,13 +132,13 @@ export default function SavedJobsOverview({ savedEntries, appliedJobIds }: Saved
                                 )}
                             </div>
                             <div className="flex items-center gap-2 sm:justify-end">
-                                {job && !appliedJobIds.has(job.id) && (
-                                    <button onClick={() => setSelectedJob(job)} className="text-sm font-semibold text-[#16324f] hover:underline dark:text-slate-200">
-                                        View
+                                {job && (
+                                    <button onClick={() => setSelectedJob(job)} className="text-xs font-bold text-[#16324f] hover:underline dark:text-slate-200">
+                                        {appliedJobIds.has(job.id) ? "View application" : "Apply now →"}
                                     </button>
                                 )}
-                                <button onClick={() => handleRemove(job_id)} className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-red-600 dark:border-slate-700 dark:text-slate-300">
-                                    <Trash2 size={16} />
+                                <button onClick={() => handleRemove(job_id)} className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:bg-stone-100 hover:text-rose-600 dark:border-slate-700 dark:text-slate-300 transition">
+                                    <Trash2 size={15} />
                                 </button>
                             </div>
                         </div>

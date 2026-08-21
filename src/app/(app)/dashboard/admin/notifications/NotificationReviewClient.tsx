@@ -319,6 +319,30 @@ export default function NotificationReviewClient() {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* AI Match Reasoning & Scoring Breakdown */}
+                                    {item.payload?._scoring && (
+                                        <div className="mt-3 rounded-xl border border-amber-200/80 bg-amber-50/50 p-3.5 dark:border-amber-900/40 dark:bg-amber-950/20">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">
+                                                    <Sparkles size={14} /> Stage 2: Gemini LLM Skills Evaluation
+                                                </div>
+                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                                    {item.payload._scoring.llmSkillScore}/100 Score ({item.payload._scoring.llmFromGemini ? "Gemini AI" : "Rule Fallback"})
+                                                </span>
+                                            </div>
+                                            {item.payload._scoring.llmReasoning && (
+                                                <p className="mt-1.5 text-xs text-slate-700 dark:text-slate-300 italic">
+                                                    &ldquo;{item.payload._scoring.llmReasoning}&rdquo;
+                                                </p>
+                                            )}
+                                            <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-slate-500 border-t border-amber-200/50 pt-2 dark:border-amber-900/30">
+                                                <span><strong className="text-slate-700 dark:text-slate-300">Qual (80%):</strong> {item.payload._scoring.qualScore}</span>
+                                                <span><strong className="text-slate-700 dark:text-slate-300">Exp (10%):</strong> {item.payload._scoring.expScore}</span>
+                                                <span><strong className="text-slate-700 dark:text-slate-300">Vector Boost:</strong> {item.payload._scoring.vectorBoost > 0 ? `+${item.payload._scoring.vectorBoost}` : item.payload._scoring.vectorBoost} pts ({item.payload._scoring.vectorSimilarity}%)</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })
