@@ -123,12 +123,8 @@ export async function POST(request: Request) {
                 await supabase.from("job_seekers").update({ phone: phoneCheck.formatted }).eq("id", seeker.id);
             }
 
-            const getPlanTotal = (months: number) => {
-                if (months === 3) return 2700;
-                if (months === 6) return 5100;
-                return 1000 * months;
-            };
-            const totalAmount = getPlanTotal(Number(durationMonths));
+            const amountPerMonth = 1000; // MWK 1,000 / month
+            const totalAmount = amountPerMonth * Number(durationMonths);
 
             const provider = new PayChanguProvider();
             const checkout = await provider.initiatePayment(seeker.id, totalAmount);
@@ -200,23 +196,15 @@ export async function POST(request: Request) {
             }
 
             if (subscriptionId) {
-                const { data: existingPayment } = await supabase
-                    .from("subscription_payments")
-                    .select("id")
-                    .eq("provider_reference", reference)
-                    .maybeSingle();
-
-                if (!existingPayment) {
-                    const { error: paymentErr } = await supabase.from("subscription_payments").insert({
-                        subscription_id: subscriptionId,
-                        amount: amount,
-                        currency: "MWK",
-                        status: "PAID",
-                        provider_reference: reference
-                    });
-                    if (paymentErr) {
-                        console.error("[Subscription API] Failed to insert subscription_payments record:", paymentErr);
-                    }
+                const { error: paymentErr } = await supabase.from("subscription_payments").insert({
+                    subscription_id: subscriptionId,
+                    amount: amount,
+                    currency: "MWK",
+                    status: "PAID",
+                    provider_reference: reference
+                });
+                if (paymentErr) {
+                    console.error("[Subscription API] Failed to insert subscription_payments record:", paymentErr);
                 }
             }
 

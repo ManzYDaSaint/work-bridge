@@ -21,7 +21,7 @@ const adminNavGroups: NavGroup[] = [
         title: "Premium",
         items: [
             { label: "Subscriptions", href: "/dashboard/admin/premium", icon: Crown },
-            { label: "Match Approvals", href: "/dashboard/admin/notifications", icon: ShieldCheck },
+            { label: "Analytics Insights", href: "/dashboard/admin/matchanalytics", icon: BarChart3 },
         ]
     },
     {

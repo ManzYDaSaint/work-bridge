@@ -1,7 +1,12 @@
-import { redirect } from "next/navigation";
+import MatchAnalyticsClient from "./PremiumHubClient";
+
+export const metadata = {
+    title: "Premium Analytics Hub | Admin Dashboard",
+    description: "Monitor and manage all Aganyu Premium job seeker analytics."
+};
 
 export default function PremiumHubPage() {
-    redirect("/dashboard/admin/premium");
+    return <MatchAnalyticsClient />;
 }
 
 export const dynamic = "force-dynamic";
