@@ -3,13 +3,14 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { triggerDelayedFreeMatchNotifications } from "@/lib/match-notification-service";
 import { emitSystemEvent } from "@/lib/mission-control";
 
-const CRON_SECRET = process.env.CRON_SECRET || "local-cron-secret";
-
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
+    if (
+        process.env.CRON_SECRET &&
+        authHeader !== `Bearer ${process.env.CRON_SECRET}`
+    ) {
         return new NextResponse("Unauthorized", { status: 401 });
     }
 

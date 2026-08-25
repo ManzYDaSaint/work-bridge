@@ -41,12 +41,19 @@ let usageState = {
 function buildPrompt(
     rawText: string,
     existingFields: Partial<StructuredJobFields>,
-    missingFields: string[]
+    missingFields: string[],
+    feedbackExamples?: { fieldName: string; originalValue: any; correctedValue: any }[]
 ): string {
     const existingStr = Object.entries(existingFields)
         .filter(([, v]) => v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0))
         .map(([k, v]) => `  ${k}: ${JSON.stringify(v)}`)
         .join('\n');
+
+    let feedbackStr = '';
+    if (feedbackExamples && feedbackExamples.length > 0) {
+        feedbackStr = '\nRECENT HUMAN CORRECTIONS FOR THIS SOURCE (Learn from these past edits):\n' +
+            feedbackExamples.map(e => `  - Field '${e.fieldName}': Corrected from ${JSON.stringify(e.originalValue)} to ${JSON.stringify(e.correctedValue)}`).join('\n') + '\n';
+    }
 
     // Truncate raw text to avoid excessive token usage
     const truncated = rawText.length > 3000 ? rawText.slice(0, 3000) + '...[truncated]' : rawText;
@@ -55,7 +62,7 @@ function buildPrompt(
 
 ALREADY EXTRACTED (do not change these):
 ${existingStr}
-
+${feedbackStr}
 MISSING FIELDS TO FILL: ${missingFields.join(', ')}
 
 RAW JOB TEXT:
@@ -166,7 +173,8 @@ export async function enrichWithGemini(
     rawText: string,
     existingFields: Partial<StructuredJobFields>,
     missingFields: string[],
-    contentHash: string
+    contentHash: string,
+    feedbackExamples?: { fieldName: string; originalValue: any; correctedValue: any }[]
 ): Promise<{ result: GeminiEnrichmentResult | null; tokensUsed: number; fromCache: boolean }> {
 
     // 1. Check cache first
@@ -194,7 +202,7 @@ export async function enrichWithGemini(
         return { result: null, tokensUsed: 0, fromCache: false };
     }
 
-    const prompt = buildPrompt(rawText, existingFields, missingFields);
+    const prompt = buildPrompt(rawText, existingFields, missingFields, feedbackExamples);
 
     // 4. Call Gemini with retry
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {

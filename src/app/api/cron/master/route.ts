@@ -27,6 +27,7 @@ export async function GET(req: Request) {
         'prune-notifications',
         'process-ingestion',
         'process-opportunity-ingestion',
+        'check-source-health',
         'subscriptions-expiry',
         'cleanup-system'
     ];

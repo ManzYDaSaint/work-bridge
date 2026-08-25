@@ -119,6 +119,19 @@ export async function runJobMatchingOrchestration() {
       // Rule + LLM combined base score (max 100)
       const baseScore = Math.round(qualComponent + expComponent + skillsComponent);
 
+      // Experience Gap Penalty Cap: Prevent entry-level candidates from matching senior roles
+      let adjustedBaseScore = baseScore;
+      const minYearsReq = job.minimum_years_experience || 0;
+      const actualYears = ruleMatch.breakdown.experience.actual || 0;
+      
+      if (minYearsReq >= 5 && actualYears < 2) {
+        // Senior/Management role requiring 5+ years, candidate has < 2 years -> Cap at 40 (No Alert)
+        adjustedBaseScore = Math.min(adjustedBaseScore, 40);
+      } else if (minYearsReq >= 3 && actualYears === 0) {
+        // Mid-level role requiring 3+ years, candidate has 0 years -> Cap at 45 (No Alert)
+        adjustedBaseScore = Math.min(adjustedBaseScore, 45);
+      }
+
       // ─────────────────────────────────────────────────────────────
       // STAGE 3 — Vector Embedding Boost (±10 pts modifier)
       // Applied last — fine-tunes ranking but cannot override qual gate
@@ -126,7 +139,7 @@ export async function runJobMatchingOrchestration() {
       const vectorSimilarity = match.similarity || 0; // 0.0–1.0
       const vectorBoost = Math.round((vectorSimilarity - 0.5) * 20); // -10 to +10 pts
 
-      const finalScore = Math.max(0, Math.min(100, baseScore + vectorBoost));
+      const finalScore = Math.max(0, Math.min(100, adjustedBaseScore + vectorBoost));
 
       console.log(
         `[Orchestrator] ${seeker.full_name} ↔ "${job.title}": ` +
@@ -143,8 +156,20 @@ export async function runJobMatchingOrchestration() {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aganyu.com";
       const seekerFirstName = seeker.full_name ? seeker.full_name.trim().split(" ")[0] : "Seeker";
 
-      // ── Queue WhatsApp alert if score meets threshold ────────────
+      // ── Queue WhatsApp alert if score meets threshold & not already sent ──
       if (finalScore >= 50) {
+        const { data: existingNotif } = await supabase
+          .from("notification_queue")
+          .select("id")
+          .eq("seeker_id", seeker.id)
+          .eq("job_id", job.id)
+          .maybeSingle();
+
+        if (existingNotif) {
+          console.log(`[Orchestrator] Alert already queued/sent for seeker ${seeker.id} and job ${job.id}. Skipping.`);
+          continue;
+        }
+
         await supabase.from("notification_queue").insert({
           seeker_id: seeker.id,
           job_id: job.id,

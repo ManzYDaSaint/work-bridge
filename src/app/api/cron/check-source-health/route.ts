@@ -4,9 +4,17 @@ import { emitSystemEvent } from "@/lib/mission-control";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
+    const authHeader = req.headers.get("authorization");
+    if (
+        process.env.CRON_SECRET &&
+        authHeader !== `Bearer ${process.env.CRON_SECRET}`
+    ) {
+        return new NextResponse("Unauthorized", { status: 401 });
+    }
+
     const supabase = getSupabaseAdminClient();
-    if (!supabase) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!supabase) return NextResponse.json({ error: "Database admin client unavailable" }, { status: 500 });
 
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 

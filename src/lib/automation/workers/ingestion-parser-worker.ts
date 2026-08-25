@@ -15,6 +15,7 @@ import { analyzeJobIntelligence } from "@/lib/ingestion/job-intelligence";
 import { checkForDuplicates } from "@/lib/ingestion/duplicate-detector";
 import { deriveApplicationMethod } from "@/lib/ingestion/types";
 import { validateExtractedJob } from "@/lib/ingestion/validation";
+import { getSourceFeedbackContext } from "@/lib/ingestion/feedback-loop";
 import { emitSystemEvent } from "@/lib/mission-control";
 import { IngestionEvents } from "@/lib/ingestion/ingestion-events";
 
@@ -117,11 +118,14 @@ export const JobIngestionParserWorker = {
                     const crypto = await import('crypto');
                     const normalizedHash = crypto.createHash('sha256').update(normalizedContent).digest('hex');
 
+                    const feedbackCtx = await getSourceFeedbackContext(payload.sourceId);
+
                     const aiResult = await enrichWithGemini(
                         rawPayload.payload,
                         finalJobFields,
                         missingFields,
-                        normalizedHash
+                        normalizedHash,
+                        feedbackCtx?.correctionExamples
                     );
 
                     if (aiResult.result) {
@@ -253,19 +257,15 @@ export const JobIngestionParserWorker = {
             .eq('key', 'ingestion_require_admin_approval')
             .maybeSingle();
 
-        const requireAdminApproval = settingApproval ? (settingApproval.value as boolean) : true;
-
-        // Determine queue status
+        // Determine queue status — parsed jobs are placed directly into the Verification Queue (PENDING_REVIEW) for admin review
         let queueStatus: 'PENDING_REVIEW' | 'APPROVED' | 'DUPLICATE' | 'NEEDS_MORE_DATA' = 'PENDING_REVIEW';
         if (dupCheck.isDuplicate) {
             queueStatus = 'DUPLICATE';
         } else if (validation.decision === 'NEEDS_MORE_DATA') {
             queueStatus = 'NEEDS_MORE_DATA';
-        } else if (!requireAdminApproval && source?.auto_publish && overallConfidence >= 85 && intel.scam_risk_score < 30) {
-            queueStatus = 'APPROVED';
         }
 
-        // 7. Insert into ingested_jobs_queue
+        // 7. Insert into ingested_jobs_queue (Verification Queue)
         const { data: queueItem, error: queueErr } = await supabase
             .from('ingested_jobs_queue')
             .insert({
@@ -318,20 +318,11 @@ export const JobIngestionParserWorker = {
 
         if (queueErr) throw queueErr;
 
-        // Update raw payload status
+        // Update raw payload status to PARSED immediately
         await supabase
             .from('ingested_raw_payloads')
             .update({ processing_status: 'PARSED', parsed_at: new Date().toISOString() })
             .eq('id', rawPayload.id);
-
-        // Auto-publish if approved
-        if (queueStatus === 'APPROVED' && queueItem) {
-            await supabase.from('automation_tasks').insert({
-                plugin_id: 'job-ingestion-publisher',
-                payload: { queueItemId: queueItem.id },
-                priority: 'HIGH',
-            });
-        }
 
         await emitSystemEvent({
             category: 'AUTOMATION',

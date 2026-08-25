@@ -6,13 +6,14 @@ import { emitSystemEvent } from "@/lib/mission-control";
 
 // Vercel Cron routes can be triggered by sending an authorization header
 // or simply allowing public execution with a secret. For security:
-const CRON_SECRET = process.env.CRON_SECRET || "local-cron-secret";
-
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
+    if (
+        process.env.CRON_SECRET &&
+        authHeader !== `Bearer ${process.env.CRON_SECRET}`
+    ) {
         return new NextResponse("Unauthorized", { status: 401 });
     }
 

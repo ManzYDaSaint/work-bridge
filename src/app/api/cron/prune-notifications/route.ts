@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { emitSystemEvent } from "@/lib/mission-control";
 
 export const maxDuration = 60;
@@ -13,7 +13,10 @@ export async function GET(req: Request) {
     }
 
     try {
-        const supabase = await createSupabaseServerClient();
+        const supabase = getSupabaseAdminClient();
+        if (!supabase) {
+            return NextResponse.json({ success: false, error: "Database admin client unavailable" }, { status: 500 });
+        }
         
         // Calculate the date 30 days ago
         const thirtyDaysAgo = new Date();
