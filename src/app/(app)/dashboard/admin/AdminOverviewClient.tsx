@@ -262,20 +262,27 @@ export default function AdminOverviewClient({
                 <StatCard label="Applications" value={stats?.totalApplications || 0} icon={BarChart3} iconBg="bg-rose-50 dark:bg-rose-950/30" iconColor="text-rose-600" />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+                <StatCard
+                    label="Gross Revenue"
+                    value={`MWK ${((stats?.paidSubscriptionsCount || stats?.premiumEmployers || 0) * 1000).toLocaleString()}`}
+                    icon={Crown}
+                    iconBg="bg-emerald-50 dark:bg-emerald-950/30"
+                    iconColor="text-emerald-600"
+                />
+                <StatCard
+                    label="Premium seekers"
+                    value={stats?.premiumSeekers || 0}
+                    icon={Crown}
+                    iconBg="bg-amber-50 dark:bg-amber-950/30"
+                    iconColor="text-amber-600"
+                />
                 <StatCard
                     label="Premium employers"
                     value={stats?.premiumEmployers || 0}
                     icon={Crown}
                     iconBg="bg-violet-50 dark:bg-violet-950/30"
                     iconColor="text-violet-600"
-                />
-                <StatCard
-                    label="Free employers"
-                    value={Math.max((stats?.totalEmployers || 0) - (stats?.premiumEmployers || 0), 0)}
-                    icon={Users}
-                    iconBg="bg-slate-100 dark:bg-slate-800"
-                    iconColor="text-slate-500"
                 />
                 <StatCard
                     label="Signups (30d)"

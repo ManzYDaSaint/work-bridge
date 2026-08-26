@@ -55,12 +55,55 @@ export async function GET() {
             };
         });
 
+        // Fetch subscription payments ledger if table exists
+        let payments: any[] = [];
+        try {
+            const { data: payData } = await supabase
+                .from("subscription_payments")
+                .select("id, subscription_id, amount, currency, status, provider_reference, created_at")
+                .order("created_at", { ascending: false });
+            payments = payData || [];
+        } catch (e) {
+            console.warn("[api/admin/premium] subscription_payments fetch fallback:", e);
+        }
+
         const active = allSubs.filter(s => s.status === "ACTIVE" && new Date(s.ends_at) > new Date());
         const expiringSoon = active.filter(s => new Date(s.ends_at) <= new Date(sevenDaysFromNow));
         const expired = allSubs.filter(s => s.status === "ACTIVE" && new Date(s.ends_at) <= new Date());
         const cancelled = allSubs.filter(s => s.status === "CANCELLED");
         const adminGranted = allSubs.filter(s => s.payment_provider === "ADMIN_MANUAL");
         const paidSubs = allSubs.filter(s => s.payment_provider && s.payment_provider !== "ADMIN_MANUAL");
+
+        // Calculate Revenue Telemetry
+        const paidPayments = payments.filter(p => p.status === "PAID");
+        const totalRevenueFromPayments = paidPayments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+        
+        // Fallback revenue calculation if ledger records were registered before subscription_payments table was attached
+        const estimatedPaidSubsCount = paidSubs.length;
+        const estimatedRevenueFromSubs = estimatedPaidSubsCount * 1000; // MWK 1,000 / month standard rate
+        
+        // Dynamic combined total gross revenue (ledger takes priority if populated)
+        const totalGrossRevenue = totalRevenueFromPayments > 0 ? totalRevenueFromPayments : estimatedRevenueFromSubs;
+        
+        // Estimated Monthly Recurring Revenue (MRR) from active paid subscriptions
+        const activePaidCount = active.filter(s => s.payment_provider && s.payment_provider !== "ADMIN_MANUAL").length;
+        const mrr = activePaidCount * 1000;
+
+        // Payment breakdown by provider
+        const providerBreakdown = allSubs.reduce((acc: Record<string, number>, s) => {
+            const key = s.payment_provider || "UNSPECIFIED";
+            acc[key] = (acc[key] || 0) + 1;
+            return acc;
+        }, {});
+
+        // Attach recent transactions enriched with seeker metadata
+        const recentTransactions = paidPayments.map(p => {
+            const sub = allSubs.find(s => s.id === p.subscription_id);
+            return {
+                ...p,
+                seeker: sub?.job_seekers || null
+            };
+        });
 
         return NextResponse.json({
             stats: {
@@ -70,11 +113,16 @@ export async function GET() {
                 cancelled: cancelled.length,
                 adminGranted: adminGranted.length,
                 paidSubs: paidSubs.length,
+                totalGrossRevenue,
+                mrr,
+                currency: "MWK",
+                providerBreakdown
             },
             active,
             expiringSoon,
             expired,
             cancelled,
+            recentTransactions,
             all: allSubs
         });
     } catch (error: any) {
