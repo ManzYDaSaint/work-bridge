@@ -41,41 +41,46 @@ export async function runJobMatchingOrchestration() {
 
   if (!jobs || jobs.length === 0) return;
 
+  // ── Fetch all active premium subscriptions ────────────────────────
+  const nowIso = new Date().toISOString();
+  const { data: activeSubs } = await supabase
+    .from("premium_subscriptions")
+    .select("seeker_id")
+    .eq("status", "ACTIVE")
+    .gt("ends_at", nowIso);
+
+  if (!activeSubs || activeSubs.length === 0) {
+    console.log("[Orchestrator] No active premium subscribers found.");
+    return;
+  }
+
+  const premiumSeekerIds = activeSubs.map((s: any) => s.seeker_id);
+
+  // ── Fetch detailed seeker profiles & preferences for active premium subscribers ─
+  const { data: seekers } = await supabase
+    .from("job_seekers")
+    .select("id, user_id, full_name, qualification, skills, experience, location, phone, notification_preferences(whatsapp_enabled, min_match_score)")
+    .in("id", premiumSeekerIds);
+
+  if (!seekers || seekers.length === 0) return;
+
   for (const job of jobs) {
-    if (!job.embedding) continue;
+    // Stage 1a: Vector similarity score lookup (if embedding exists)
+    let vectorMatchMap = new Map<string, number>();
 
-    // ── Stage 1a: Candidate retrieval via Vector Similarity ─────────
-    const { data: vectorMatches } = await supabase.rpc("match_candidates", {
-      query_embedding: job.embedding,
-      match_threshold: 0.2,   // wide net — LLM + rules will filter precisely
-      match_count: 50
-    });
+    if (job.embedding) {
+      const { data: vectorMatches } = await supabase.rpc("match_candidates", {
+        query_embedding: job.embedding,
+        match_threshold: 0.15,
+        match_count: 200
+      });
 
-    if (!vectorMatches || vectorMatches.length === 0) continue;
+      if (vectorMatches && Array.isArray(vectorMatches)) {
+        vectorMatches.forEach((m: any) => vectorMatchMap.set(m.id, m.similarity || 0));
+      }
+    }
 
-    const candidateIds = vectorMatches.map((m: any) => m.id);
-
-    // ── Fetch detailed seeker profiles ──────────────────────────────
-    const { data: seekers } = await supabase
-      .from("job_seekers")
-      .select("id, user_id, full_name, qualification, skills, experience")
-      .in("id", candidateIds);
-
-    if (!seekers || seekers.length === 0) continue;
-
-    for (const match of vectorMatches) {
-      const seeker = seekers.find((s: any) => s.id === match.id);
-      if (!seeker) continue;
-
-      // ── Premium gate: only notify premium subscribers ────────────
-      const { data: sub } = await supabase
-        .from("premium_subscriptions")
-        .select("id")
-        .eq("seeker_id", seeker.id)
-        .eq("status", "ACTIVE")
-        .single();
-
-      if (!sub) continue;
+    for (const seeker of seekers) {
 
       // ─────────────────────────────────────────────────────────────
       // STAGE 1 — Rule-Based: Qualification (80%) + Experience (10%)
@@ -136,8 +141,8 @@ export async function runJobMatchingOrchestration() {
       // STAGE 3 — Vector Embedding Boost (±10 pts modifier)
       // Applied last — fine-tunes ranking but cannot override qual gate
       // ─────────────────────────────────────────────────────────────
-      const vectorSimilarity = match.similarity || 0; // 0.0–1.0
-      const vectorBoost = Math.round((vectorSimilarity - 0.5) * 20); // -10 to +10 pts
+      const vectorSimilarity = vectorMatchMap.get(seeker.id) || 0; // 0.0–1.0
+      const vectorBoost = vectorSimilarity > 0 ? Math.round((vectorSimilarity - 0.5) * 20) : 0; // -10 to +10 pts
 
       const finalScore = Math.max(0, Math.min(100, adjustedBaseScore + vectorBoost));
 
@@ -156,8 +161,27 @@ export async function runJobMatchingOrchestration() {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aganyu.com";
       const seekerFirstName = seeker.full_name ? seeker.full_name.trim().split(" ")[0] : "Seeker";
 
-      // ── Queue WhatsApp alert if score meets threshold & not already sent ──
-      if (finalScore >= 50) {
+      // ── Honor candidate custom notification preferences ──
+      const userPrefs = Array.isArray(seeker.notification_preferences)
+        ? seeker.notification_preferences[0]
+        : seeker.notification_preferences;
+
+      const whatsappEnabled = userPrefs?.whatsapp_enabled !== false; // default true
+      const requiredThreshold = userPrefs?.min_match_score || 50; // default 50%
+
+      if (!whatsappEnabled) {
+        console.log(`[Orchestrator] Seeker ${seeker.id} disabled WhatsApp alerts. Skipping.`);
+        continue;
+      }
+
+      if (!seeker.phone) {
+        console.log(`[Orchestrator] Seeker ${seeker.id} has no phone number on file. Skipping.`);
+        continue;
+      }
+
+      // ── Queue WhatsApp alert if score meets candidate threshold & not already sent ──
+      if (finalScore >= requiredThreshold) {
+        // 1. Check if job alert already sent to seeker
         const { data: existingNotif } = await supabase
           .from("notification_queue")
           .select("id")
@@ -167,6 +191,19 @@ export async function runJobMatchingOrchestration() {
 
         if (existingNotif) {
           console.log(`[Orchestrator] Alert already queued/sent for seeker ${seeker.id} and job ${job.id}. Skipping.`);
+          continue;
+        }
+
+        // 2. Cooldown Rate Limit: Max 3 WhatsApp job alerts per seeker per 24 hours
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { count: recentCount } = await supabase
+          .from("notification_queue")
+          .select("id", { count: "exact", head: true })
+          .eq("seeker_id", seeker.id)
+          .gt("created_at", twentyFourHoursAgo);
+
+        if (recentCount && recentCount >= 3) {
+          console.log(`[Orchestrator] Seeker ${seeker.id} reached 24h WhatsApp alert limit (${recentCount}/3). Skipping.`);
           continue;
         }
 

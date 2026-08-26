@@ -57,7 +57,7 @@ export async function triggerMatchNotifications(jobId: string) {
     const seekerIds = matches.map((m: any) => m.id);
     const { data: seekers } = await supabase
       .from("job_seekers")
-      .select("id, user_id, skills, experience, qualification, certifications, user:users(plan)")
+      .select("id, user_id, skills, experience, qualification, certifications")
       .in("id", seekerIds);
       
     if (!seekers) return;
@@ -77,9 +77,19 @@ export async function triggerMatchNotifications(jobId: string) {
       return;
     }
 
-    // Monetization: Premium users get notifications instantly. Free users get delayed notification.
-    const premiumSeekers = filteredSeekers.filter((s: any) => s.user?.plan === "PREMIUM" || s.user?.plan === "PRO");
-    const freeSeekers = filteredSeekers.filter((s: any) => !s.user?.plan || s.user?.plan === "FREE");
+    // Fetch active premium subscriptions for candidates
+    const nowIso = new Date().toISOString();
+    const { data: activeSubs } = await supabase
+      .from("premium_subscriptions")
+      .select("seeker_id")
+      .in("seeker_id", seekerIds)
+      .eq("status", "ACTIVE")
+      .gt("ends_at", nowIso);
+
+    const activePremiumSeekerIds = new Set((activeSubs || []).map((sub: any) => sub.seeker_id));
+
+    const premiumSeekers = filteredSeekers.filter((s: any) => activePremiumSeekerIds.has(s.id));
+    const freeSeekers = filteredSeekers.filter((s: any) => !activePremiumSeekerIds.has(s.id));
 
     // Instantly notify premium seekers
     const notifications = premiumSeekers.map((seeker: any) =>
@@ -153,12 +163,22 @@ export async function triggerDelayedFreeMatchNotifications(jobId: string) {
         const seekerIds = matches.map((m: any) => m.id);
         const { data: seekers } = await supabase
             .from("job_seekers")
-            .select("id, user_id, skills, experience, qualification, certifications, user:users(plan)")
+            .select("id, user_id, skills, experience, qualification, certifications")
             .in("id", seekerIds);
         if (!seekers) return;
 
+        const nowIso = new Date().toISOString();
+        const { data: activeSubs } = await supabase
+            .from("premium_subscriptions")
+            .select("seeker_id")
+            .in("seeker_id", seekerIds)
+            .eq("status", "ACTIVE")
+            .gt("ends_at", nowIso);
+
+        const activePremiumSeekerIds = new Set((activeSubs || []).map((sub: any) => sub.seeker_id));
+
         const freeSeekers = seekers
-            .filter((s: any) => !s.user?.plan || s.user?.plan === "FREE")
+            .filter((s: any) => !activePremiumSeekerIds.has(s.id))
             .filter((seeker: any) => {
                 const seekerProfile: SeekerProfile = {
                     skills: seeker.skills || [],

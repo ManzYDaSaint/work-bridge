@@ -90,6 +90,19 @@ export const PATCH = withAudit(async (request: Request) => {
 
         await jobService.updateJob(jobId, { status });
 
+        if (status === "ACTIVE") {
+            const { runJobMatchingOrchestration } = await import("@/lib/notification/orchestrator");
+            const { triggerMatchNotifications } = await import("@/lib/match-notification-service");
+            
+            // Fire instant matching routines asynchronously
+            triggerMatchNotifications(jobId).catch((err) =>
+                console.error("[Admin Job PATCH] Instant notification error:", err)
+            );
+            runJobMatchingOrchestration().catch((err) =>
+                console.error("[Admin Job PATCH] Orchestration error:", err)
+            );
+        }
+
         await emitSystemEvent({
             category: "JOB",
             severity: "SUCCESS",
