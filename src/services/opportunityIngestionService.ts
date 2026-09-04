@@ -13,7 +13,12 @@ import crypto from "crypto";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getConnector } from "@/lib/ingestion/connectors";
 import { parseOpportunityWithGemini } from "@/lib/ingestion/gemini-opportunity-service";
-import { createOpportunity, publishOpportunity, detectDuplicateOpportunity } from "@/services/opportunityService";
+import {
+    createOpportunity,
+    publishOpportunity,
+    detectDuplicateOpportunity,
+    type OpportunitySource,
+} from "@/services/opportunityService";
 import { emitSystemEvent } from "@/lib/mission-control";
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -212,11 +217,127 @@ export async function getStagedOpportunitiesQueue(status = "PENDING_REVIEW") {
     return data || [];
 }
 
+export async function getStagedOpportunityById(id: string) {
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from("ingested_opportunities_queue")
+        .select(`
+            *,
+            source:opportunity_ingestion_sources(name, slug)
+        `)
+        .eq("id", id)
+        .maybeSingle();
+
+    if (error) {
+        console.error("[OpportunityIngestion] Fetch staged item error:", error);
+        return null;
+    }
+
+    return data;
+}
+
+const STAGED_EDITABLE_FIELDS = [
+    "title",
+    "organization_name",
+    "description",
+    "short_description",
+    "category",
+    "country",
+    "location_type",
+    "application_url",
+    "contact_email",
+    "deadline",
+    "eligibility_requirements",
+    "education_requirements",
+    "required_skills",
+    "required_certifications",
+    "age_min",
+    "age_max",
+    "experience_years_min",
+    "funding_type",
+    "funding_amount",
+    "target_regions",
+    "host_institutions",
+    "gender_eligibility",
+] as const;
+
+export type StagedOpportunityUpdatePayload = Partial<{
+    title: string;
+    organization_name: string;
+    description: string;
+    short_description: string | null;
+    category: string;
+    country: string | null;
+    location_type: string;
+    application_url: string;
+    contact_email: string | null;
+    deadline: string | null;
+    eligibility_requirements: string | null;
+    education_requirements: string | null;
+    required_skills: string[];
+    required_certifications: string[];
+    age_min: number | null;
+    age_max: number | null;
+    experience_years_min: number;
+    funding_type: string;
+    funding_amount: string | null;
+    target_regions: string[];
+    host_institutions: string[];
+    gender_eligibility: string;
+}>;
+
+export async function updateStagedOpportunity(id: string, payload: StagedOpportunityUpdatePayload) {
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) throw new Error("Supabase admin client unavailable");
+
+    const updates: Record<string, unknown> = {};
+    for (const key of STAGED_EDITABLE_FIELDS) {
+        if (key in payload) {
+            updates[key] = payload[key];
+        }
+    }
+
+    if (Object.keys(updates).length === 0) {
+        throw new Error("No valid fields to update");
+    }
+
+    const { data, error } = await supabase
+        .from("ingested_opportunities_queue")
+        .update(updates)
+        .eq("id", id)
+        .select(`
+            *,
+            source:opportunity_ingestion_sources(name, slug)
+        `)
+        .single();
+
+    if (error) throw new Error(`Failed to update staged opportunity: ${error.message}`);
+    return data;
+}
+
+export type StagedApprovalOptions = {
+    publish?: boolean;
+    featured?: boolean;
+    slug?: string;
+    organization_logo?: string;
+    source?: OpportunitySource;
+    weight_education?: number;
+    weight_certifications?: number;
+    weight_skills?: number;
+    weight_location?: number;
+};
+
 // ──────────────────────────────────────────────────────────────────────────────
-// Approve & Publish Staged Opportunity
+// Approve Staged Opportunity (publish or keep as draft)
 // ──────────────────────────────────────────────────────────────────────────────
 
-export async function approveStagedOpportunity(stagedId: string, adminId: string) {
+export async function approveStagedOpportunity(
+    stagedId: string,
+    adminId: string,
+    options: StagedApprovalOptions = {}
+) {
     const supabase = getSupabaseAdminClient();
     if (!supabase) throw new Error("Supabase admin client unavailable");
 
@@ -228,51 +349,69 @@ export async function approveStagedOpportunity(stagedId: string, adminId: string
 
     if (error || !staged) throw new Error("Staged opportunity item not found");
 
-    // Generate clean unique slug
-    const rawSlug = `${staged.title}-${staged.organization_name}`
+    if (staged.status === "APPROVED" && staged.published_opportunity_id) {
+        throw new Error("This ingested opportunity has already been approved.");
+    }
+
+    if (staged.status === "REJECTED") {
+        throw new Error("Rejected items cannot be approved.");
+    }
+
+    const rawSlug = (options.slug || `${staged.title}-${staged.organization_name}`)
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)+/g, "");
     const slug = `${rawSlug}-${crypto.randomBytes(3).toString("hex")}`;
 
-    // Create opportunity record
     const draftOpp = await createOpportunity({
         title: staged.title,
         slug,
         category: staged.category,
         organization_name: staged.organization_name,
+        organization_logo: options.organization_logo || undefined,
         description: staged.description,
         short_description: staged.short_description || staged.title,
         country: staged.country,
         location_type: staged.location_type || "GLOBAL",
         application_url: staged.application_url,
+        contact_email: staged.contact_email || undefined,
         deadline: staged.deadline,
         eligibility_requirements: staged.eligibility_requirements,
         education_requirements: staged.education_requirements,
+        required_skills: staged.required_skills || [],
+        required_certifications: staged.required_certifications || [],
+        age_min: staged.age_min ?? undefined,
+        age_max: staged.age_max ?? undefined,
+        experience_years_min: staged.experience_years_min ?? 0,
         funding_type: staged.funding_type,
         funding_amount: staged.funding_amount,
         target_regions: staged.target_regions || ["GLOBAL"],
         host_institutions: staged.host_institutions || [],
         gender_eligibility: staged.gender_eligibility || "ANY",
-        source: "RSS_API",
+        weight_education: options.weight_education,
+        weight_certifications: options.weight_certifications,
+        weight_skills: options.weight_skills,
+        weight_location: options.weight_location,
+        source: options.source || "RSS_API",
         created_by_admin: adminId,
     });
 
-    // Publish opportunity (DRAFT -> PUBLISHED) to trigger AI matching & social posting
-    const publishedOpportunity = await publishOpportunity(draftOpp.id, false, adminId);
+    const shouldPublish = options.publish !== false;
+    const opportunity = shouldPublish
+        ? await publishOpportunity(draftOpp.id, options.featured ?? false, adminId)
+        : draftOpp;
 
-    // Update staged record to APPROVED & link published opportunity ID
     await supabase
         .from("ingested_opportunities_queue")
         .update({
             status: "APPROVED",
             reviewed_by: adminId,
             reviewed_at: new Date().toISOString(),
-            published_opportunity_id: publishedOpportunity.id,
+            published_opportunity_id: opportunity.id,
         })
         .eq("id", stagedId);
 
-    return publishedOpportunity;
+    return opportunity;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

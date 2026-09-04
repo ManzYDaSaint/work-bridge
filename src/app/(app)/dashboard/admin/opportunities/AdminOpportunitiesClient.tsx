@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { PageHeader, Badge, StatCard, EmptyState } from "@/components/dashboard/ui";
@@ -67,11 +67,14 @@ export default function AdminOpportunitiesClient({
     analytics: any;
 }) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [opportunities, setOpportunities] = useState<any[]>(initialOpportunities);
     const [actioning, setActioning] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState("ALL");
     const [search, setSearch] = useState("");
-    const [activeTab, setActiveTab] = useState<"active" | "ingestion">("active");
+    const [activeTab, setActiveTab] = useState<"active" | "ingestion">(
+        searchParams.get("tab") === "ingestion" ? "ingestion" : "active"
+    );
 
     const filtered = opportunities.filter((o) => {
         const matchesStatus = statusFilter === "ALL" || o.status === statusFilter;
@@ -161,7 +164,10 @@ export default function AdminOpportunitiesClient({
             {/* Sub Navigation Tabs */}
             <div className="flex border-b border-stone-200 dark:border-slate-800">
                 <button
-                    onClick={() => setActiveTab("active")}
+                    onClick={() => {
+                        setActiveTab("active");
+                        router.replace("/dashboard/admin/opportunities", { scroll: false });
+                    }}
                     className={`inline-flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-semibold transition-colors ${
                         activeTab === "active"
                             ? "border-amber-500 text-amber-600 dark:text-amber-400"
@@ -171,7 +177,10 @@ export default function AdminOpportunitiesClient({
                     <GraduationCap className="h-4 w-4" /> Published & Draft Opportunities
                 </button>
                 <button
-                    onClick={() => setActiveTab("ingestion")}
+                    onClick={() => {
+                        setActiveTab("ingestion");
+                        router.replace("/dashboard/admin/opportunities?tab=ingestion", { scroll: false });
+                    }}
                     className={`inline-flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm font-semibold transition-colors ${
                         activeTab === "ingestion"
                             ? "border-amber-500 text-amber-600 dark:text-amber-400"

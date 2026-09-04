@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { redirect } from "next/navigation";
 import { getAllOpportunitiesAdmin, getOpportunityAnalytics } from "@/services/opportunityService";
@@ -20,5 +21,9 @@ export default async function AdminOpportunitiesPage() {
         getOpportunityAnalytics(),
     ]);
 
-    return <AdminOpportunitiesClient initialOpportunities={opportunities} analytics={analytics} />;
+    return (
+        <Suspense>
+            <AdminOpportunitiesClient initialOpportunities={opportunities} analytics={analytics} />
+        </Suspense>
+    );
 }

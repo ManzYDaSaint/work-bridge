@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Badge, EmptyState } from "@/components/dashboard/ui";
 import {
-    Sparkles, RefreshCw, CheckCircle2, XCircle, ExternalLink,
-    GraduationCap, Globe, Building2, Calendar, ShieldCheck, AlertTriangle
+    Sparkles, RefreshCw, CheckCircle2, XCircle, Pencil,
+    Globe, Building2, Calendar, ShieldCheck
 } from "lucide-react";
 
 export default function OpportunityIngestionQueue() {
@@ -14,7 +15,6 @@ export default function OpportunityIngestionQueue() {
     const [loading, setLoading] = useState(true);
     const [crawling, setCrawling] = useState(false);
     const [actioningId, setActioningId] = useState<string | null>(null);
-    const [selectedItem, setSelectedItem] = useState<any | null>(null);
     const [statusFilter, setStatusFilter] = useState("PENDING_REVIEW");
 
     const fetchQueue = async () => {
@@ -71,7 +71,6 @@ export default function OpportunityIngestionQueue() {
             });
             if (res.ok) {
                 toast.success("Opportunity approved & published!");
-                setSelectedItem(null);
                 fetchQueue();
             } else {
                 const err = await res.json();
@@ -92,7 +91,6 @@ export default function OpportunityIngestionQueue() {
             });
             if (res.ok) {
                 toast.success("Opportunity rejected.");
-                setSelectedItem(null);
                 fetchQueue();
             } else {
                 toast.error("Rejection failed.");
@@ -161,15 +159,12 @@ export default function OpportunityIngestionQueue() {
                 ) : (
                     <div className="divide-y divide-stone-200/70 dark:divide-slate-800">
                         {queue.map((item) => {
-                            const isSelected = selectedItem?.id === item.id;
                             const isActioning = actioningId === item.id;
 
                             return (
                                 <div
                                     key={item.id}
-                                    className={`p-4 transition-colors hover:bg-stone-50/70 dark:hover:bg-slate-800/40 ${
-                                        isSelected ? "bg-blue-50/40 dark:bg-blue-950/20" : ""
-                                    }`}
+                                    className="p-4 transition-colors hover:bg-stone-50/70 dark:hover:bg-slate-800/40"
                                 >
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-1">
@@ -213,12 +208,12 @@ export default function OpportunityIngestionQueue() {
                                         </div>
 
                                         <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => setSelectedItem(isSelected ? null : item)}
-                                                className="rounded-xl border border-stone-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-stone-100 dark:border-slate-700 dark:text-slate-300"
+                                            <Link
+                                                href={`/dashboard/admin/opportunities/ingestion/${item.id}/review`}
+                                                className="inline-flex items-center gap-1 rounded-xl border border-stone-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-stone-100 dark:border-slate-700 dark:text-slate-300"
                                             >
-                                                {isSelected ? "Hide Review" : "Review Payload"}
-                                            </button>
+                                                <Pencil className="h-3.5 w-3.5" /> Review & Edit
+                                            </Link>
 
                                             {item.status === "PENDING_REVIEW" && (
                                                 <>
@@ -240,43 +235,6 @@ export default function OpportunityIngestionQueue() {
                                             )}
                                         </div>
                                     </div>
-
-                                    {/* Split View Detail Drawer */}
-                                    {isSelected && (
-                                        <div className="mt-4 grid grid-cols-1 gap-4 rounded-xl border border-stone-200 bg-stone-50 p-4 dark:border-slate-800 dark:bg-slate-900/80 sm:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                                                    Extracted AI Fields
-                                                </h5>
-                                                <div className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
-                                                    <p><strong>Funding Amount:</strong> {item.funding_amount || "Not specified"}</p>
-                                                    <p><strong>Host Institutions:</strong> {item.host_institutions?.join(", ") || "None listed"}</p>
-                                                    <p><strong>Target Regions:</strong> {item.target_regions?.join(", ") || "Global"}</p>
-                                                    <p><strong>Eligibility:</strong> {item.eligibility_requirements || "Not specified"}</p>
-                                                    <p><strong>Education Required:</strong> {item.education_requirements || "Not specified"}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                                                    Application Link & Overview
-                                                </h5>
-                                                <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-4">
-                                                    {item.description}
-                                                </p>
-                                                {item.application_url && (
-                                                    <a
-                                                        href={item.application_url}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline"
-                                                    >
-                                                        View Official Webpage <ExternalLink className="h-3 w-3" />
-                                                    </a>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             );
                         })}
