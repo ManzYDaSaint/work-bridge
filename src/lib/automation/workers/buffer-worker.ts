@@ -1,35 +1,36 @@
 /**
  * Automation worker: buffer-social-poster
  *
- * Triggered by the JOB_POSTED event via the automation engine.
- * Fetches the full job record from Supabase, then calls postJobToBuffer()
- * to publish to LinkedIn and Facebook Pages via the Buffer GraphQL API.
+ * Triggered by JOB_POSTED or OPPORTUNITY_PUBLISHED events via the automation engine.
+ * Fetches the job or opportunity record from Supabase, then calls postJobToBuffer()
+ * or postOpportunityToBuffer() to publish to LinkedIn and Facebook Pages via Buffer GraphQL API.
  *
- * Expected payload: { jobId: string; employerId: string; eventType: string }
+ * Expected payload: { jobId?: string; opportunityId?: string; employerId?: string; eventType?: string }
  */
 
 import { registerPlugin } from "../registry";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
-import { postJobToBuffer } from "@/lib/buffer";
+import { postJobToBuffer, postOpportunityToBuffer } from "@/lib/buffer";
 import { emitSystemEvent } from "@/lib/mission-control";
 
 const BufferSocialPoster = {
     id: "buffer-social-poster",
     run: async (payload: {
-        jobId: string;
+        jobId?: string;
+        opportunityId?: string;
         employerId?: string;
         eventType?: string;
         taskId?: string;
     }): Promise<void> => {
-        const { jobId } = payload;
+        const { jobId, opportunityId } = payload;
 
-        if (!jobId) {
-            console.warn("[BufferWorker] No jobId in payload, skipping.");
+        if (!jobId && !opportunityId) {
+            console.warn("[BufferWorker] Neither jobId nor opportunityId in payload, skipping.");
             await emitSystemEvent({
                 category: "AUTOMATION",
                 severity: "INFO",
-                event: "BUFFER_JOB_SKIPPED",
-                message: `BufferWorker skipped due to missing jobId`,
+                event: "BUFFER_POST_SKIPPED",
+                message: `BufferWorker skipped due to missing jobId and opportunityId`,
                 metadata: { payload }
             });
             return;
@@ -58,62 +59,112 @@ const BufferSocialPoster = {
             throw new Error("[BufferWorker] Supabase admin client unavailable.");
         }
 
-        // Fetch the job record
-        const { data: job, error: jobError } = await supabase
-            .from("jobs")
-            .select("id, title, location, work_mode, type, salary_range, public_slug, employer_id")
-            .eq("id", jobId)
-            .single();
-
-        if (jobError || !job) {
-            throw new Error(`[BufferWorker] Failed to fetch job ${jobId}: ${jobError?.message}`);
-        }
-
-        // Fetch employer name
-        let companyName: string | null = null;
-        if (job.employer_id) {
-            const { data: employer } = await supabase
-                .from("employers")
-                .select("company_name")
-                .eq("id", job.employer_id)
+        if (opportunityId) {
+            // Handle Opportunity Post
+            const { data: opp, error: oppError } = await supabase
+                .from("opportunities")
+                .select("id, title, organization_name, category, slug, deadline, funding_amount, country")
+                .eq("id", opportunityId)
                 .single();
-            companyName = employer?.company_name ?? null;
+
+            if (oppError || !opp) {
+                throw new Error(`[BufferWorker] Failed to fetch opportunity ${opportunityId}: ${oppError?.message}`);
+            }
+
+            const results = await postOpportunityToBuffer({
+                id: opp.id,
+                title: opp.title,
+                organization_name: opp.organization_name,
+                category: opp.category,
+                slug: opp.slug,
+                deadline: opp.deadline,
+                funding_amount: opp.funding_amount,
+                country: opp.country,
+            });
+
+            const linkedInStatus = results.linkedin
+                ? results.linkedin.success
+                    ? `✅ LinkedIn queued (postId=${results.linkedin.postId})`
+                    : `❌ LinkedIn failed: ${results.linkedin.errorMessage}`
+                : "⏭ LinkedIn not configured";
+
+            const facebookStatus = results.facebook
+                ? results.facebook.success
+                    ? `✅ Facebook queued (postId=${results.facebook.postId})`
+                    : `❌ Facebook failed: ${results.facebook.errorMessage}`
+                : "⏭ Facebook not configured";
+
+            console.log(
+                `[BufferWorker] Opportunity "${opp.title}" (${opportunityId})\n  ${linkedInStatus}\n  ${facebookStatus}`
+            );
+
+            await emitSystemEvent({
+                category: "AUTOMATION",
+                severity: results.linkedin?.success || results.facebook?.success ? "SUCCESS" : "WARNING",
+                event: "BUFFER_OPPORTUNITY_POST_RESULT",
+                message: `Buffer worker processed opportunity ${opportunityId}`,
+                metadata: { opportunityId, linkedin: results.linkedin, facebook: results.facebook }
+            });
+            return;
         }
 
-        const results = await postJobToBuffer({
-            id: job.id,
-            title: job.title,
-            companyName,
-            location: job.location,
-            workMode: job.work_mode,
-            jobType: job.type,
-            salaryRange: job.salary_range,
-            publicSlug: job.public_slug,
-        });
+        if (jobId) {
+            // Handle Job Post
+            const { data: job, error: jobError } = await supabase
+                .from("jobs")
+                .select("id, title, location, work_mode, type, salary_range, public_slug, employer_id")
+                .eq("id", jobId)
+                .single();
 
-        const linkedInStatus = results.linkedin
-            ? results.linkedin.success
-                ? `✅ LinkedIn queued (postId=${results.linkedin.postId}, dueAt=${results.linkedin.dueAt})`
-                : `❌ LinkedIn failed: ${results.linkedin.errorMessage}`
-            : "⏭ LinkedIn not configured";
+            if (jobError || !job) {
+                throw new Error(`[BufferWorker] Failed to fetch job ${jobId}: ${jobError?.message}`);
+            }
 
-        const facebookStatus = results.facebook
-            ? results.facebook.success
-                ? `✅ Facebook queued (postId=${results.facebook.postId}, dueAt=${results.facebook.dueAt})`
-                : `❌ Facebook failed: ${results.facebook.errorMessage}`
-            : "⏭ Facebook not configured";
+            let companyName: string | null = null;
+            if (job.employer_id) {
+                const { data: employer } = await supabase
+                    .from("employers")
+                    .select("company_name")
+                    .eq("id", job.employer_id)
+                    .single();
+                companyName = employer?.company_name ?? null;
+            }
 
-        console.log(
-            `[BufferWorker] Job "${job.title}" (${jobId})\n  ${linkedInStatus}\n  ${facebookStatus}`
-        );
+            const results = await postJobToBuffer({
+                id: job.id,
+                title: job.title,
+                companyName,
+                location: job.location,
+                workMode: job.work_mode,
+                jobType: job.type,
+                salaryRange: job.salary_range,
+                publicSlug: job.public_slug,
+            });
 
-        await emitSystemEvent({
-            category: "AUTOMATION",
-            severity: "INFO",
-            event: "BUFFER_JOB_POST_RESULT",
-            message: `Buffer worker processed job ${jobId}`,
-            metadata: { jobId, linkedIn: results.linkedin, facebook: results.facebook }
-        });
+            const linkedInStatus = results.linkedin
+                ? results.linkedin.success
+                    ? `✅ LinkedIn queued (postId=${results.linkedin.postId}, dueAt=${results.linkedin.dueAt})`
+                    : `❌ LinkedIn failed: ${results.linkedin.errorMessage}`
+                : "⏭ LinkedIn not configured";
+
+            const facebookStatus = results.facebook
+                ? results.facebook.success
+                    ? `✅ Facebook queued (postId=${results.facebook.postId}, dueAt=${results.facebook.dueAt})`
+                    : `❌ Facebook failed: ${results.facebook.errorMessage}`
+                : "⏭ Facebook not configured";
+
+            console.log(
+                `[BufferWorker] Job "${job.title}" (${jobId})\n  ${linkedInStatus}\n  ${facebookStatus}`
+            );
+
+            await emitSystemEvent({
+                category: "AUTOMATION",
+                severity: results.linkedin?.success || results.facebook?.success ? "SUCCESS" : "WARNING",
+                event: "BUFFER_JOB_POST_RESULT",
+                message: `Buffer worker processed job ${jobId}`,
+                metadata: { jobId, linkedIn: results.linkedin, facebook: results.facebook }
+            });
+        }
     },
 };
 

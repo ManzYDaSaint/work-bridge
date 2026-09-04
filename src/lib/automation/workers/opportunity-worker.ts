@@ -45,70 +45,8 @@ const OpportunityMatcher = {
             throw new Error(`[OpportunityMatcher] Failed to fetch opportunity ${opportunityId}: ${oppError?.message}`);
         }
 
-        // 1. Run AI matching — creates match records + sends in-app notifications
+        // Run AI matching — creates match records + sends in-app notifications
         await triggerOpportunityMatchNotifications(opportunityId);
-
-        // 2. If featured (or marked featured in DB), also queue a social post
-        const isFeatured = featured ?? opp.featured ?? false;
-        if (isFeatured) {
-            if (
-                !process.env.BUFFER_API_KEY ||
-                (!process.env.BUFFER_LINKEDIN_CHANNEL_ID && !process.env.BUFFER_FACEBOOK_CHANNEL_ID)
-            ) {
-                console.warn("[OpportunityMatcher] Buffer not configured — skipping social post.");
-            } else {
-                try {
-                    const results = await postOpportunityToBuffer({
-                        id: opp.id,
-                        title: opp.title,
-                        organization_name: opp.organization_name,
-                        category: opp.category,
-                        slug: opp.slug,
-                        deadline: opp.deadline,
-                        funding_amount: opp.funding_amount,
-                        country: opp.country,
-                    });
-
-                    const linkedInStatus = results.linkedin
-                        ? results.linkedin.success
-                            ? `✅ LinkedIn queued (postId=${results.linkedin.postId})`
-                            : `❌ LinkedIn failed: ${results.linkedin.errorMessage}`
-                        : "⏭ LinkedIn not configured";
-
-                    const facebookStatus = results.facebook
-                        ? results.facebook.success
-                            ? `✅ Facebook queued (postId=${results.facebook.postId})`
-                            : `❌ Facebook failed: ${results.facebook.errorMessage}`
-                        : "⏭ Facebook not configured";
-
-                    console.log(
-                        `[OpportunityMatcher] Social share for "${opp.title}"\n  ${linkedInStatus}\n  ${facebookStatus}`
-                    );
-
-                    await emitSystemEvent({
-                        category: "OPPORTUNITY_MANAGEMENT",
-                        severity: results.linkedin?.success || results.facebook?.success ? "SUCCESS" : "WARNING",
-                        event: "OPPORTUNITY_SOCIAL_POST_QUEUED",
-                        message: `Social post queued for featured opportunity: ${opp.title}`,
-                        metadata: {
-                            opportunityId,
-                            title: opp.title,
-                            linkedin: results.linkedin,
-                            facebook: results.facebook,
-                        },
-                    });
-                } catch (err: any) {
-                    console.error("[OpportunityMatcher] Social post failed:", err.message);
-                    await emitSystemEvent({
-                        category: "OPPORTUNITY_MANAGEMENT",
-                        severity: "WARNING",
-                        event: "OPPORTUNITY_SOCIAL_POST_FAILED",
-                        message: `Social post failed for opportunity: ${opp.title}`,
-                        metadata: { opportunityId, error: err.message },
-                    });
-                }
-            }
-        }
     },
 };
 
