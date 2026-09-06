@@ -297,11 +297,11 @@ function EducationEntry({
             </button>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Certificate</label>
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Certification</label>
                     <input
                         value={edu.certificate}
                         onChange={(e) => onChange({ ...edu, certificate: e.target.value })}
-                        placeholder="e.g. Degree"
+                        placeholder="e.g. Bachelors Degree In Business Administration"
                         className={inputCls}
                     />
                 </div>
@@ -974,52 +974,52 @@ export function JobSeekerOnboarding({ me }: { me: NonNullable<MeData> }) {
 
                 <div className="sticky bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/90 px-5 py-4 pb-safe backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90 sm:static sm:mt-8 sm:border-t sm:border-slate-100 sm:bg-transparent sm:p-0 sm:pt-6 sm:dark:border-slate-800 sm:dark:bg-transparent">
                     <div className="flex items-center justify-between gap-3">
-                    {step > 1 ? (
-                        <button
-                            type="button"
-                            onClick={() => setStep(step - 1)}
-                            disabled={saving}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                        >
-                            <ChevronLeft size={16} />
-                            Back
-                        </button>
-                    ) : (
-                        <div />
-                    )}
-
-                    <div className="flex items-center gap-2">
-                        {isOptionalStep && (
+                        {step > 1 ? (
                             <button
                                 type="button"
-                                onClick={() => handleNext(true)}
+                                onClick={() => setStep(step - 1)}
                                 disabled={saving}
-                                className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 transition hover:text-slate-700 disabled:opacity-50 dark:text-slate-400 dark:hover:text-slate-200"
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                             >
-                                Skip
+                                <ChevronLeft size={16} />
+                                Back
                             </button>
+                        ) : (
+                            <div />
                         )}
-                        <button
-                            type="button"
-                            onClick={() => handleNext(false)}
-                            disabled={saving}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-black disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                        >
-                            {saving ? (
-                                <Loader2 size={15} className="animate-spin" />
-                            ) : step === 5 ? (
-                                <>
-                                    <Check size={15} />
-                                    Finish
-                                </>
-                            ) : (
-                                <>
-                                    Continue
-                                    <ChevronRight size={15} />
-                                </>
+
+                        <div className="flex items-center gap-2">
+                            {isOptionalStep && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleNext(true)}
+                                    disabled={saving}
+                                    className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 transition hover:text-slate-700 disabled:opacity-50 dark:text-slate-400 dark:hover:text-slate-200"
+                                >
+                                    Skip
+                                </button>
                             )}
-                        </button>
-                    </div>
+                            <button
+                                type="button"
+                                onClick={() => handleNext(false)}
+                                disabled={saving}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-black disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                            >
+                                {saving ? (
+                                    <Loader2 size={15} className="animate-spin" />
+                                ) : step === 5 ? (
+                                    <>
+                                        <Check size={15} />
+                                        Finish
+                                    </>
+                                ) : (
+                                    <>
+                                        Continue
+                                        <ChevronRight size={15} />
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                     {isOptionalStep && (
                         <p className="mt-3 text-center text-[10px] text-slate-400 sm:mt-4 sm:text-xs">
@@ -1068,46 +1068,46 @@ export function EmployerOnboarding({ me }: { me: NonNullable<MeData> }) {
         <div className="mx-auto max-w-xl sm:px-4 sm:py-10">
             <div className="flex min-h-[100dvh] flex-col bg-white dark:bg-slate-950 sm:min-h-0 sm:rounded-3xl sm:border sm:border-slate-200/80 sm:bg-white/90 sm:p-6 sm:shadow-sm sm:dark:border-slate-800 sm:dark:bg-slate-900/80">
                 <div className="flex-1 px-5 py-8 sm:p-0">
-                <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Set up your company</h1>
-                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    This helps us personalise your employer dashboard.
-                </p>
-                <form onSubmit={onSubmit} className="mt-6 space-y-4">
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Company name</label>
-                        <input
-                            value={companyName}
-                            onChange={(e) => setCompanyName(e.target.value)}
-                            required
-                            className={inputCls}
-                        />
-                    </div>
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Industry</label>
-                        <input
-                            value={industry}
-                            onChange={(e) => setIndustry(e.target.value)}
-                            required
-                            className={inputCls}
-                        />
-                    </div>
-                    <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Location</label>
-                        <input
-                            value={companyLocation}
-                            onChange={(e) => setCompanyLocation(e.target.value)}
-                            required
-                            className={inputCls}
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={saving}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3.5 text-sm font-medium text-white transition hover:bg-black disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 sm:py-2.5"
-                    >
-                        {saving ? <Loader2 size={15} className="animate-spin" /> : "Continue to dashboard"}
-                    </button>
-                </form>
+                    <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Set up your company</h1>
+                    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                        This helps us personalise your employer dashboard.
+                    </p>
+                    <form onSubmit={onSubmit} className="mt-6 space-y-4">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Company name</label>
+                            <input
+                                value={companyName}
+                                onChange={(e) => setCompanyName(e.target.value)}
+                                required
+                                className={inputCls}
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Industry</label>
+                            <input
+                                value={industry}
+                                onChange={(e) => setIndustry(e.target.value)}
+                                required
+                                className={inputCls}
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Location</label>
+                            <input
+                                value={companyLocation}
+                                onChange={(e) => setCompanyLocation(e.target.value)}
+                                required
+                                className={inputCls}
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={saving}
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3.5 text-sm font-medium text-white transition hover:bg-black disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 sm:py-2.5"
+                        >
+                            {saving ? <Loader2 size={15} className="animate-spin" /> : "Continue to dashboard"}
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>

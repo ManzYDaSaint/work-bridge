@@ -2,6 +2,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { processNotificationQueue } from "./worker";
 import { scoreJobSeekerMatch, SeekerProfile, normalizeStringArray } from "@/lib/matching-helpers";
 import { evaluateSkillsWithGemini } from "@/lib/llm-skills-evaluator";
+import { emitSystemEvent } from "@/lib/mission-control";
 
 /**
  * Aganyu Premium Job Match Orchestrator
@@ -94,10 +95,17 @@ export async function runJobMatchingOrchestration() {
 
       const ruleMatch = scoreJobSeekerMatch(job, seekerProfile);
 
-      // Qualification Knockout Floor: if seeker is 2+ levels below requirement, skip entirely
+      // Education / experience gate for this product: hard filters come before ranking.
       const qualScore = ruleMatch.breakdown.qualification.score;
-      if (qualScore === 0 && job.qualification) {
+      if (job.qualification && qualScore === 0) {
         console.log(`[Orchestrator] Knockout: seeker ${seeker.id} failed qualification floor for job ${job.id}`);
+        continue;
+      }
+
+      const requiredYears = job.minimum_years_experience || 0;
+      const actualYears = ruleMatch.breakdown.experience.actual || 0;
+      if (requiredYears > 0 && actualYears < requiredYears) {
+        console.log(`[Orchestrator] Knockout: seeker ${seeker.id} has ${actualYears} years but job ${job.id} requires ${requiredYears}`);
         continue;
       }
 
@@ -127,13 +135,12 @@ export async function runJobMatchingOrchestration() {
       // Experience Gap Penalty Cap: Prevent entry-level candidates from matching senior roles
       let adjustedBaseScore = baseScore;
       const minYearsReq = job.minimum_years_experience || 0;
-      const actualYears = ruleMatch.breakdown.experience.actual || 0;
-      
+
+      // This is a soft cap for very mismatched seniority, but the strict gate above already filters
+      // on qualification and minimum years experience. Skills remain a ranking signal, not a blocker.
       if (minYearsReq >= 5 && actualYears < 2) {
-        // Senior/Management role requiring 5+ years, candidate has < 2 years -> Cap at 40 (No Alert)
         adjustedBaseScore = Math.min(adjustedBaseScore, 40);
       } else if (minYearsReq >= 3 && actualYears === 0) {
-        // Mid-level role requiring 3+ years, candidate has 0 years -> Cap at 45 (No Alert)
         adjustedBaseScore = Math.min(adjustedBaseScore, 45);
       }
 
@@ -207,32 +214,93 @@ export async function runJobMatchingOrchestration() {
           continue;
         }
 
-        await supabase.from("notification_queue").insert({
-          seeker_id: seeker.id,
-          job_id: job.id,
-          template_id: "aganyu_job_match_alert_v1",
-          payload: {
+        // Insert into queue with observability and error handling
+        try {
+          // Flag near-miss cases for admin inspection
+          const nearMiss = finalScore < requiredThreshold && finalScore >= Math.max(35, requiredThreshold - 10);
+          const scoring: {
+            qualScore: number;
+            qualPassed: boolean;
+            expScore: number;
+            expPassed: boolean;
+            skillsRuleScore: number;
+            skillsMatched: string[];
+            skillsMissing: string[];
+            llmSkillScore: number;
+            llmFromGemini: boolean;
+            llmReasoning: string;
+            llmMatchedConcepts: string[];
+            vectorSimilarity: number;
+            vectorBoost: number;
+            baseScore: number;
+            finalScore: number;
+            near_miss?: boolean;
+          } = {
+            qualScore: ruleMatch.breakdown.qualification.score,
+            qualPassed: ruleMatch.breakdown.qualification.passed,
+            expScore: ruleMatch.breakdown.experience.score,
+            expPassed: ruleMatch.breakdown.experience.passed,
+            skillsRuleScore: ruleMatch.breakdown.skills.score,
+            skillsMatched: ruleMatch.breakdown.skills.matched || [],
+            skillsMissing: ruleMatch.breakdown.skills.missing || [],
+            llmSkillScore: llmResult.score,
+            llmFromGemini: llmResult.fromLLM,
+            llmReasoning: llmResult.reasoning,
+            llmMatchedConcepts: llmResult.matchedConcepts || [],
+            vectorSimilarity: Math.round(vectorSimilarity * 100),
+            vectorBoost,
+            baseScore,
+            finalScore
+          };
+
+          if (nearMiss) scoring.near_miss = true;
+
+          const payload = {
             seekerName: seekerFirstName,
             jobTitle: job.title,
             company: job.display_company_name || "Direct Employer",
             location: job.location || "Malawi",
             matchScore: finalScore,
-            jobId: job.id,   // dynamic button URL suffix
+            jobId: job.id, // dynamic button URL suffix
             // Debug metadata (not sent to WhatsApp, stored for admin review)
-            _scoring: {
-              qualScore: ruleMatch.breakdown.qualification.score,
-              expScore: ruleMatch.breakdown.experience.score,
-              llmSkillScore: llmResult.score,
-              llmFromGemini: llmResult.fromLLM,
-              llmReasoning: llmResult.reasoning,
-              vectorSimilarity: Math.round(vectorSimilarity * 100),
-              vectorBoost,
-              baseScore,
-              finalScore
-            }
-          },
-          status: initialStatus
-        });
+            _scoring: scoring
+          };
+
+          const { data: inserted, error: insertErr } = await supabase
+            .from("notification_queue")
+            .insert({
+              seeker_id: seeker.id,
+              job_id: job.id,
+              template_id: "aganyu_job_match_alert_v1",
+              payload,
+              status: initialStatus,
+              attempts: 0,
+              next_attempt_at: null
+            })
+            .select();
+
+          if (insertErr) {
+            console.error(`[Orchestrator] Failed to insert notification for seeker ${seeker.id}, job ${job.id}:`, insertErr);
+            await emitSystemEvent({
+              category: "MATCHING",
+              severity: "CRITICAL",
+              event: "NOTIFICATION_QUEUE_INSERT_FAILED",
+              message: `Failed to queue notification for seeker ${seeker.id} and job ${job.id}`,
+              metadata: { seekerId: seeker.id, jobId: job.id, error: insertErr.message }
+            });
+          } else {
+            console.log(`[Orchestrator] Queued notification for seeker ${seeker.id}, job ${job.id} (status=${initialStatus})`);
+          }
+        } catch (err: any) {
+          console.error(`[Orchestrator] Exception inserting notification for seeker ${seeker.id}, job ${job.id}:`, err);
+          await emitSystemEvent({
+            category: "MATCHING",
+            severity: "CRITICAL",
+            event: "NOTIFICATION_QUEUE_INSERT_EXCEPTION",
+            message: `Exception while queuing notification for seeker ${seeker.id} and job ${job.id}`,
+            metadata: { seekerId: seeker.id, jobId: job.id, error: err?.message }
+          });
+        }
       }
     }
   }

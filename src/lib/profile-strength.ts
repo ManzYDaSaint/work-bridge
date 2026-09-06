@@ -44,13 +44,13 @@ export function calculateProfileStrength(profile: any): ProfileStrengthResult {
             id: "education",
             label: "Education",
             check: () => Array.isArray(profile.education) && profile.education.length > 0,
-            suggestion: "Add your educational background and qualifications.",
+            suggestion: "Add your exact degree or programme (for example, BSc in Information Technology) to improve matching.",
         },
         {
             id: "qualification",
             label: "Highest Qualification",
             check: () => !!profile.qualification && profile.qualification.trim().length > 0,
-            suggestion: "Select your highest qualification level (Bachelor's, Master's, Diploma, etc.) for AI job matching.",
+            suggestion: "Select your highest qualification level and pair it with the exact course/field for better job matching.",
         },
         {
             id: "portfolio",

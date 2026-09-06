@@ -31,12 +31,12 @@ interface Certificate {
     credential_url: string | null;
 }
 
-export default function SeekerProfile({ 
-    initialProfile, 
-    initialCertificates 
-}: { 
-    initialProfile: SeekerProfileData; 
-    initialCertificates: Certificate[]; 
+export default function SeekerProfile({
+    initialProfile,
+    initialCertificates
+}: {
+    initialProfile: SeekerProfileData;
+    initialCertificates: Certificate[];
 }) {
     const profile = initialProfile;
     const [saving, setSaving] = useState(false);
@@ -46,7 +46,7 @@ export default function SeekerProfile({
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
     const [resumeUrl, setResumeUrl] = useState<string | null>(initialProfile.resume_url ?? null);
     const [uploadingResume, setUploadingResume] = useState(false);
-    
+
     // Certificates state
     const [certificates, setCertificates] = useState<Certificate[]>(initialCertificates);
     const [newCert, setNewCert] = useState({ title: "", issuer: "", issue_date: "", credential_url: "" });
@@ -217,6 +217,12 @@ export default function SeekerProfile({
     };
 
     const inputClass = "w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white";
+    const hasGenericQualification = profile.qualification && ["High School", "Diploma", "Bachelor's Degree", "Master's Degree", "PhD / Doctorate", "Professional Certification", "Other"].includes(profile.qualification);
+    const hasDetailedEducation = (profile.education || []).some((entry: any) => {
+        const certificate = (entry?.certificate || "").trim();
+        const institution = (entry?.institution || "").trim();
+        return certificate.length > 0 || institution.length > 0;
+    });
     const publicCareerPath = profile.publicSlug ? `/in/${profile.publicSlug}` : profile.id ? `/career/${profile.id}` : null;
     const isPublicCareerVisible = profile.profileVisibility === "PUBLIC" || profile.profileVisibility === "ANONYMOUS";
 
@@ -244,6 +250,12 @@ export default function SeekerProfile({
                                     <Badge label={`${profile.completion ?? 0}% complete`} variant="blue" className="mt-2" />
                                 </div>
                             </div>
+
+                            {(hasGenericQualification || !hasDetailedEducation) && (
+                                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                                    Improve job matching: add your exact degree or programme, for example “BSc in Information Technology”, in the Education section below.
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div>
@@ -279,6 +291,9 @@ export default function SeekerProfile({
                                         <option value="Professional Certification">Professional Certification</option>
                                         <option value="Other">Other</option>
                                     </select>
+                                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                        For better matching, use the exact degree and field when possible, for example “BSc in Information Technology”.
+                                    </p>
                                 </div>
                                 <div className="md:col-span-2">
                                     <select {...register("seniorityLevel")} className={inputClass}>
@@ -328,7 +343,7 @@ export default function SeekerProfile({
                             <p className="text-sm text-slate-500 dark:text-slate-400">
                                 Upload a resume to apply to jobs and stand out to recruiters. We support PDF, DOC, or DOCX up to 5MB.
                             </p>
-                            
+
                             {resumeUrl ? (
                                 <div className="flex items-center justify-between rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-slate-800 dark:bg-slate-900">
                                     <div className="flex items-center gap-3">
@@ -337,19 +352,19 @@ export default function SeekerProfile({
                                         </div>
                                         <div>
                                             <p className="text-sm font-semibold text-slate-900 dark:text-white">Your Resume</p>
-                                            <a 
-                                                href={resumeUrl} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer" 
+                                            <a
+                                                href={resumeUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
                                                 className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#16324f] hover:underline dark:text-slate-300"
                                             >
                                                 View uploaded resume <ExternalLink size={12} />
                                             </a>
                                         </div>
                                     </div>
-                                    <button 
-                                        type="button" 
-                                        onClick={handleResumeDelete} 
+                                    <button
+                                        type="button"
+                                        onClick={handleResumeDelete}
                                         className="rounded-xl p-2.5 text-slate-400 hover:bg-stone-100 hover:text-red-500 dark:hover:bg-slate-800"
                                     >
                                         <Trash2 size={18} />
@@ -364,12 +379,12 @@ export default function SeekerProfile({
                                         {uploadingResume ? "Uploading..." : "Click to upload resume"}
                                     </p>
                                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">PDF, DOC, or DOCX (max. 5MB)</p>
-                                    <input 
-                                        type="file" 
-                                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
-                                        className="hidden" 
-                                        onChange={handleResumeUpload} 
-                                        disabled={uploadingResume} 
+                                    <input
+                                        type="file"
+                                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                        className="hidden"
+                                        onChange={handleResumeUpload}
+                                        disabled={uploadingResume}
                                     />
                                 </label>
                             )}
@@ -378,11 +393,14 @@ export default function SeekerProfile({
 
                     <SectionCard title="Education">
                         <div className="space-y-4 p-6">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                Add the exact programme or degree title for stronger job matching, such as “BSc in Information Technology” or “Diploma in Accounting”.
+                            </p>
                             {educationFields.map((field, index) => (
                                 <div key={field.id} className="rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-slate-800 dark:bg-slate-900">
                                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                        <input {...register(`education.${index}.certificate`)} placeholder="Certificate" className={inputClass} />
-                                        <input {...register(`education.${index}.institution`)} placeholder="Institution" className={inputClass} />
+                                        <input {...register(`education.${index}.certificate`)} placeholder="e.g. Bachelor's Degree In Business Administration" className={inputClass} />
+                                        <input {...register(`education.${index}.institution`)} placeholder="e.g. University of Malawi (UNIMA)" className={inputClass} />
                                         <input {...register(`education.${index}.startDate`)} placeholder="Start date" className={inputClass} />
                                         <input {...register(`education.${index}.endDate`)} placeholder="End date" className={inputClass} />
                                     </div>
@@ -458,10 +476,10 @@ export default function SeekerProfile({
                             <div className="mt-4 rounded-2xl border border-dashed border-stone-300 p-4 dark:border-slate-700">
                                 <h4 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">Add Certification</h4>
                                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                    <input value={newCert.title} onChange={e => setNewCert({...newCert, title: e.target.value})} placeholder="Title *" className={inputClass} />
-                                    <input value={newCert.issuer} onChange={e => setNewCert({...newCert, issuer: e.target.value})} placeholder="Issuer (e.g. Coursera)" className={inputClass} />
-                                    <input type="date" value={newCert.issue_date} onChange={e => setNewCert({...newCert, issue_date: e.target.value})} className={inputClass} />
-                                    <input value={newCert.credential_url} onChange={e => setNewCert({...newCert, credential_url: e.target.value})} placeholder="Credential URL" className={inputClass} />
+                                    <input value={newCert.title} onChange={e => setNewCert({ ...newCert, title: e.target.value })} placeholder="Title *" className={inputClass} />
+                                    <input value={newCert.issuer} onChange={e => setNewCert({ ...newCert, issuer: e.target.value })} placeholder="Issuer (e.g. Coursera)" className={inputClass} />
+                                    <input type="date" value={newCert.issue_date} onChange={e => setNewCert({ ...newCert, issue_date: e.target.value })} className={inputClass} />
+                                    <input value={newCert.credential_url} onChange={e => setNewCert({ ...newCert, credential_url: e.target.value })} placeholder="Credential URL" className={inputClass} />
                                 </div>
                                 <button type="button" onClick={handleAddCertificate} disabled={addingCert || !newCert.title} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#16324f] px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
                                     {addingCert ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
@@ -481,7 +499,7 @@ export default function SeekerProfile({
                                     <option value="HIDDEN">Hidden (You will not appear in the discover pool)</option>
                                 </select>
                             </div>
-                            
+
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Employment Status</label>
                                 <select {...register("employmentStatus")} className={inputClass}>
@@ -495,7 +513,7 @@ export default function SeekerProfile({
                                     <option value="BETWEEN_JOBS">Between Jobs</option>
                                 </select>
                             </div>
-                            
+
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Current Intent</label>
                                 <select {...register("searchIntent")} className={inputClass}>
@@ -505,7 +523,7 @@ export default function SeekerProfile({
                                     <option value="NOT_LOOKING">Not looking</option>
                                 </select>
                             </div>
-                            
+
                             <div className="border-t border-stone-200 pt-4 dark:border-slate-800">
                                 <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Portfolio Links</label>
                                 <div className="space-y-2">
@@ -577,7 +595,7 @@ export default function SeekerProfile({
                             </div>
                         </div>
                     </SectionCard>
-                    
+
                     <EmailPreferences />
                 </div>
             </div>

@@ -6,6 +6,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { formatJobType, formatWorkMode } from "@/lib/utils";
 import ShareJobButton from "@/components/jobs/ShareJobButton";
 import ApplyActionButton from "@/components/jobs/ApplyActionButton";
+import { RecommendationService } from "@/services/recommendation.service";
 
 // Revalidate every 10 minutes — much better than force-dynamic for crawlers
 export const revalidate = 600;
@@ -136,6 +137,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
     if (!result) notFound();
 
     const { job, employer } = result;
+    const similarJobs = await RecommendationService.getSimilarJobs(job.id, { limit: 4 }).catch(() => [] as any[]);
     // display_company_name overrides the employer account name
     const company = job.display_company_name || employer?.company_name || "Aganyu employer";
     const isAgencyPosting = job.posting_type === "AGENCY" || job.posting_type === "AGANYU";
@@ -319,6 +321,30 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
                             </div>
                         </div>
                     </section>
+
+                    {similarJobs.length > 0 && (
+                        <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                            <h2 className="text-lg font-semibold text-slate-950 dark:text-white">Similar jobs</h2>
+                            <div className="mt-4 space-y-3">
+                                {similarJobs.map((similarJob: any) => {
+                                    const similarCompany = similarJob.display_company_name || similarJob.employer?.company_name || "Company";
+                                    const similarHref = `/jobs/${similarJob.public_slug || similarJob.id}`;
+
+                                    return (
+                                        <Link
+                                            key={similarJob.id}
+                                            href={similarHref}
+                                            className="block rounded-xl border border-stone-200 bg-stone-50 p-3 transition hover:border-slate-300 hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600 dark:hover:bg-slate-700"
+                                        >
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-400">{similarCompany}</p>
+                                            <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{similarJob.title}</p>
+                                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">{similarJob.location} · {similarJob.type ? formatJobType(similarJob.type) : "Role"}</p>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
                 </aside>
             </section>
         </div>

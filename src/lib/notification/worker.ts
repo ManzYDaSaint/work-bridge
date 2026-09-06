@@ -9,11 +9,14 @@ export async function processNotificationQueue() {
     console.error("[WhatsApp Worker] Admin Supabase client not initialized.");
     return;
   }
-  // 1. Fetch pending notifications
+  // 1. Fetch pending notifications whose next_attempt_at is null or <= now
+  const nowIso = new Date().toISOString();
   const { data: queueItems } = await supabase
     .from("notification_queue")
     .select("*, job_seekers(phone)")
     .eq("status", "PENDING")
+    .or(`next_attempt_at.is.null,next_attempt_at.lte.${nowIso}`)
+    .order("next_attempt_at", { ascending: true })
     .limit(10);
 
   if (!queueItems) return;
@@ -40,11 +43,41 @@ export async function processNotificationQueue() {
       });
 
     } catch (error: any) {
-      console.error(`Failed to send notification ${item.id}:`, error);
-      await supabase
-        .from("notification_queue")
-        .update({ status: "FAILED", last_error: error.message, attempts: item.attempts + 1 })
-        .eq("id", item.id);
+      const MAX_RETRIES = 5;
+      console.error(`Failed to send notification ${item.id}:`, error?.message || error);
+      const newAttempts = (item.attempts || 0) + 1;
+
+      if (newAttempts >= MAX_RETRIES) {
+        // Move to dead-letter state after exhausting retries
+        await supabase
+          .from("notification_queue")
+          .update({ status: "DEAD_LETTER", last_error: error.message, attempts: newAttempts, next_attempt_at: null })
+          .eq("id", item.id);
+
+        await supabase.from("whatsapp_delivery_logs").insert({
+          queue_id: item.id,
+          status: "PERMANENT_FAILURE",
+          error: error?.message || String(error)
+        });
+      } else {
+        // Exponential backoff: base 60s * 2^(attempts-1), capped at 1 hour
+        const baseSeconds = 60;
+        const delaySeconds = Math.min(3600, baseSeconds * Math.pow(2, newAttempts - 1));
+        const nextAttemptAt = new Date(Date.now() + delaySeconds * 1000).toISOString();
+
+        // Re-queue for retry by setting next_attempt_at and incrementing attempts
+        await supabase
+          .from("notification_queue")
+          .update({ status: "PENDING", last_error: error.message, attempts: newAttempts, next_attempt_at: nextAttemptAt })
+          .eq("id", item.id);
+
+        await supabase.from("whatsapp_delivery_logs").insert({
+          queue_id: item.id,
+          status: "RETRY",
+          error: error?.message || String(error),
+          next_attempt_at: nextAttemptAt
+        });
+      }
     }
   }
 }

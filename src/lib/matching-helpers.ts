@@ -297,10 +297,11 @@ export function scoreJobSeekerMatch(
       certificationsScore * weights.certifications) / totalWeight
   );
 
+  // HR-first match gate for this product: the candidate must pass the education and experience
+  // requirements. Skills and certifications are treated as secondary fit signals used for ranking,
+  // not as hard blockers for match eligibility.
   const passed = qualificationPassed &&
-    (experienceRequired === 0 || yearsExperience >= experienceRequired) &&
-    skillMatch.passed &&
-    certMatch.passed;
+    (experienceRequired === 0 || yearsExperience >= experienceRequired);
 
   const reasons: string[] = [];
   if (!qualificationPassed) {
@@ -313,8 +314,12 @@ export function scoreJobSeekerMatch(
   if (experienceRequired > 0 && yearsExperience < experienceRequired) {
     reasons.push(`Needs ${experienceRequired} years experience, seeker has ${yearsExperience}`);
   }
-  if (!skillMatch.passed) reasons.push(`Missing required skills: ${skillMatch.missing.join(", ")}`);
-  if (!certMatch.passed) reasons.push(`Missing required certifications: ${certMatch.missing.join(", ")}`);
+  if (!skillMatch.passed) {
+    reasons.push(`Skill fit is not exact: ${skillMatch.missing.join(", ") || "some required skills are missing"}`);
+  }
+  if (!certMatch.passed) {
+    reasons.push(`Certification fit is not exact: ${certMatch.missing.join(", ") || "some certifications are missing"}`);
+  }
 
   return {
     passed,

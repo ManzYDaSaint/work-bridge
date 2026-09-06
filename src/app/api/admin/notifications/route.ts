@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     try {
         const dispatchMode = await getMatchDispatchMode();
 
-        // 1. Fetch pending approvals (status = 'REQUIRES_APPROVAL')
+        // 1. Fetch pending approvals (status = 'REQUIRES_APPROVAL') and pending queue (status = 'PENDING')
         const { data: requiresApproval } = await supabase
             .from("notification_queue")
             .select(`
@@ -46,6 +46,39 @@ export async function GET(request: Request) {
             .eq("status", "REQUIRES_APPROVAL")
             .order("created_at", { ascending: false });
 
+        const { data: pendingQueue } = await supabase
+            .from("notification_queue")
+            .select(`
+                id,
+                created_at,
+                status,
+                template_id,
+                payload,
+                job_seekers ( full_name, phone ),
+                jobs ( title, display_company_name )
+            `)
+            .eq("status", "PENDING")
+            .order("created_at", { ascending: false })
+            .limit(200);
+
+        // Dead-letter items for admin inspection
+        const { data: deadLetter } = await supabase
+            .from("notification_queue")
+            .select(`
+                id,
+                created_at,
+                status,
+                template_id,
+                payload,
+                last_error,
+                attempts,
+                job_seekers ( full_name, phone ),
+                jobs ( title, display_company_name )
+            `)
+            .eq("status", "DEAD_LETTER")
+            .order("created_at", { ascending: false })
+            .limit(200);
+
         // 2. Fetch recently processed notifications (SENT, FAILED, REJECTED)
         const { data: recentHistory } = await supabase
             .from("notification_queue")
@@ -64,15 +97,21 @@ export async function GET(request: Request) {
 
         // Counts
         const pendingCount = requiresApproval?.length || 0;
+        const pendingQueueCount = pendingQueue?.length || 0;
+        const deadLetterCount = deadLetter?.length || 0;
         const sentCount = recentHistory?.filter(h => h.status === "SENT").length || 0;
         const rejectedCount = recentHistory?.filter(h => h.status === "REJECTED").length || 0;
 
         return NextResponse.json({
             dispatchMode,
             pendingCount,
+            pendingQueueCount,
+            deadLetterCount,
             sentCount,
             rejectedCount,
             requiresApproval: requiresApproval || [],
+            pendingQueue: pendingQueue || [],
+            deadLetter: deadLetter || [],
             recentHistory: recentHistory || []
         });
 
@@ -193,6 +232,42 @@ export async function POST(request: Request) {
                 success: true,
                 message: `Rejected ${targetIds.length} match notification(s).`
             });
+        }
+
+        // Requeue dead-letter or other notifications for retry
+        if (action === "REQUEUE") {
+            const targetIds = notificationIds || (notificationId ? [notificationId] : []);
+            if (targetIds.length === 0) {
+                return NextResponse.json({ error: "No notification ID provided" }, { status: 400 });
+            }
+
+            await supabase
+                .from("notification_queue")
+                .update({ status: "PENDING", attempts: 0, last_error: null })
+                .in("id", targetIds);
+
+            // Kick the worker to process requeued items
+            await processNotificationQueue();
+
+            await recordAuditLog({
+                action: "notification_REQUEUE",
+                path: "/api/admin/notifications",
+                method: "POST",
+                statusCode: 200,
+                userId: auth.user.id,
+                metadata: { requeuedCount: targetIds.length, targetIds }
+            });
+
+            await emitSystemEvent({
+                category: "NOTIFICATION",
+                severity: "INFO",
+                event: "ADMIN_NOTIFICATION_REQUEUED",
+                message: `Admin requeued ${targetIds.length} notification(s) for retry`,
+                actorId: auth.user.id,
+                metadata: { requeuedCount: targetIds.length }
+            });
+
+            return NextResponse.json({ success: true, message: `Requeued ${targetIds.length} notification(s).` });
         }
 
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { User } from "@/types";
-import { BrainCircuit, Briefcase, ClipboardList, LayoutDashboard, ShieldCheck, Users, Activity, Sparkles, Zap, Crown, BarChart3 } from "lucide-react";
+import { BrainCircuit, Briefcase, ClipboardList, LayoutDashboard, ShieldCheck, Users, Activity, Sparkles, Zap, Crown, BarChart3, Mail } from "lucide-react";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
 import { UserProvider } from "@/context/UserContext";
 import { signOutAndRedirect } from "@/lib/auth-utils";
@@ -14,6 +14,7 @@ const adminNavGroups: NavGroup[] = [
             { label: "Job Ingestion", href: "/dashboard/admin/ingestion", icon: Zap },
             { label: "Market Moderation", href: "/dashboard/admin/jobs", icon: Briefcase },
             { label: "User Management", href: "/dashboard/admin/users", icon: Users },
+            { label: "Communications", href: "/dashboard/admin/communications", icon: Mail },
             { label: "Match Approvals", href: "/dashboard/admin/notifications", icon: ShieldCheck },
         ]
     },
