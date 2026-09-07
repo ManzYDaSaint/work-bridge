@@ -1,6 +1,11 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { fetchJobsWithEmployers } from "@/lib/seeker-data";
-import { scoreJobSeekerMatch, SeekerProfile, StructuredMatchResult } from "@/lib/matching-helpers";
+import {
+  scoreJobSeekerMatch,
+  SeekerProfile,
+  StructuredMatchResult,
+  resolveHighestEducationQualification,
+} from "@/lib/matching-helpers";
 import { Job } from "@/types";
 import { generateEmbedding } from "@/lib/embedding-service";
 
@@ -67,7 +72,7 @@ export class RecommendationService {
     const supabase = await this.getSupabase();
     const { data: seeker, error: seekerError } = await supabase
       .from('job_seekers')
-      .select('id, full_name, bio, location, skills, experience, qualification, embedding')
+      .select('id, full_name, bio, location, skills, experience, education, qualification, embedding')
       .eq('id', userId)
       .single();
 
@@ -102,7 +107,8 @@ export class RecommendationService {
     const seekerProfile: SeekerProfile = {
       skills: seeker.skills || [],
       experience: seeker.experience || [],
-      qualification: seeker.qualification || null,
+      qualification: resolveHighestEducationQualification(seeker.qualification || null, seeker.education || []),
+      education: seeker.education || [],
       certifications: [],
     };
 
@@ -204,7 +210,7 @@ export class RecommendationService {
 
     const { data: seekerRows, error: seekerRowsError } = await supabase
       .from('job_seekers')
-      .select('id, full_name, bio, location, skills, completion, experience, qualification, seniority_level, employment_status, profile_visibility, avatar_url')
+      .select('id, full_name, bio, location, skills, completion, experience, education, qualification, seniority_level, employment_status, profile_visibility, avatar_url')
       .in('id', candidateSeekerIds);
 
     if (seekerRowsError) {
@@ -230,7 +236,8 @@ export class RecommendationService {
         const seekerProfile: SeekerProfile = {
           skills: s.skills || [],
           experience: s.experience || [],
-          qualification: s.qualification || null,
+          qualification: resolveHighestEducationQualification(s.qualification || null, s.education || []),
+          education: s.education || [],
           certifications: [],
         };
 

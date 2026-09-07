@@ -4,6 +4,7 @@ export interface SeekerProfile {
   skills?: string[] | string | null;
   experience?: any[] | null;
   qualification?: string | null;
+  education?: Array<Record<string, any>> | null;
   certifications?: string[] | string | null;
 }
 
@@ -135,8 +136,13 @@ const DISCIPLINE_DOMAINS: Record<string, string[]> = {
  */
 const GENERIC_QUAL_PHRASES = [
   "or related field",
-  "or equivalent",
+  "or a related field",
+  "or related discipline",
+  "or a related discipline",
   "or relevant",
+  "or a relevant field",
+  "or equivalent",
+  "or an equivalent",
   "any relevant",
   "related discipline",
   "relevant qualification",
@@ -221,6 +227,28 @@ export function qualificationMatches(jobQualification?: string | null, seekerQua
   return evaluateQualificationMatch(jobQualification, seekerQualification).passed;
 }
 
+export function resolveHighestEducationQualification(
+  qualification?: string | null,
+  education?: Array<Record<string, any>> | null
+): string | null {
+  const educationQualifications = Array.isArray(education)
+    ? education
+        .map((entry: any) => {
+          const value = entry?.certificate || entry?.degree || entry?.qualification || entry?.programme || entry?.program || entry?.name;
+          return typeof value === "string" ? value.trim() : "";
+        })
+        .filter(Boolean)
+    : [];
+
+  const detailedEducation = educationQualifications.find((value) =>
+    /(bachelor|master|degree|diploma|certificate|phd|msc|bsc|ba\b|ma\b|diploma|associate|higher diploma|advanced diploma|education|teaching|business administration)/i.test(value)
+  );
+
+  if (detailedEducation) return detailedEducation;
+
+  return qualification?.trim() || null;
+}
+
 export function normalizeStringArray(raw?: string[] | string | null): string[] {
   if (!raw) return [];
   if (Array.isArray(raw)) return normalizeSkills(raw);
@@ -290,18 +318,27 @@ export function scoreJobSeekerMatch(
     : 100;
 
   const totalWeight = weights.qualification + weights.experience + weights.skills + weights.certifications;
-  const score = Math.round(
+  const baseScore = Math.round(
     (qualificationScore * weights.qualification +
       experienceScore * weights.experience +
       skillsScore * weights.skills +
       certificationsScore * weights.certifications) / totalWeight
   );
 
-  // HR-first match gate for this product: the candidate must pass the education and experience
-  // requirements. Skills and certifications are treated as secondary fit signals used for ranking,
-  // not as hard blockers for match eligibility.
+  // Missing required skills/certifications cannot be hidden behind a strong qualification score.
+  // If the role explicitly lists must-have competencies, they must drag the match below the
+  // recommendation threshold instead of appearing as a 90% fit.
+  const hardRequirementPenalty =
+    (!skillMatch.passed ? 45 : 0) +
+    (!certMatch.passed ? 25 : 0);
+  const score = Math.max(0, Math.min(100, baseScore - hardRequirementPenalty));
+
+  // HR-first match gate for this product: the candidate must meet education, experience,
+  // and must-have skill/certification requirements before the role is eligible for recommendation.
   const passed = qualificationPassed &&
-    (experienceRequired === 0 || yearsExperience >= experienceRequired);
+    (experienceRequired === 0 || yearsExperience >= experienceRequired) &&
+    skillMatch.passed &&
+    certMatch.passed;
 
   const reasons: string[] = [];
   if (!qualificationPassed) {

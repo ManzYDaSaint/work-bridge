@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiFetchJson } from "@/lib/api";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
-import { Send, Users, Sparkles, Mail, FileText, Eye, Save, CheckCircle2 } from "lucide-react";
+import { Send, Sparkles, Mail, Eye, Save, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 type Audience = "ALL" | "SEEKERS" | "EMPLOYERS" | "PREMIUM_SEEKERS";

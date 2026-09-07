@@ -61,9 +61,17 @@ export function constructSeekerDNA(profile: any): string {
         .map((exp: any) => `${exp.role || exp.title || "Role"} at ${exp.company || exp.employer || "Organization"}: ${exp.description || ""}`)
         .join(". ");
 
+    const educationText = Array.isArray(profile.education)
+        ? profile.education
+            .map((entry: any) => entry?.certificate || entry?.degree || entry?.qualification || entry?.programme || entry?.program || "")
+            .filter(Boolean)
+            .join("; ")
+        : "";
+    const highestQualification = educationText || profile.qualification || "N/A";
+
     return `PRIMARY PROFESSIONAL QUALIFICATIONS:
 Role Title / Seniority: ${profile.seniority_level || profile.qualification || "Professional"}
-Highest Qualification: ${profile.qualification || "N/A"}
+Highest Qualification: ${highestQualification}
 Certifications & Professional Memberships: ${certs}
 
 CORE WORK HISTORY & RESPONSIBILITIES:
