@@ -35,7 +35,7 @@ export async function GET() {
         if (seekerIds.length > 0) {
             const [{ data: seekerList }, { data: userList }] = await Promise.all([
                 supabase.from("job_seekers").select("id, full_name, phone, qualification").in("id", seekerIds),
-                supabase.from("users").select("id, email, plan").in("id", seekerIds),
+                supabase.from("users").select("id, email").in("id", seekerIds),
             ]);
 
             (seekerList || []).forEach(s => { seekersMap[s.id] = s; });

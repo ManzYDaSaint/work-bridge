@@ -104,8 +104,8 @@ async function processPayChanguActivation(targetRef: string, durationMonths: num
         }
     }
 
-    if (seeker?.user_id) {
-        await supabase.from("users").update({ plan: "PREMIUM" }).eq("id", seeker.user_id);
+    if (actualSeekerId) {
+        await supabase.from("job_seekers").update({ is_subscribed: true }).eq("id", actualSeekerId);
     }
 
     // Trigger WhatsApp welcome alert if phone number exists

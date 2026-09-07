@@ -5,9 +5,11 @@ import {
   SeekerProfile,
   StructuredMatchResult,
   resolveHighestEducationQualification,
+  getQualificationRank,
 } from "@/lib/matching-helpers";
 import { Job } from "@/types";
 import { generateEmbedding } from "@/lib/embedding-service";
+import { normalizeSkills } from "@/lib/skill-normalizer";
 
 export interface RecommendationOptions {
   limit?: number;
@@ -281,6 +283,126 @@ export class RecommendationService {
   }
 
   /**
+   * Fallback: find jobs with similar qualification and skill requirements when embedding-based
+   * similarity is not available or returns no matches.
+   */
+  private static async getQualificationBasedSimilarJobs(jobId: string, limit: number) {
+    const supabase = await this.getSupabase();
+
+    const { data: anchorJob, error: anchorError } = await supabase
+      .from('jobs')
+      .select('id, title, type, work_mode, qualification, minimum_years_experience, skills, must_have_skills, nice_to_have_skills, location, status, public_slug, display_company_name, employer_id, created_at')
+      .eq('id', jobId)
+      .maybeSingle();
+
+    if (anchorError || !anchorJob) {
+      return [];
+    }
+
+    const { data: jobs, error: jobsError } = await supabase
+      .from('jobs')
+      .select('id, title, type, work_mode, qualification, minimum_years_experience, skills, must_have_skills, nice_to_have_skills, location, status, public_slug, display_company_name, employer_id, created_at')
+      .eq('status', 'ACTIVE')
+      .neq('id', jobId)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (jobsError || !jobs || jobs.length === 0) {
+      return [];
+    }
+
+    const currentSkills = new Set(
+      normalizeSkills([
+        ...(anchorJob.must_have_skills || []),
+        ...(anchorJob.skills || []),
+        ...(anchorJob.nice_to_have_skills || []),
+      ])
+    );
+    const currentQualification = anchorJob.qualification || null;
+    const currentQualificationRank = getQualificationRank(currentQualification);
+    const currentMinExp = Number(anchorJob.minimum_years_experience ?? 0) || 0;
+
+    const scoredJobs = jobs
+      .map((candidate: any) => {
+        const candidateSkills = normalizeSkills([
+          ...(candidate.must_have_skills || []),
+          ...(candidate.skills || []),
+          ...(candidate.nice_to_have_skills || []),
+        ]);
+        const candidateSkillSet = new Set(candidateSkills);
+
+        const overlap = [...currentSkills].filter((skill) => candidateSkillSet.has(skill));
+        const skillOverlapRatio = currentSkills.size > 0
+          ? overlap.length / Math.max(currentSkills.size, 1)
+          : 0;
+
+        const candidateQualificationRank = getQualificationRank(candidate.qualification || null);
+        let qualificationScore = 0;
+
+        if (currentQualification && candidate.qualification) {
+          const currentLower = currentQualification.toLowerCase();
+          const candidateLower = candidate.qualification.toLowerCase();
+
+          if (currentLower === candidateLower || candidateLower.includes(currentLower) || currentLower.includes(candidateLower)) {
+            qualificationScore = 1;
+          } else if (currentQualificationRank > 0 && candidateQualificationRank > 0) {
+            const delta = Math.abs(currentQualificationRank - candidateQualificationRank);
+            if (delta === 0) qualificationScore = 1;
+            else if (delta === 1) qualificationScore = 0.75;
+            else if (delta === 2) qualificationScore = 0.4;
+            else qualificationScore = 0.15;
+          } else {
+            qualificationScore = 0.5;
+          }
+        } else if (!currentQualification && candidate.qualification) {
+          qualificationScore = 0.4;
+        } else if (currentQualification && !candidate.qualification) {
+          qualificationScore = 0.2;
+        } else {
+          qualificationScore = 0.5;
+        }
+
+        const candidateMinExp = Number(candidate.minimum_years_experience ?? 0) || 0;
+        const expDelta = Math.abs(currentMinExp - candidateMinExp);
+        let experienceScore = 0.5;
+        if (currentMinExp > 0) {
+          if (expDelta <= 1) experienceScore = 1;
+          else if (expDelta <= 3) experienceScore = 0.75;
+          else if (expDelta <= 5) experienceScore = 0.45;
+          else experienceScore = 0.2;
+        }
+
+        const typeBonus = anchorJob.type && candidate.type && anchorJob.type === candidate.type ? 0.15 : 0;
+        const workModeBonus = anchorJob.work_mode && candidate.work_mode && anchorJob.work_mode === candidate.work_mode ? 0.1 : 0;
+        const locationBonus = anchorJob.location && candidate.location && anchorJob.location.toLowerCase() === candidate.location.toLowerCase() ? 0.1 : 0;
+
+        const score = (
+          qualificationScore * 50 +
+          skillOverlapRatio * 30 +
+          experienceScore * 15 +
+          typeBonus * 100 +
+          workModeBonus * 100 +
+          locationBonus * 100
+        );
+
+        return {
+          ...candidate,
+          _similarity_score: score,
+          _overlap_count: overlap.length,
+        };
+      })
+      .filter((candidate: any) => {
+        const hasRelevantSignal = candidate._similarity_score >= 25 || candidate._overlap_count > 0;
+        return hasRelevantSignal;
+      })
+      .sort((a: any, b: any) => b._similarity_score - a._similarity_score)
+      .slice(0, limit)
+      .map(({ _similarity_score, _overlap_count, ...candidate }: any) => candidate);
+
+    return scoredJobs;
+  }
+
+  /**
    * Find jobs similar to a given job.
    */
   static async getSimilarJobs(jobId: string, options: RecommendationOptions = {}) {
@@ -294,18 +416,28 @@ export class RecommendationService {
       .single();
 
     if (jobError || !job?.embedding) {
-      throw new Error("Job embedding not found.");
+      return this.getQualificationBasedSimilarJobs(jobId, limit);
     }
 
-    const { data: similarJobs, error: simError } = await supabase.rpc('find_similar_jobs', {
-      query_embedding: job.embedding,
-      exclude_job_id: jobId,
-      match_count: limit,
-    });
+    try {
+      const { data: similarJobs, error: simError } = await supabase.rpc('find_similar_jobs', {
+        query_embedding: job.embedding,
+        exclude_job_id: jobId,
+        match_count: limit,
+      });
 
-    if (simError) throw simError;
+      if (simError) {
+        return this.getQualificationBasedSimilarJobs(jobId, limit);
+      }
 
-    return similarJobs;
+      if (!Array.isArray(similarJobs) || similarJobs.length === 0) {
+        return this.getQualificationBasedSimilarJobs(jobId, limit);
+      }
+
+      return similarJobs;
+    } catch {
+      return this.getQualificationBasedSimilarJobs(jobId, limit);
+    }
   }
 
   /**

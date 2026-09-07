@@ -30,13 +30,22 @@ export const userService = {
         }
 
         // Parallel fetch for role-specific profiles
-        const [seekerData, employerData] = await Promise.all([
-            supabase.from("job_seekers").select("*").eq("id", userId).single(),
-            supabase.from("employers").select("*").eq("id", userId).single(),
+        const [seekerData, employerData, premiumData] = await Promise.all([
+            supabase.from("job_seekers").select("*").eq("id", userId).maybeSingle(),
+            supabase.from("employers").select("*").eq("id", userId).maybeSingle(),
+            supabase
+                .from("premium_subscriptions")
+                .select("id, ends_at")
+                .eq("seeker_id", userId)
+                .eq("status", "ACTIVE")
+                .gt("ends_at", new Date().toISOString())
+                .maybeSingle(),
         ]);
 
+        const plan = seekerData.data?.is_subscribed || premiumData.data ? "PREMIUM" : "FREE";
+
         return {
-            user,
+            user: { ...user, plan },
             jobSeeker: seekerData.data,
             employer: employerData.data,
         };

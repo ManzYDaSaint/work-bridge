@@ -208,8 +208,8 @@ export async function POST(request: Request) {
                 }
             }
 
-            // Update user plan in users table
-            await supabase.from("users").update({ plan: "PREMIUM" }).eq("id", auth.user.id);
+            // Keep premium status on the actual schema source of truth
+            await supabase.from("job_seekers").update({ is_subscribed: true }).eq("id", seeker.id);
 
             // Update phone if provided
             if (phone) {
@@ -323,7 +323,7 @@ export async function POST(request: Request) {
                 .update({ status: "CANCELLED" })
                 .eq("seeker_id", seeker.id);
 
-            await supabase.from("users").update({ plan: "FREE" }).eq("id", auth.user.id);
+            await supabase.from("job_seekers").update({ is_subscribed: false }).eq("id", seeker.id);
 
             return NextResponse.json({ success: true, message: "Subscription cancelled." });
         }

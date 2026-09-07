@@ -60,11 +60,29 @@ export async function GET(request: Request) {
                         });
 
                         if (effectiveRole === "JOB_SEEKER") {
+                            const { data: existingSeeker, error: seekerLookupError } = await adminClient
+                                .from("job_seekers")
+                                .select("id, full_name, location, avatar_url")
+                                .eq("id", user.id)
+                                .maybeSingle();
+
+                            const safeFullName = existingSeeker?.full_name && String(existingSeeker.full_name).trim()
+                                ? existingSeeker.full_name
+                                : displayName || email.split("@")[0] || "";
+                            const safeLocation = existingSeeker?.location && String(existingSeeker.location).trim()
+                                ? existingSeeker.location
+                                : "To be updated";
+                            const safeAvatar = existingSeeker?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+
+                            if (seekerLookupError && seekerLookupError.code !== "PGRST116") {
+                                console.error("[auth/callback] seeker lookup failed:", seekerLookupError);
+                            }
+
                             await adminClient.from("job_seekers").upsert({
                                 id: user.id,
-                                full_name: displayName,
-                                location: "To be updated",
-                                avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+                                full_name: safeFullName,
+                                location: safeLocation,
+                                avatar_url: safeAvatar,
                             });
 
                             if (canApplyRequestedRole) {
@@ -98,13 +116,19 @@ export async function GET(request: Request) {
                                 }
                             }
                         } else if (effectiveRole === "EMPLOYER") {
+                            const { data: existingEmployer } = await adminClient
+                                .from("employers")
+                                .select("id, company_name, industry, location, status, recruiter_verified")
+                                .eq("id", user.id)
+                                .maybeSingle();
+
                             await adminClient.from("employers").upsert({
                                 id: user.id,
-                                company_name: user.user_metadata?.company_name ?? null,
-                                industry: null,
-                                location: null,
-                                status: "PENDING",
-                                recruiter_verified: email ? !isFreeEmailDomain(email) : false,
+                                company_name: existingEmployer?.company_name || user.user_metadata?.company_name || null,
+                                industry: existingEmployer?.industry || null,
+                                location: existingEmployer?.location || null,
+                                status: existingEmployer?.status || "PENDING",
+                                recruiter_verified: existingEmployer?.recruiter_verified ?? (email ? !isFreeEmailDomain(email) : false),
                             });
 
                             if (canApplyRequestedRole) {

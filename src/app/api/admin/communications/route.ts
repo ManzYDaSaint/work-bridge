@@ -6,6 +6,20 @@ import { resend } from "@/lib/resend";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_URL || "https://aganyu.com";
 const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || "Aganyu <hello@aganyu.com>";
 
+function getEmailConfigError() {
+    const apiKey = process.env.RESEND_API_KEY?.trim();
+    if (!apiKey || apiKey === "re_dummy_key") {
+        return "Resend is not configured. Set RESEND_API_KEY to a valid key before sending emails.";
+    }
+
+    const fromEmail = process.env.RESEND_FROM_EMAIL?.trim();
+    if (!fromEmail || fromEmail === "Aganyu <hello@aganyu.com>") {
+        return "RESEND_FROM_EMAIL is not configured. Add a verified sender address from your Resend account, for example: Aganyu <no-reply@yourdomain.com>";
+    }
+
+    return null;
+}
+
 type Audience = "ALL" | "SEEKERS" | "EMPLOYERS" | "PREMIUM_SEEKERS";
 
 function escapeHtml(value: string) {
@@ -39,38 +53,89 @@ async function getRecipients(audience: Audience, limit = 20) {
     const supabase = getSupabaseAdminClient();
     if (!supabase) return [] as Array<{ email: string; first_name: string; role: string; profile_url: string }>;
 
-    let query = supabase.from("users").select("id, email, role, plan");
+    // Default: fetch users (id, email, role)
+    if (audience === "ALL" || audience === "SEEKERS" || audience === "EMPLOYERS") {
+        let query = supabase.from("users").select("id, email, role");
+        if (audience === "SEEKERS") query = query.eq("role", "JOB_SEEKER");
+        if (audience === "EMPLOYERS") query = query.eq("role", "EMPLOYER");
 
-    if (audience === "SEEKERS") {
-        query = query.eq("role", "JOB_SEEKER");
+        const { data, error } = await query.order("created_at", { ascending: false }).limit(limit + 25);
+        if (error) throw error;
+
+        return (data || [])
+            .filter((user: any) => user.email && user.email.includes("@"))
+            .map((user: any) => {
+                const fullEmail = String(user.email).trim();
+                const localPart = fullEmail.split("@")[0] || "there";
+                const firstName = localPart
+                    .replace(/[._-]+/g, " ")
+                    .replace(/\b\w/g, (char) => char.toUpperCase())
+                    .trim();
+
+                return {
+                    email: fullEmail,
+                    first_name: firstName,
+                    role: user.role,
+                    profile_url: buildProfileUrl(user.role),
+                };
+            });
     }
-    if (audience === "EMPLOYERS") {
-        query = query.eq("role", "EMPLOYER");
-    }
+
+    // PREMIUM_SEEKERS: use both current schema state and active premium subscription rows.
     if (audience === "PREMIUM_SEEKERS") {
-        query = query.eq("role", "JOB_SEEKER").eq("plan", "PREMIUM");
+        const now = new Date().toISOString();
+
+        const [{ data: subs, error: subsError }, { data: premiumSeekers, error: premiumSeekersError }] = await Promise.all([
+            supabase
+                .from("premium_subscriptions")
+                .select("seeker_id, ends_at")
+                .eq("status", "ACTIVE")
+                .gt("ends_at", now),
+            supabase
+                .from("job_seekers")
+                .select("id")
+                .eq("is_subscribed", true),
+        ]);
+
+        if (subsError) throw subsError;
+        if (premiumSeekersError) throw premiumSeekersError;
+
+        const seekerIds = Array.from(new Set([
+            ...((subs || []).map((s: any) => s.seeker_id).filter(Boolean)),
+            ...((premiumSeekers || []).map((s: any) => s.id).filter(Boolean)),
+        ]));
+
+        if (seekerIds.length === 0) return [];
+
+        const { data: users, error: usersError } = await supabase
+            .from("users")
+            .select("id, email, role")
+            .in("id", seekerIds)
+            .order("created_at", { ascending: false })
+            .limit(limit + 25);
+
+        if (usersError) throw usersError;
+
+        return (users || [])
+            .filter((user: any) => user.email && user.email.includes("@"))
+            .map((user: any) => {
+                const fullEmail = String(user.email).trim();
+                const localPart = fullEmail.split("@")[0] || "there";
+                const firstName = localPart
+                    .replace(/[._-]+/g, " ")
+                    .replace(/\b\w/g, (char) => char.toUpperCase())
+                    .trim();
+
+                return {
+                    email: fullEmail,
+                    first_name: firstName,
+                    role: user.role,
+                    profile_url: buildProfileUrl(user.role),
+                };
+            });
     }
 
-    const { data, error } = await query.order("created_at", { ascending: false }).limit(limit + 25);
-    if (error) throw error;
-
-    return (data || [])
-        .filter((user: any) => user.email && user.email.includes("@"))
-        .map((user: any) => {
-            const fullEmail = String(user.email).trim();
-            const localPart = fullEmail.split("@")[0] || "there";
-            const firstName = localPart
-                .replace(/[._-]+/g, " ")
-                .replace(/\b\w/g, (char) => char.toUpperCase())
-                .trim();
-
-            return {
-                email: fullEmail,
-                first_name: firstName,
-                role: user.role,
-                profile_url: buildProfileUrl(user.role),
-            };
-        });
+    return [];
 }
 
 export async function GET(request: Request) {
@@ -110,6 +175,11 @@ export async function POST(request: Request) {
 
         if (!subject || !rawBody) {
             return NextResponse.json({ error: "Subject and body are required." }, { status: 400 });
+        }
+
+        const emailConfigError = getEmailConfigError();
+        if (emailConfigError) {
+            return NextResponse.json({ error: emailConfigError }, { status: 500 });
         }
 
         let recipients = await getRecipients(audience, 5000);

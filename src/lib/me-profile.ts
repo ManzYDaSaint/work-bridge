@@ -26,11 +26,21 @@ export async function buildMeProfile(
         return { profile: null, error: "not_found" };
     }
 
+    const { data: activePremium } = await supabase
+        .from("premium_subscriptions")
+        .select("id, ends_at")
+        .eq("seeker_id", userId)
+        .eq("status", "ACTIVE")
+        .gt("ends_at", new Date().toISOString())
+        .maybeSingle();
+
+    const isPremium = Boolean(userData.jobSeeker?.is_subscribed || activePremium);
+
     const profile: User = {
         id: userData.id,
         email: userData.email,
         role: userData.role,
-        plan: userData.plan || 'FREE',
+        plan: isPremium ? 'PREMIUM' : 'FREE',
         createdAt: userData.created_at,
         onboardingCompletedAt: userData.onboarding_completed_at ?? null,
         jobSeeker: userData.jobSeeker

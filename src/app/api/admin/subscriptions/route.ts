@@ -52,8 +52,10 @@ export async function POST(request: Request) {
                 }
             }
 
-            // Update user plan to PREMIUM
-            await supabase.from("users").update({ plan: "PREMIUM" }).eq("id", userId);
+            // Keep premium state on the actual schema fields used by the app
+            if (seekerId) {
+                await supabase.from("job_seekers").update({ is_subscribed: true }).eq("id", seekerId);
+            }
 
             await recordAuditLog({
                 action: "subscription_GRANT_PREMIUM",
@@ -89,8 +91,9 @@ export async function POST(request: Request) {
                     .eq("seeker_id", seekerId);
             }
 
-            // Reset user plan to FREE
-            await supabase.from("users").update({ plan: "FREE" }).eq("id", userId);
+            if (seekerId) {
+                await supabase.from("job_seekers").update({ is_subscribed: false }).eq("id", seekerId);
+            }
 
             await recordAuditLog({
                 action: "subscription_REVOKE_PREMIUM",

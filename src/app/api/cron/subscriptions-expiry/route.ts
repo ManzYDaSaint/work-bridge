@@ -46,19 +46,19 @@ export async function GET(request: Request) {
             .update({ status: "EXPIRED" })
             .in("id", expiredSubs.map((s) => s.id));
 
-        // 3. Downgrade user plan to FREE in users table
+        // 3. Mark expired seekers as no longer premium on the current schema
         const { data: seekers } = await supabase
             .from("job_seekers")
-            .select("user_id")
+            .select("id")
             .in("id", seekerIds);
 
         if (seekers && seekers.length > 0) {
-            const userIds = seekers.map((s) => s.user_id).filter(Boolean);
-            if (userIds.length > 0) {
+            const seekerIdsToClear = seekers.map((s) => s.id).filter(Boolean);
+            if (seekerIdsToClear.length > 0) {
                 await supabase
-                    .from("users")
-                    .update({ plan: "FREE" })
-                    .in("id", userIds);
+                    .from("job_seekers")
+                    .update({ is_subscribed: false })
+                    .in("id", seekerIdsToClear);
             }
         }
 

@@ -41,7 +41,7 @@ export async function GET(request: Request) {
                 id: u.id,
                 email: u.email,
                 role: u.role,
-                plan: u.plan || (activeSub ? 'PREMIUM' : 'FREE'),
+                plan: activeSub ? 'PREMIUM' : (seeker?.is_subscribed ? 'PREMIUM' : 'FREE'),
                 createdAt: u.created_at,
                 name: u.role === 'JOB_SEEKER'
                     ? seeker?.full_name

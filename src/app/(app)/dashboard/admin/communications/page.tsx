@@ -21,17 +21,18 @@ export default async function CommunicationsPage() {
     };
 
     if (supabase) {
-        const [{ count: allCount }, { count: seekerCount }, { count: employerCount }, { count: premiumCount }] = await Promise.all([
+        const [{ count: allCount }, { count: seekerCount }, { count: employerCount }, { count: premiumCount }, { count: subscribedCount }] = await Promise.all([
             supabase.from("users").select("id", { count: "exact", head: true }),
             supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "JOB_SEEKER"),
             supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "EMPLOYER"),
-            supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "JOB_SEEKER").eq("plan", "PREMIUM"),
+            supabase.from("premium_subscriptions").select("seeker_id", { count: "exact", head: true }).eq("status", "ACTIVE").gt("ends_at", new Date().toISOString()),
+            supabase.from("job_seekers").select("id", { count: "exact", head: true }).eq("is_subscribed", true),
         ]);
 
         counts.ALL = allCount ?? 0;
         counts.SEEKERS = seekerCount ?? 0;
         counts.EMPLOYERS = employerCount ?? 0;
-        counts.PREMIUM_SEEKERS = premiumCount ?? 0;
+        counts.PREMIUM_SEEKERS = Math.max(premiumCount ?? 0, subscribedCount ?? 0);
     }
 
     return <CommunicationsClient initialCounts={counts} />;
