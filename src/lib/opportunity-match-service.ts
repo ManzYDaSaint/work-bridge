@@ -130,7 +130,7 @@ export async function triggerOpportunityMatchNotifications(opportunityId: string
                 qualification,
                 location,
                 experience,
-                user:users(plan, email)
+                user:users(email)
             `)
             .in("id", seekerIds);
 
