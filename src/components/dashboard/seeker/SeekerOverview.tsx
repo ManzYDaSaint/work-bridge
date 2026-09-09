@@ -65,17 +65,18 @@ export default function SeekerOverview({
         }
     };
 
-    const fullName = activeUser?.jobSeeker?.full_name || activeUser?.email?.split("@")[0] || "User";
-    const isPremium = activeUser?.plan === "PREMIUM" || activeUser?.jobSeeker?.isSubscribed === true;
+    const seeker = activeUser?.jobSeeker;
+    const fullName = seeker?.full_name || activeUser?.email?.split("@")[0] || "User";
+    const isPremium = activeUser?.plan === "PREMIUM" || seeker?.isSubscribed === true;
 
     // Use the new Profile Strength engine
-    const strength = calculateProfileStrength(activeUser?.jobSeeker);
+    const strength = calculateProfileStrength(seeker);
     const nextActions = [
-        !activeUser?.jobSeeker?.full_name ? { title: "Add your full name", detail: "Personalise your professional profile.", href: "/dashboard/seeker/profile" } : null,
-        !activeUser?.jobSeeker?.qualification ? { title: "Add your qualification", detail: "Highlight your highest education level.", href: "/dashboard/seeker/profile" } : null,
-        !activeUser?.jobSeeker?.phone ? { title: "Connect WhatsApp", detail: "Get instant alerts and faster responses.", href: "/dashboard/seeker/profile" } : null,
-        !activeUser?.jobSeeker?.skills?.length ? { title: "Add your skills", detail: "Improve discovery and match quality.", href: "/dashboard/seeker/profile" } : null,
-        !(activeUser?.jobSeeker?.experience?.length) ? { title: "Add work experience", detail: "Show employers the value you bring.", href: "/dashboard/seeker/profile" } : null,
+        !seeker?.full_name ? { title: "Add your full name", detail: "Personalise your professional profile.", href: "/dashboard/seeker/profile" } : null,
+        !seeker?.qualification ? { title: "Add your qualification", detail: "Highlight your highest education level.", href: "/dashboard/seeker/profile" } : null,
+        !seeker?.phone ? { title: "Connect WhatsApp", detail: "Get instant alerts and faster responses.", href: "/dashboard/seeker/profile" } : null,
+        !seeker?.skills?.length ? { title: "Add your skills", detail: "Improve discovery and match quality.", href: "/dashboard/seeker/profile" } : null,
+        !(seeker?.experience?.length) ? { title: "Add work experience", detail: "Show employers the value you bring.", href: "/dashboard/seeker/profile" } : null,
     ].filter(Boolean) as Array<{ title: string; detail: string; href: string }>;
 
     return (
@@ -245,7 +246,7 @@ export default function SeekerOverview({
                                 </div>
                                 <div className="min-w-0">
                                     <p className="text-base font-bold text-slate-900 dark:text-white truncate">{fullName}</p>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.jobSeeker?.location || "Location not specified"}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{seeker?.location || "Location not specified"}</p>
                                 </div>
                             </div>
 
@@ -253,14 +254,14 @@ export default function SeekerOverview({
                                 <div className="flex items-center justify-between">
                                     <span className="text-slate-400 font-medium">Qualification:</span>
                                     <span className="font-bold text-slate-800 dark:text-slate-200 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 px-2.5 py-0.5 rounded-md border border-amber-200/60 dark:border-amber-900/40">
-                                        {user?.jobSeeker?.qualification || "Not set"}
+                                        {seeker?.qualification || "Not set"}
                                     </span>
                                 </div>
 
                                 <div className="flex items-center justify-between">
                                     <span className="text-slate-400 font-medium">WhatsApp Status:</span>
-                                    <span className={`font-bold px-2 py-0.5 rounded-md ${user?.jobSeeker?.phone ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-stone-100 text-slate-500"}`}>
-                                        {user?.jobSeeker?.phone ? "Connected" : "Unlinked"}
+                                    <span className={`font-bold px-2 py-0.5 rounded-md ${seeker?.phone ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-stone-100 text-slate-500"}`}>
+                                        {seeker?.phone ? "Connected" : "Unlinked"}
                                     </span>
                                 </div>
                             </div>
@@ -279,10 +280,10 @@ export default function SeekerOverview({
                             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                                 Get extra application priority credits for every friend who signs up and completes their profile using your invite link.
                             </p>
-                            {user?.jobSeeker?.publicSlug && (
+                            {seeker?.publicSlug && (
                                 <button
                                     onClick={() => {
-                                        navigator.clipboard.writeText(`${window.location.origin}/register?ref=${user.jobSeeker?.publicSlug}`);
+                                        navigator.clipboard.writeText(`${window.location.origin}/register?ref=${seeker.publicSlug}`);
                                         toast.success("Referral link copied to clipboard!");
                                     }}
                                     className="flex w-full items-center justify-between gap-2 rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-xs font-bold text-slate-700 transition hover:bg-stone-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 active:scale-95"
