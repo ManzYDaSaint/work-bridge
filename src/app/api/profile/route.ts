@@ -17,6 +17,8 @@ export async function GET() {
         .select("*")
         .eq("id", auth.userId)
         .single();
+    
+    console.log("Profile GET result:", JSON.stringify({ profile, error }, null, 2));
 
     if (error && error.code !== "PGRST116") {
         console.error("Profile GET error:", error);
