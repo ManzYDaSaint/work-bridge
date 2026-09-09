@@ -119,29 +119,32 @@ export async function PUT(request: Request) {
 
         const public_slug = currentProfile?.public_slug || buildPublicProfileSlug(body.full_name, auth.userId);
 
+        const upsertPayload = {
+            id: auth.userId,
+            full_name: body.full_name,
+            bio: body.bio,
+            location: body.location,
+            phone: body.phone,
+            whatsapp: body.whatsapp || false,
+            qualification: body.qualification,
+            skills: body.skills || [],
+            experience: body.experience || [],
+            education: body.education || [],
+            salary_expectation: body.salaryExpectation,
+            seniority_level: body.seniorityLevel,
+            employment_type: body.employmentType,
+            employment_status: body.employmentStatus || null,
+            search_intent: body.searchIntent || "ACTIVELY_LOOKING",
+            profile_visibility: body.profileVisibility || "HIDDEN",
+            public_slug,
+            completion,
+        };
+        console.log("Profile PUT upsertPayload:", JSON.stringify(upsertPayload, null, 2));
+
         // Upsert the profile first (without touching has_badge — the DB function owns that)
         const { data, error } = await supabase
             .from("job_seekers")
-            .upsert({
-                id: auth.userId,
-                full_name: body.full_name,
-                bio: body.bio,
-                location: body.location,
-                phone: body.phone,
-                whatsapp: body.whatsapp || false,
-                qualification: body.qualification,
-                skills: body.skills || [],
-                experience: body.experience || [],
-                education: body.education || [],
-                salary_expectation: body.salaryExpectation,
-                seniority_level: body.seniorityLevel,
-                employment_type: body.employmentType,
-                employment_status: body.employmentStatus || null,
-                search_intent: body.searchIntent || "ACTIVELY_LOOKING",
-                profile_visibility: body.profileVisibility || "HIDDEN",
-                public_slug,
-                completion,
-            })
+            .upsert(upsertPayload)
             .select()
             .single();
 
