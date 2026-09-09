@@ -136,11 +136,11 @@ export default function JobAlertsManager() {
                                 className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none transition-all focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                             />
                         </div>
-                        <div className="sm:col-span-2 flex items-center gap-4">
+                        <div className="sm:col-span-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                             <select
                                 value={frequency}
                                 onChange={(e) => setFrequency(e.target.value)}
-                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                className="w-full sm:w-auto rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                             >
                                 <option value="DAILY">Daily</option>
                                 <option value="WEEKLY">Weekly</option>
@@ -149,7 +149,7 @@ export default function JobAlertsManager() {
                             <button
                                 type="submit"
                                 disabled={isCreating}
-                                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                                className="flex w-full sm:flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
                             >
                                 {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                                 Save Alert

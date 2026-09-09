@@ -133,8 +133,8 @@ export default function JobDetailModal({
                                 </div>
                             </div>
                         </div>
-                        <button onClick={onClose} className="shrink-0 rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
-                            <X size={20} />
+                        <button onClick={onClose} className="shrink-0 rounded-xl p-2.5 text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center min-h-[44px] min-w-[44px]">
+                            <X size={22} />
                         </button>
                     </div>
                 </div>

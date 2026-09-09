@@ -103,7 +103,7 @@ export default function ApplicationsOverview({ applications }: { applications: A
 
             {/* Status Tabs and Search Input */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap gap-1.5 rounded-2xl bg-stone-100 p-1.5 dark:bg-slate-900 border border-stone-200/80 dark:border-slate-800">
+                <div className="no-scrollbar flex overflow-x-auto gap-1.5 rounded-2xl bg-stone-100 p-1.5 dark:bg-slate-900 border border-stone-200/80 dark:border-slate-800">
                     {tabs.map((tab) => {
                         const count = statusCounts[tab.id as keyof typeof statusCounts] || 0;
                         const isActive = activeTab === tab.id;
@@ -111,7 +111,7 @@ export default function ApplicationsOverview({ applications }: { applications: A
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+                                className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all whitespace-nowrap ${
                                     isActive
                                         ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
                                         : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"

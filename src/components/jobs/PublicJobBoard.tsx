@@ -76,20 +76,20 @@ function JobListRow({
     const company = job.display_company_name || job.employer?.companyName || "Independent team";
 
     return (
-        <div className="grid grid-cols-1 gap-y-4 border-b border-stone-200/70 px-4 py-4 transition-colors hover:bg-stone-50/70 dark:border-slate-800 dark:hover:bg-slate-900/60 sm:grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-4">
-            <button type="button" onClick={onOpen} className="min-w-0 text-left">
+        <div className="grid grid-cols-1 gap-y-3.5 border-b border-stone-200/70 px-4 py-4 transition-colors hover:bg-stone-50/70 dark:border-slate-800 dark:hover:bg-slate-900/60 sm:grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-4">
+            <button type="button" onClick={onOpen} className="min-w-0 text-left group">
                 <div className="flex items-start gap-3">
                     <CompanyAvatar logoUrl={job.employer?.logoUrl} name={company} size="sm" />
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <h2 className="truncate text-sm font-semibold text-slate-900 dark:text-white sm:text-base">{job.title}</h2>
+                            <h2 className="truncate text-sm font-bold text-slate-900 group-hover:text-[#16324f] dark:text-white dark:group-hover:text-amber-400 sm:text-base">{job.title}</h2>
                             {isApplied && (
                                 <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                                     Applied
                                 </span>
                             )}
                         </div>
-                        <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        <div className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                             <div className="inline-flex items-center gap-1.5">
                                 <span className="font-medium text-slate-700 dark:text-slate-300">{company}</span>
                                 <VerifiedBadge isVerified={job.employer?.recruiterVerified} />
@@ -115,9 +115,12 @@ function JobListRow({
                 )}
             </button>
 
-            <div className="flex items-center justify-between gap-2 sm:justify-end">
-                <span className="text-[11px] sm:text-xs text-slate-400">{timeAgo(job.createdAt) || "Recently"}</span>
-                <div className="flex items-center gap-1.5">
+            <div className="flex items-center justify-between gap-3 sm:justify-end pt-1 sm:pt-0">
+                <button type="button" onClick={onOpen} className="text-xs font-bold text-[#16324f] hover:underline dark:text-slate-200 sm:hidden">
+                    View details →
+                </button>
+                <span className="hidden sm:inline text-[11px] sm:text-xs text-slate-400">{timeAgo(job.createdAt) || "Recently"}</span>
+                <div className="flex items-center gap-2">
                     <ShareJobButton
                         jobId={job.id}
                         jobTitle={job.title}
@@ -131,10 +134,10 @@ function JobListRow({
                     <button
                         type="button"
                         onClick={onToggleSave}
-                        className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white text-slate-500 transition-colors hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-white"
+                        className="flex h-11 w-11 items-center justify-center rounded-full border border-stone-200 bg-white text-slate-500 transition-colors hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-white shrink-0 active:scale-95"
                         aria-label={isSaved ? "Unsave job" : "Save job"}
                     >
-                        {isSaved ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
+                        {isSaved ? <BookmarkCheck size={20} className="text-[#16324f] dark:text-white" /> : <Bookmark size={20} />}
                     </button>
                 </div>
             </div>
