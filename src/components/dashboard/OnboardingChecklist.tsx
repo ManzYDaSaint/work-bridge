@@ -25,11 +25,6 @@ function buildSeekerItems(user: User): ChecklistItem[] {
             complete: hasText(seeker?.avatarUrl) || hasText(seeker?.avatar_url),
         },
         {
-            label: "Upload resume",
-            href: "/dashboard/seeker/profile",
-            complete: hasText(seeker?.resumeUrl) || hasText(seeker?.resume_url),
-        },
-        {
             label: "Add 3+ skills",
             href: "/dashboard/seeker/profile",
             complete: (seeker?.skills?.length ?? 0) >= 3,

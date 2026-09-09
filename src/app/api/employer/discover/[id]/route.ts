@@ -130,7 +130,6 @@ export async function GET(
         experience: seeker.experience || [],
         education: seeker.education || [],
         certificates: certificates || [],
-        portfolio_links: seeker.portfolio_links || [],
         seniority_level: seeker.seniority_level,
         employment_type: seeker.employment_type,
         employment_status: seeker.employment_status ?? null,

@@ -81,9 +81,25 @@ export default function ApplicationsOverview({ applications }: { applications: A
         { id: "WITHDRAWN", label: "Withdrawn" },
     ];
 
+    const summaryCards = [
+        { label: "Pending", value: statusCounts.PENDING, tone: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300" },
+        { label: "Shortlisted", value: statusCounts.SHORTLISTED, tone: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300" },
+        { label: "Interviewing", value: statusCounts.INTERVIEWING, tone: "bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300" },
+        { label: "Accepted", value: statusCounts.ACCEPTED, tone: "bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-300" },
+    ];
+
     return (
         <div className="space-y-6 pb-20">
-            <PageHeader title="Applications" subtitle={`You have ${applications.length} active application${applications.length === 1 ? "" : "s"}.`} />
+            <PageHeader title="Applications" subtitle={`You have ${applications.length} application${applications.length === 1 ? "" : "s"} in your pipeline.`} />
+
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                {summaryCards.map((card) => (
+                    <div key={card.label} className={`rounded-2xl border border-stone-200 p-4 ${card.tone} dark:border-slate-800`}>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em]">{card.label}</p>
+                        <p className="mt-2 text-2xl font-black">{card.value}</p>
+                    </div>
+                ))}
+            </div>
 
             {/* Status Tabs and Search Input */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -123,7 +139,23 @@ export default function ApplicationsOverview({ applications }: { applications: A
 
             {filteredApplications.length === 0 ? (
                 <div className="rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
-                    <EmptyState icon={Briefcase} title="No applications match" description="Try selecting a different status tab or clearing your search filter." action={{ label: "Browse jobs", href: "/jobs" }} iconColor="text-[#16324f]" />
+                    {applications.length === 0 ? (
+                        <EmptyState 
+                            icon={Briefcase} 
+                            title="No applications yet" 
+                            description="Start applying to jobs in your recommended feed to track your status and progress here." 
+                            action={{ label: "View recommendations", href: "/dashboard/seeker/recommendations" }} 
+                            iconColor="text-[#16324f]" 
+                        />
+                    ) : (
+                        <EmptyState 
+                            icon={Briefcase} 
+                            title="No applications match" 
+                            description="Try selecting a different status tab or clearing your search filter." 
+                            action={{ label: "Browse all applications", onClick: () => { setActiveTab("ALL"); setSearchQuery(""); } }} 
+                            iconColor="text-[#16324f]" 
+                        />
+                    )}
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">

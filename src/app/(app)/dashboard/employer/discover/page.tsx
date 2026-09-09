@@ -11,7 +11,6 @@ export default async function DiscoverTalentPage({
         status?: string;
         location?: string;
         qualification?: string;
-        hasResume?: string;
         skills?: string;
         page?: string;
     }>;
@@ -26,7 +25,6 @@ export default async function DiscoverTalentPage({
         status: params.status,
         location: params.location,
         qualification: params.qualification,
-        hasResume: params.hasResume === "true",
         skills: params.skills,
     };
 

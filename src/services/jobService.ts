@@ -314,7 +314,6 @@ export const jobService = {
             status?: string;
             location?: string;
             qualification?: string;
-            hasResume?: boolean;
             skills?: string;
         },
         page: number = 1,
@@ -337,9 +336,9 @@ export const jobService = {
             .from("job_seekers")
             .select(`
                 id, full_name, bio, location, skills, seniority_level,
-                employment_status, search_intent, qualification, resume_url,
+                employment_status, search_intent, qualification,
                 avatar_url, created_at, experience, education, employment_type,
-                profile_visibility, portfolio_links
+                profile_visibility
             `, { count: "exact" });
 
         if (filters.intent && filters.intent !== "ALL") query = query.eq("search_intent", filters.intent);
@@ -347,7 +346,6 @@ export const jobService = {
         if (filters.status && filters.status !== "ALL") query = query.eq("employment_status", filters.status);
         if (filters.location) query = query.ilike("location", `%${filters.location}%`);
         if (filters.qualification && filters.qualification !== "ALL") query = query.eq("qualification", filters.qualification);
-        if (filters.hasResume) query = query.not("resume_url", "is", null);
         if (filters.skills) {
             const skillArray = filters.skills.split(",");
             query = query.contains("skills", skillArray);

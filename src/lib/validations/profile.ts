@@ -26,7 +26,6 @@ export const seekerProfileSchema = z.object({
     employmentType: z.string().optional(),
     searchIntent: z.enum(["ACTIVELY_LOOKING", "OPEN_TO_OFFERS", "SEEKING_INTERNSHIP", "NOT_LOOKING"]).optional(),
     profileVisibility: z.enum(["PUBLIC", "ANONYMOUS", "HIDDEN"]).optional(),
-    portfolioLinks: z.array(z.string().url("Invalid URL format")).optional(),
     employmentStatus: z.string().optional(),
 });
 

@@ -104,7 +104,7 @@ To ensure a safe and professional marketplace, Aganyu implements a multi-tier tr
 | AI/Embeddings | HuggingFace Inference API (`all-MiniLM-L6-v2`) |
 | Messaging | Meta WhatsApp Cloud API |
 | Auth | Supabase Auth |
-| Storage | Supabase Storage (avatars, resumes) |
+| Storage | Supabase Storage (avatars and media assets) |
 | Realtime | Supabase Realtime (messages, notifications) |
 | Payments | PayChangu (MWK Mobile Money & Cards) |
 | Email | Resend |

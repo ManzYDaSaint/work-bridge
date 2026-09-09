@@ -5,6 +5,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { emitSystemEvent } from "@/lib/mission-control";
+import { isFreshUserRecord } from "@/lib/role-utils";
 
 const PUBLIC_REGISTRATION_ROLES = new Set(["JOB_SEEKER", "EMPLOYER"]);
 
@@ -99,7 +100,8 @@ export async function POST(request: Request) {
         }
 
         // 2. Create Role-Specific Profile
-        const effectiveRole = (existingUser?.role || finalRole) as "JOB_SEEKER" | "EMPLOYER";
+        const prefersRequestedRole = !!(finalRole && (!existingUser || existingUser.role === finalRole || isFreshUserRecord(authUser.created_at)));
+        const effectiveRole = (prefersRequestedRole ? finalRole : (existingUser?.role || finalRole)) as "JOB_SEEKER" | "EMPLOYER";
         if (effectiveRole === "JOB_SEEKER") {
             const fallbackName = full_name || registrationEmail.split("@")[0] || "";
             const { error: seekerError } = await supabase

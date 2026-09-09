@@ -23,7 +23,6 @@ interface SeekerCard {
     employment_status: string | null;
     search_intent: string;
     profile_visibility: string;
-    portfolio_links: string[];
     is_saved?: boolean;
 }
 
@@ -45,7 +44,6 @@ export default function DiscoverTalentClient({
     const [statusFilter, setStatusFilter] = useState("ALL");
     const [locationQuery, setLocationQuery] = useState("");
     const [qualificationFilter, setQualificationFilter] = useState("ALL");
-    const [hasResumeFilter, setHasResumeFilter] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     
     // Sync state when server re-renders with new filtered results via URL params
@@ -121,7 +119,6 @@ export default function DiscoverTalentClient({
         if (statusFilter !== "ALL") params.append("status", statusFilter);
         if (locationQuery.trim()) params.append("location", locationQuery.trim());
         if (qualificationFilter !== "ALL") params.append("qualification", qualificationFilter);
-        if (hasResumeFilter) params.append("hasResume", "true");
         if (searchQuery) params.append("skills", searchQuery.split(" ").join(","));
         
         router.push(`/dashboard/employer/discover?${params.toString()}`);
@@ -209,7 +206,6 @@ export default function DiscoverTalentClient({
                                             if (statusFilter !== "ALL") params.append("status", statusFilter);
                                             if (locationQuery.trim()) params.append("location", locationQuery.trim());
                                             if (qualificationFilter !== "ALL") params.append("qualification", qualificationFilter);
-                                            if (hasResumeFilter) params.append("hasResume", "true");
                                             if (searchQuery) params.append("skills", searchQuery.split(" ").join(","));
                                             router.push(`/dashboard/employer/discover?${params.toString()}`);
                                         }, 0);
@@ -236,7 +232,6 @@ export default function DiscoverTalentClient({
                                             if (e.target.value !== "ALL") params.append("status", e.target.value);
                                             if (locationQuery.trim()) params.append("location", locationQuery.trim());
                                             if (qualificationFilter !== "ALL") params.append("qualification", qualificationFilter);
-                                            if (hasResumeFilter) params.append("hasResume", "true");
                                             if (searchQuery) params.append("skills", searchQuery.split(" ").join(","));
                                             router.push(`/dashboard/employer/discover?${params.toString()}`);
                                         }, 0);
@@ -267,7 +262,7 @@ export default function DiscoverTalentClient({
                                             if (statusFilter !== "ALL") params.append("status", statusFilter);
                                             if (locationQuery.trim()) params.append("location", locationQuery.trim());
                                             if (qualificationFilter !== "ALL") params.append("qualification", qualificationFilter);
-                                            if (hasResumeFilter) params.append("hasResume", "true");
+
                                             if (searchQuery) params.append("skills", searchQuery.split(" ").join(","));
                                             router.push(`/dashboard/employer/discover?${params.toString()}`);
                                         }, 0);
@@ -295,7 +290,6 @@ export default function DiscoverTalentClient({
                                             if (statusFilter !== "ALL") params.append("status", statusFilter);
                                             if (locationQuery.trim()) params.append("location", locationQuery.trim());
                                             if (e.target.value !== "ALL") params.append("qualification", e.target.value);
-                                            if (hasResumeFilter) params.append("hasResume", "true");
                                             if (searchQuery) params.append("skills", searchQuery.split(" ").join(","));
                                             router.push(`/dashboard/employer/discover?${params.toString()}`);
                                         }, 0);
@@ -310,30 +304,7 @@ export default function DiscoverTalentClient({
                                 </select>
                             </div>
 
-                            <div className="pt-2">
-                                <label className="flex items-center gap-2.5 cursor-pointer select-none text-sm font-medium text-slate-700 dark:text-slate-300">
-                                    <input 
-                                        type="checkbox" 
-                                        className="h-4 w-4 rounded border-stone-300 text-[#16324f] focus:ring-[#16324f] dark:border-slate-700 dark:bg-slate-950"
-                                        checked={hasResumeFilter}
-                                        onChange={(e) => {
-                                            setHasResumeFilter(e.target.checked);
-                                            setTimeout(() => {
-                                                const params = new URLSearchParams();
-                                                if (intentFilter !== "ALL") params.append("intent", intentFilter);
-                                                if (seniorityFilter !== "ALL") params.append("seniority", seniorityFilter);
-                                                if (statusFilter !== "ALL") params.append("status", statusFilter);
-                                                if (locationQuery.trim()) params.append("location", locationQuery.trim());
-                                                if (qualificationFilter !== "ALL") params.append("qualification", qualificationFilter);
-                                                if (e.target.checked) params.append("hasResume", "true");
-                                                if (searchQuery) params.append("skills", searchQuery.split(" ").join(","));
-                                                router.push(`/dashboard/employer/discover?${params.toString()}`);
-                                            }, 0);
-                                        }}
-                                    />
-                                    <span>Has uploaded resume</span>
-                                </label>
-                            </div>
+
                         </div>
                     </div>
                 </div>

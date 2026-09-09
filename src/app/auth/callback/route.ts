@@ -3,22 +3,9 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isFreeEmailDomain } from "@/lib/email-safety";
 import { sendWelcomeEmail } from "@/lib/resend";
+import { normalizeRequestedRole, resolveEffectiveRole, isFreshUserRecord } from "@/lib/role-utils";
 
 type AuthRole = "JOB_SEEKER" | "EMPLOYER";
-
-function normalizeRequestedRole(role: string | null): AuthRole | null {
-    const normalized = role?.toLowerCase();
-    if (normalized === "employer") return "EMPLOYER";
-    if (normalized === "seeker" || normalized === "job_seeker" || normalized === "candidate") return "JOB_SEEKER";
-    return null;
-}
-
-function isFreshOAuthUser(createdAt?: string): boolean {
-    if (!createdAt) return false;
-    const createdTime = new Date(createdAt).getTime();
-    if (Number.isNaN(createdTime)) return false;
-    return Date.now() - createdTime < 5 * 60 * 1000;
-}
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
@@ -46,10 +33,12 @@ export async function GET(request: Request) {
 
                         const metadataRole = normalizeRequestedRole(user.user_metadata?.role as string | null);
                         const existingRole = existing?.role as AuthRole | undefined;
-                        const canApplyRequestedRole = !existing || isFreshOAuthUser(user.created_at);
-                        const effectiveRole = requestedRole && canApplyRequestedRole
-                            ? requestedRole
-                            : existingRole || metadataRole || "JOB_SEEKER";
+                        const effectiveRole = resolveEffectiveRole({
+                            requestedRole,
+                            metadataRole,
+                            existingRole,
+                            createdAt: user.created_at,
+                        });
                         const email = user.email ?? "";
                         const displayName = user.user_metadata?.full_name || user.user_metadata?.name || email.split("@")[0] || "";
 
@@ -85,7 +74,7 @@ export async function GET(request: Request) {
                                 avatar_url: safeAvatar,
                             });
 
-                            if (canApplyRequestedRole) {
+                            if (effectiveRole === "JOB_SEEKER") {
                                 await adminClient.from("employers").delete().eq("id", user.id);
                             }
 
@@ -97,7 +86,7 @@ export async function GET(request: Request) {
                                 searchParams.get("ref") ||
                                 (user.user_metadata?.referral_code as string | undefined) ||
                                 null;
-                            if (referralCode && isFreshOAuthUser(user.created_at)) {
+                            if (referralCode && isFreshUserRecord(user.created_at)) {
                                 const { data: referrer } = await adminClient
                                     .from("job_seekers")
                                     .select("id")
@@ -131,7 +120,7 @@ export async function GET(request: Request) {
                                 recruiter_verified: existingEmployer?.recruiter_verified ?? (email ? !isFreeEmailDomain(email) : false),
                             });
 
-                            if (canApplyRequestedRole) {
+                            if (effectiveRole === "EMPLOYER") {
                                 await adminClient.from("job_seekers").delete().eq("id", user.id);
                             }
                         }

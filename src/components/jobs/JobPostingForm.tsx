@@ -276,7 +276,7 @@ export function JobPostingForm({
                                         <input type="radio" value="email" {...register("applicationMethod")} className="mt-1" />
                                         <div>
                                             <p className="flex items-center gap-1 text-sm font-semibold text-slate-900 dark:text-slate-100"><Mail size={14} /> Email Submission</p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">Candidates send their CV to an email address.</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Candidates apply by email to a contact address.</p>
                                         </div>
                                     </label>
                                     <label className={cn("flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all", applicationMethod === "whatsapp" ? "border-blue-600 bg-blue-50/50 dark:border-blue-500/50 dark:bg-blue-900/20" : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900/50")}>
@@ -312,7 +312,7 @@ export function JobPostingForm({
                                 )}
                                 {applicationMethod === "manual" && (
                                     <div className="mt-3">
-                                        <textarea {...register("applicationInstructions")} rows={3} placeholder="Please send your CV and cover letter in a sealed envelope to..." className={cn(inputClass, "resize-y")} />
+                                        <textarea {...register("applicationInstructions")} rows={3} placeholder="Please send your application details or contact us for next steps..." className={cn(inputClass, "resize-y")} />
                                     </div>
                                 )}
 

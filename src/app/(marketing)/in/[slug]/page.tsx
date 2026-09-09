@@ -24,7 +24,6 @@ type CareerProfile = {
     has_badge: boolean | null;
     search_intent: string | null;
     profile_visibility: Visibility | string | null;
-    portfolio_links: string[] | null;
 };
 
 type Certificate = {
@@ -49,7 +48,7 @@ async function getCareerProfile(slug: string) {
 
     const { data } = await supabase
         .from("job_seekers")
-        .select("id, full_name, bio, location, skills, experience, education, qualification, avatar_url, salary_expectation, seniority_level, employment_type, has_badge, search_intent, profile_visibility, portfolio_links")
+        .select("id, full_name, bio, location, skills, experience, education, qualification, avatar_url, salary_expectation, seniority_level, employment_type, has_badge, search_intent, profile_visibility")
         .eq("public_slug", slug)
         .maybeSingle();
 
@@ -129,7 +128,6 @@ export default async function CareerPage({ params }: { params: Promise<{ slug: s
     const displayName = isAnonymous ? "Anonymous Candidate" : profile.full_name;
     const initials = displayName.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "WB";
     const skills = cleanList(profile.skills);
-    const portfolioLinks = isAnonymous ? [] : cleanList(profile.portfolio_links);
     const experience = profile.experience || [];
     const education = profile.education || [];
     const status = profile.search_intent ? intentLabels[profile.search_intent] || profile.search_intent.replaceAll("_", " ").toLowerCase() : "Career profile";
@@ -253,19 +251,7 @@ export default async function CareerPage({ params }: { params: Promise<{ slug: s
                         </div>
                     </section>
 
-                    {portfolioLinks.length > 0 && (
-                        <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                            <h2 className="text-lg font-semibold">Links</h2>
-                            <div className="mt-4 space-y-2">
-                                {portfolioLinks.map((link) => (
-                                    <a key={link} href={link} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between gap-3 rounded-xl border border-stone-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
-                                        <span className="truncate">{hostName(link)}</span>
-                                        <ExternalLink size={14} />
-                                    </a>
-                                ))}
-                            </div>
-                        </section>
-                    )}
+
                 </aside>
             </section>
         </div>

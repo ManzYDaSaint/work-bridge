@@ -192,7 +192,7 @@ export default function AdminOverviewClient({
         // idle API load since the admin dashboard is frequently left open in the background.
         const handleVisibilityChange = () => {
             if (document.visibilityState === "visible") {
-                // Refresh immediately when the user comes back, then resume polling
+                // Refresh immediately when the user comes back, then continue polling
                 fetchActivity();
                 fetchStats();
                 fetchCloseRequests();
@@ -253,6 +253,34 @@ export default function AdminOverviewClient({
                 pendingClosures={stats?.pendingCloseRequests || 0}
                 pendingJobs={stats?.pendingJobs || 0}
             />
+
+            <SectionCard title="Operations queue">
+                <div className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-4">
+                    <Link href="/dashboard/admin/jobs?filter=pending" className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 transition-colors hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-950/20 dark:hover:bg-amber-950/30">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700 dark:text-amber-300">Approvals</p>
+                        <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{stats?.pendingJobs || 0}</p>
+                        <p className="mt-1 text-sm text-amber-800/80 dark:text-amber-300/80">Jobs waiting for review</p>
+                    </Link>
+
+                    <Link href="/dashboard/admin/users?filter=close-requests" className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 transition-colors hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/20 dark:hover:bg-rose-950/30">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-rose-700 dark:text-rose-300">Closures</p>
+                        <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{stats?.pendingCloseRequests || 0}</p>
+                        <p className="mt-1 text-sm text-rose-800/80 dark:text-rose-300/80">Account closure requests</p>
+                    </Link>
+
+                    <Link href="/dashboard/admin/communications" className="rounded-2xl border border-sky-200 bg-sky-50/80 p-4 transition-colors hover:bg-sky-100 dark:border-sky-900/50 dark:bg-sky-950/20 dark:hover:bg-sky-950/30">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-sky-700 dark:text-sky-300">Broadcasts</p>
+                        <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{stats?.totalUsers ? "Ready" : "0"}</p>
+                        <p className="mt-1 text-sm text-sky-800/80 dark:text-sky-300/80">Reach seekers and employers</p>
+                    </Link>
+
+                    <Link href="/dashboard/admin/users" className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 transition-colors hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">Health</p>
+                        <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{stats?.totalUsers || 0}</p>
+                        <p className="mt-1 text-sm text-emerald-800/80 dark:text-emerald-300/80">Users under active oversight</p>
+                    </Link>
+                </div>
+            </SectionCard>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 <StatCard label="Total users" value={stats?.totalUsers || 0} icon={Users} iconBg="bg-stone-100 dark:bg-slate-800" iconColor="text-[#16324f]" />

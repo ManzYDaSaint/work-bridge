@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { apiFetch, apiFetchJson } from "@/lib/api";
 import { JobSeeker } from "@/types";
-import { Camera, Check, Loader2, Plus, Trash2, Award, ExternalLink, FileText, UploadCloud } from "lucide-react";
+import { Camera, Check, Loader2, Plus, Trash2, Award, ExternalLink } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { seekerProfileSchema, type SeekerProfileValues } from "@/lib/validations/profile";
@@ -18,7 +18,6 @@ interface SeekerProfileData extends JobSeeker {
     completion: number;
     searchIntent?: "ACTIVELY_LOOKING" | "OPEN_TO_OFFERS" | "SEEKING_INTERNSHIP" | "NOT_LOOKING";
     profileVisibility?: "PUBLIC" | "ANONYMOUS" | "HIDDEN";
-    portfolioLinks?: string[];
     publicSlug?: string | null;
     profileViews?: number;
 }
@@ -41,11 +40,8 @@ export default function SeekerProfile({
     const profile = initialProfile;
     const [saving, setSaving] = useState(false);
     const [newSkill, setNewSkill] = useState("");
-    const [newLink, setNewLink] = useState("");
     const [avatarUrl, setAvatarUrl] = useState<string | null>(initialProfile.avatar_url ?? null);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
-    const [resumeUrl, setResumeUrl] = useState<string | null>(initialProfile.resume_url ?? null);
-    const [uploadingResume, setUploadingResume] = useState(false);
 
     // Certificates state
     const [certificates, setCertificates] = useState<Certificate[]>(initialCertificates);
@@ -81,7 +77,6 @@ export default function SeekerProfile({
             whatsapp: profile.whatsapp ?? false,
             searchIntent: profile.searchIntent ?? "ACTIVELY_LOOKING",
             profileVisibility: profile.profileVisibility ?? "HIDDEN",
-            portfolioLinks: profile.portfolioLinks ?? [],
             employmentStatus: (profile as any).employment_status ?? profile.employmentStatus ?? "",
         } : undefined,
     });
@@ -89,24 +84,12 @@ export default function SeekerProfile({
     const { fields, append, remove } = useFieldArray({ control, name: "experience" });
     const { fields: educationFields, append: educationAppend, remove: educationRemove } = useFieldArray({ control, name: "education" });
     const watchedSkills = watch("skills") || [];
-    const watchedPortfolioLinks = watch("portfolioLinks") || [];
 
     const addSkill = (skill: string) => {
         const trimmed = skill.trim();
         if (!trimmed || watchedSkills.includes(trimmed)) return;
         setValue("skills", [...watchedSkills, trimmed], { shouldDirty: true });
         setNewSkill("");
-    };
-
-    const addLink = () => {
-        let trimmed = newLink.trim();
-        if (!trimmed) return;
-        if (!/^https?:\/\//.test(trimmed)) {
-            trimmed = `https://${trimmed}`;
-        }
-        if (watchedPortfolioLinks.includes(trimmed)) return;
-        setValue("portfolioLinks", [...watchedPortfolioLinks, trimmed], { shouldDirty: true });
-        setNewLink("");
     };
 
     const handleAddCertificate = async () => {
@@ -156,46 +139,6 @@ export default function SeekerProfile({
         } finally {
             setUploadingAvatar(false);
             e.target.value = "";
-        }
-    };
-
-    const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setUploadingResume(true);
-        try {
-            const formData = new FormData();
-            formData.append("resume", file);
-            const res = await apiFetch("/api/profile/resume", { method: "POST", body: formData });
-            const json = await res.json();
-            if (res.ok && json.url) {
-                setResumeUrl(json.url);
-                router.refresh();
-                toast.success("Resume updated");
-            } else {
-                toast.error(json.error || "Upload failed");
-            }
-        } catch (error: any) {
-            toast.error(error.message || "An error occurred");
-        } finally {
-            setUploadingResume(false);
-            e.target.value = "";
-        }
-    };
-
-    const handleResumeDelete = async () => {
-        if (!confirm("Are you sure you want to delete your resume?")) return;
-        try {
-            const res = await apiFetch("/api/profile/resume", { method: "DELETE" });
-            if (res.ok) {
-                setResumeUrl(null);
-                router.refresh();
-                toast.success("Resume deleted");
-            } else {
-                toast.error("Failed to delete resume");
-            }
-        } catch {
-            toast.error("Failed to delete resume");
         }
     };
 
@@ -338,59 +281,6 @@ export default function SeekerProfile({
                         </form>
                     </SectionCard>
 
-                    <SectionCard title="Resume">
-                        <div className="p-6 space-y-4">
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Upload a resume to apply to jobs and stand out to recruiters. We support PDF, DOC, or DOCX up to 5MB.
-                            </p>
-
-                            {resumeUrl ? (
-                                <div className="flex items-center justify-between rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-slate-800 dark:bg-slate-900">
-                                    <div className="flex items-center gap-3">
-                                        <div className="rounded-xl bg-[#16324f]/10 p-3 text-[#16324f] dark:bg-white/10 dark:text-slate-200">
-                                            <FileText size={24} />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-semibold text-slate-900 dark:text-white">Your Resume</p>
-                                            <a
-                                                href={resumeUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#16324f] hover:underline dark:text-slate-300"
-                                            >
-                                                View uploaded resume <ExternalLink size={12} />
-                                            </a>
-                                        </div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={handleResumeDelete}
-                                        className="rounded-xl p-2.5 text-slate-400 hover:bg-stone-100 hover:text-red-500 dark:hover:bg-slate-800"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                                </div>
-                            ) : (
-                                <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50/50 py-8 px-4 text-center hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-900/30 dark:hover:bg-slate-900/50">
-                                    <div className="mb-3 rounded-full bg-stone-100 p-3 text-slate-500 dark:bg-slate-800">
-                                        {uploadingResume ? <Loader2 size={24} className="animate-spin text-[#16324f]" /> : <UploadCloud size={24} />}
-                                    </div>
-                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                                        {uploadingResume ? "Uploading..." : "Click to upload resume"}
-                                    </p>
-                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">PDF, DOC, or DOCX (max. 5MB)</p>
-                                    <input
-                                        type="file"
-                                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                                        className="hidden"
-                                        onChange={handleResumeUpload}
-                                        disabled={uploadingResume}
-                                    />
-                                </label>
-                            )}
-                        </div>
-                    </SectionCard>
-
                     <SectionCard title="Education">
                         <div className="space-y-4 p-6">
                             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -524,25 +414,7 @@ export default function SeekerProfile({
                                 </select>
                             </div>
 
-                            <div className="border-t border-stone-200 pt-4 dark:border-slate-800">
-                                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">Portfolio Links</label>
-                                <div className="space-y-2">
-                                    {watchedPortfolioLinks.length > 0 ? watchedPortfolioLinks.map((link) => (
-                                        <div key={link} className="flex items-center justify-between rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900">
-                                            <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline dark:text-blue-400 truncate">{link}</a>
-                                            <button type="button" onClick={() => setValue("portfolioLinks", watchedPortfolioLinks.filter((l) => l !== link), { shouldDirty: true })} className="text-slate-400 hover:text-red-500">
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </div>
-                                    )) : <p className="text-sm text-slate-500 dark:text-slate-400">No links added yet.</p>}
-                                </div>
-                                <div className="mt-3 flex gap-2">
-                                    <input value={newLink} onChange={(e) => setNewLink(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addLink())} placeholder="https://github.com/..." className={inputClass} />
-                                    <button type="button" onClick={addLink} className="rounded-xl bg-[#16324f] px-4 py-3 text-sm font-semibold text-white hover:opacity-90">
-                                        Add
-                                    </button>
-                                </div>
-                            </div>
+
                         </div>
                     </SectionCard>
                 </div>
@@ -573,7 +445,6 @@ export default function SeekerProfile({
                         <div className="space-y-3 p-6 text-sm text-slate-600 dark:text-slate-400">
                             <p>Completion: <span className="font-semibold text-slate-900 dark:text-white">{profile.completion ?? 0}%</span></p>
                             <p>Skills: <span className="font-semibold text-slate-900 dark:text-white">{profile.skills?.length ?? 0} added</span></p>
-                            <p>Resume: <span className={`font-semibold ${resumeUrl ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>{resumeUrl ? "Uploaded" : "Missing"}</span></p>
                             <p>Status: <span className="font-semibold text-slate-900 dark:text-white">{profile.employmentStatus ? profile.employmentStatus.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "Not set"}</span></p>
                             <div className="mt-4 border-t border-stone-200 pt-3 dark:border-slate-800">
                                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Public career page</p>

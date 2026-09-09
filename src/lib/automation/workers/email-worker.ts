@@ -44,9 +44,6 @@ export const EmailNotificationWorker = {
                 case 'EMPLOYER_COME_BACK':
                     result = await emailUtils.sendEmployerComeBackEmail(to, context);
                     break;
-                case 'UPLOAD_RESUME':
-                    result = await emailUtils.sendUploadResumeReminderEmail(to, context);
-                    break;
                 // Add more mappings as needed
                 default:
                     throw new Error(`Template not implemented: ${templateId}`);

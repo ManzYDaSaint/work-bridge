@@ -53,18 +53,6 @@ export function calculateProfileStrength(profile: any): ProfileStrengthResult {
             suggestion: "Select your highest qualification level and pair it with the exact course/field for better job matching.",
         },
         {
-            id: "portfolio",
-            label: "Portfolio Links",
-            check: () => Array.isArray(profile.portfolio_links) && profile.portfolio_links.length > 0,
-            suggestion: "Link your portfolio or GitHub to showcase your work.",
-        },
-        {
-            id: "resume",
-            label: "Resume Upload",
-            check: () => !!profile.resume_url,
-            suggestion: "Upload your latest resume for a complete application.",
-        },
-        {
             id: "avatar",
             label: "Profile Picture",
             check: () => !!profile.avatar_url,

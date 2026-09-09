@@ -48,7 +48,6 @@ export const UserService = {
                       completion: userData.jobSeeker.completion,
                       isSubscribed: userData.jobSeeker.is_subscribed,
                       avatarUrl: userData.jobSeeker.avatar_url,
-                      resumeUrl: userData.jobSeeker.resume_url,
                       hasBadge: userData.jobSeeker.has_badge ?? false,
                       education: userData.jobSeeker.education || [],
                       preferredWorkModes: userData.jobSeeker.preferred_work_modes || [],

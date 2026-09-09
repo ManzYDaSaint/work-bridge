@@ -77,9 +77,24 @@ export default function SavedJobsOverview({ savedEntries, appliedJobIds }: Saved
         return <span className="text-[10px] font-medium text-slate-500">Closes in {diffDays}d</span>;
     };
 
+    const summaryCards = [
+        { label: "Saved", value: savedEntries.length, tone: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300" },
+        { label: "Applied", value: Array.from(appliedJobIds).length, tone: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300" },
+        { label: "Ready to act", value: savedEntries.filter(({ job }) => job && !appliedJobIds.has(job.id)).length, tone: "bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300" },
+    ];
+
     return (
         <div className="space-y-6 pb-20">
-            <PageHeader title="Saved jobs" subtitle="A simple shortlist of roles you want to revisit." />
+            <PageHeader title="Saved jobs" subtitle="Keep track of roles that look promising and revisit them before you apply." />
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {summaryCards.map((card) => (
+                    <div key={card.label} className={`rounded-2xl border border-stone-200 p-4 ${card.tone} dark:border-slate-800`}>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em]">{card.label}</p>
+                        <p className="mt-2 text-2xl font-black">{card.value}</p>
+                    </div>
+                ))}
+            </div>
 
             <div className="flex justify-end">
                 <input
@@ -93,7 +108,13 @@ export default function SavedJobsOverview({ savedEntries, appliedJobIds }: Saved
 
             {filteredEntries.length === 0 ? (
                 <div className="rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
-                    <EmptyState icon={Bookmark} title="No saved jobs found" description="Bookmark roles from recommendations or the job board to revisit later." action={{ label: "Browse jobs", href: "/jobs" }} iconColor="text-[#16324f]" />
+                    <EmptyState 
+                        icon={Bookmark} 
+                        title="Your shortlist is empty" 
+                        description="Find roles that interest you in the recommended section and save them here to build your personalized shortlist." 
+                        action={{ label: "Go to recommendations", href: "/dashboard/seeker/recommendations" }} 
+                        iconColor="text-[#16324f]" 
+                    />
                 </div>
             ) : (
                 <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">

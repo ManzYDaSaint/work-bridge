@@ -56,7 +56,6 @@ export interface ApplicantProfile {
   experience: CandidateExperience[];
   education: CandidateEducation[];
   certificates: CandidateCertificate[];
-  portfolio_links: string[];
   seniority_level: string | null;
   employment_type: string | null;
   employment_status: string | null;
@@ -281,19 +280,7 @@ export default function CandidateDetailDrawer({
                         <p className="mt-2 text-sm font-medium text-slate-800 dark:text-white">{profile.qualification}</p>
                       </div>
                     )}
-                    {profile.portfolio_links?.length ? (
-                      <div className="rounded-2xl border border-stone-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/40">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Portfolio</p>
-                        <div className="mt-2 space-y-2 text-sm text-slate-700 dark:text-slate-300">
-                          {profile.portfolio_links.map((link, index) => (
-                            <a key={index} href={link} target="_blank" rel="noreferrer" className="block text-slate-900 hover:text-[#16324f] dark:text-slate-100 dark:hover:text-[#7cdef4]">
-                              <Globe size={14} className="inline-block mr-2" />
-                              {link}
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
+
                   </div>
 
                   <div className="space-y-4 rounded-3xl border border-stone-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900/70">

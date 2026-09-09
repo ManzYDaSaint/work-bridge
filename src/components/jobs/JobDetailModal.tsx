@@ -74,7 +74,7 @@ export default function JobDetailModal({
     const effectiveIsSubscribed = user?.jobSeeker?.isSubscribed ?? false;
     const effectiveApplicationsThisMonth = user?.jobSeeker?.applicationsThisMonth ?? 0;
 
-    const isProfileIncomplete = effectiveCompletion < 60; // Lowered threshold since resume is removed
+    const isProfileIncomplete = effectiveCompletion < 60; // Lowered threshold for the current profile-first flow
     const isLimitReached = !effectiveIsSubscribed && effectiveApplicationsThisMonth >= 3; // Standardized limit
     const [screeningAnswers, setScreeningAnswers] = useState<Record<string, ScreeningAnswer>>({});
     const effectiveSkills = user?.jobSeeker?.skills ?? [];

@@ -33,12 +33,9 @@ export async function GET() {
             completion: 0,
             hasBadge: false,
             avatarUrl: null,
-            resumeUrl: null,
-            resume_url: null,
             employmentStatus: null,
             searchIntent: "ACTIVELY_LOOKING",
             profileVisibility: "HIDDEN",
-            portfolioLinks: [],
             publicSlug: null,
         });
         emptyResponse.headers.set("Cache-Control", "no-store, max-age=0");
@@ -64,12 +61,9 @@ export async function GET() {
         has_badge: profile.has_badge ?? false,
         avatarUrl: profile.avatar_url ?? null,
         avatar_url: profile.avatar_url ?? null,
-        resumeUrl: profile.resume_url ?? null,
-        resume_url: profile.resume_url ?? null,
         employmentStatus: profile.employment_status ?? null,
         searchIntent: profile.search_intent,
         profileVisibility: profile.profile_visibility,
-        portfolioLinks: profile.portfolio_links || [],
         publicSlug: profile.public_slug || buildPublicProfileSlug(profile.full_name, profile.id),
     });
     response.headers.set("Cache-Control", "no-store, max-age=0");
@@ -144,7 +138,6 @@ export async function PUT(request: Request) {
                 employment_status: body.employmentStatus || null,
                 search_intent: body.searchIntent || "ACTIVELY_LOOKING",
                 profile_visibility: body.profileVisibility || "HIDDEN",
-                portfolio_links: body.portfolioLinks || [],
                 public_slug,
                 completion,
             })

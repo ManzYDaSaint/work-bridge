@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const seekerSteps = [
     {
         title: "Build Your Profile",
-        description: "Add your skills, experience, education, certifications, and portfolio links — your full professional presence in one place.",
+        description: "Add your skills, experience, education, and certifications to build a complete professional profile.",
         icon: UserPlus,
         color: "bg-[#16324f]",
     },

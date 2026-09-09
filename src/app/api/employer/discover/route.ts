@@ -14,7 +14,6 @@ export async function GET(request: Request) {
     const seniorityParam = searchParams.get("seniority");
     const locationParam = searchParams.get("location");
     const qualificationParam = searchParams.get("qualification");
-    const hasResumeParam = searchParams.get("hasResume");
     const statusParam = searchParams.get("status");
 
     const supabase = await createSupabaseServerClient();
@@ -35,9 +34,7 @@ export async function GET(request: Request) {
             employment_type,
             employment_status,
             search_intent,
-            profile_visibility,
-            portfolio_links,
-            resume_url
+            profile_visibility
         `)
         .in("profile_visibility", ["PUBLIC", "ANONYMOUS"])
         .order("created_at", { ascending: false });
@@ -57,10 +54,6 @@ export async function GET(request: Request) {
 
     if (qualificationParam && qualificationParam !== "ALL") {
         query = query.ilike("qualification", `%${qualificationParam}%`);
-    }
-
-    if (hasResumeParam === "true") {
-        query = query.not("resume_url", "is", null);
     }
 
     if (statusParam && statusParam !== "ALL") {
@@ -107,8 +100,6 @@ export async function GET(request: Request) {
                 full_name: "Anonymous Candidate",
                 avatar_url: null,
                 location: seeker.location ? "Location Hidden" : null,
-                portfolio_links: [],
-                resume_url: null,
             };
         }
         return {

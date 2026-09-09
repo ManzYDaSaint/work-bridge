@@ -24,7 +24,6 @@ export default async function EmployerOverviewPage() {
                 </div>
             )}
 
-            {/* Stat cards — each links to the relevant filtered view */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <Link href="/dashboard/employer/jobs?status=ACTIVE" className="block transition-transform hover:-translate-y-0.5">
                     <StatCard label="Live roles" value={stats.activeJobs} icon={Briefcase} iconBg="bg-stone-100 dark:bg-slate-800" iconColor="text-[#16324f]" />
@@ -39,6 +38,42 @@ export default async function EmployerOverviewPage() {
                     <StatCard label="Interviews set" value={stats.interviewsSet} icon={ArrowRight} iconBg="bg-sky-50 dark:bg-sky-950/30" iconColor="text-sky-600" />
                 </Link>
             </div>
+
+            <SectionCard title={isApproved ? "Priority actions" : "Before you can hire"}>
+                <div className="grid gap-3 p-5 md:grid-cols-3">
+                    {isApproved ? (
+                        <>
+                            <Link href="/dashboard/employer/jobs/new" className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 transition-colors hover:bg-white dark:border-slate-800 dark:bg-slate-900">
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">Post a new role</p>
+                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Start a fresh hiring campaign with a clear brief.</p>
+                            </Link>
+                            <Link href="/dashboard/employer/candidates" className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 transition-colors hover:bg-white dark:border-slate-800 dark:bg-slate-900">
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">Review applicants</p>
+                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Move qualified candidates quickly through the hiring pipeline.</p>
+                            </Link>
+                            <Link href="/dashboard/employer/settings" className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 transition-colors hover:bg-white dark:border-slate-800 dark:bg-slate-900">
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">Update company profile</p>
+                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Keep your credibility, branding, and profile details current.</p>
+                            </Link>
+                        </>
+                    ) : (
+                        <>
+                            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 dark:border-amber-900/50 dark:bg-amber-950/30">
+                                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Complete company profile</p>
+                                <p className="mt-1 text-sm text-amber-800/80 dark:text-amber-300/80">Add your business details so the verification review can pass smoothly.</p>
+                            </div>
+                            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 dark:border-amber-900/50 dark:bg-amber-950/30">
+                                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Confirm contact details</p>
+                                <p className="mt-1 text-sm text-amber-800/80 dark:text-amber-300/80">Make sure your hiring team and company information are accurate.</p>
+                            </div>
+                            <Link href="/dashboard/employer/settings" className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 transition-colors hover:bg-white dark:border-slate-800 dark:bg-slate-900">
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">Open profile settings</p>
+                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Finish the remaining setup before posting jobs or messaging candidates.</p>
+                            </Link>
+                        </>
+                    )}
+                </div>
+            </SectionCard>
 
             <OnboardingChecklist user={user} />
 

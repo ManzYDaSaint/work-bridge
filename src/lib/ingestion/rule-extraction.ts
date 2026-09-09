@@ -130,8 +130,8 @@ export function extractJobFields(
 
     // ── Non-Vacancy / Blog Article Filter ───────────────────────
     const NON_VACANCY_KEYWORDS = [
-        'job hunting tips', 'cv stand out', 'how to write a cv', 'interview tips',
-        'career advice', 'how to get a job', 'resume guide', 'write a resume',
+        'job hunting tips', 'interview tips',
+        'career advice', 'how to get a job',
         'top 10 jobs', 'weekly round up', 'disclaimer', 'privacy policy',
         'interview questions', 'find jobs in', 'alternative employment',
         'without a college degree', 'conduct a job search', 'transferable skills',

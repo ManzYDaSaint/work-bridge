@@ -71,8 +71,6 @@ export interface JobSeeker {
     isSubscribed?: boolean;
     avatarUrl?: string;
     avatar_url?: string;
-    resumeUrl?: string;
-    resume_url?: string;
     employmentStatus?: string | null;
     hasBadge?: boolean;
     qualification?: string | null;
@@ -163,7 +161,7 @@ export interface Job {
     application_method?: ApplicationMethod;
     /** URL to redirect candidates for external ATS applications (method = external_url). */
     external_apply_url?: string | null;
-    /** Email address for CV submissions (method = email). */
+    /** Email address for application submissions (method = email). */
     apply_email?: string | null;
     /** WhatsApp number for applications (method = whatsapp). */
     apply_whatsapp?: string | null;

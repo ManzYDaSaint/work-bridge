@@ -18,7 +18,6 @@ interface PublicProfile {
     experience: any[];
     education: any[];
     certificates: any[];
-    portfolio_links: string[];
     seniority_level: string | null;
     employment_type: string | null;
     employment_status: string | null;
@@ -362,18 +361,7 @@ export default function TalentProfilePage() {
                         </div>
                     </SectionCard>
 
-                    {profile.portfolio_links?.length > 0 && (
-                        <SectionCard title="Portfolio & Links">
-                            <div className="space-y-3 p-5">
-                                {profile.portfolio_links.map((link, i) => (
-                                    <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between rounded-xl border border-stone-200 bg-white p-3 text-sm font-medium text-slate-700 hover:border-slate-300 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600">
-                                        <span className="truncate">{link.replace(/^https?:\/\//, '')}</span>
-                                        <ExternalLink size={14} className="flex-shrink-0 text-slate-400" />
-                                    </a>
-                                ))}
-                            </div>
-                        </SectionCard>
-                    )}
+
                 </div>
             </div>
         </div>
