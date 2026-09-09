@@ -67,12 +67,19 @@ export async function GET(request: Request) {
                                 console.error("[auth/callback] seeker lookup failed:", seekerLookupError);
                             }
 
-                            await adminClient.from("job_seekers").upsert({
-                                id: user.id,
-                                full_name: safeFullName,
-                                location: safeLocation,
-                                avatar_url: safeAvatar,
-                            });
+                            const upsertData: any = { id: user.id };
+                            
+                            if (!existingSeeker?.full_name || !String(existingSeeker.full_name).trim()) {
+                                upsertData.full_name = safeFullName;
+                            }
+                            if (!existingSeeker?.location || !String(existingSeeker.location).trim() || existingSeeker.location === 'To be updated') {
+                                upsertData.location = safeLocation;
+                            }
+                            if (!existingSeeker?.avatar_url) {
+                                upsertData.avatar_url = safeAvatar;
+                            }
+
+                            await adminClient.from("job_seekers").upsert(upsertData);
 
                             if (effectiveRole === "JOB_SEEKER") {
                                 await adminClient.from("employers").delete().eq("id", user.id);
