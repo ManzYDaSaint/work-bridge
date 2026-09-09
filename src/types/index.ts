@@ -58,8 +58,11 @@ export interface JobSeeker {
     whatsapp?: boolean;
     skills?: string[];
     salaryExpectation?: string;
+    salary_expectation?: string | null;
     seniorityLevel?: string;
+    seniority_level?: string | null;
     employmentType?: string;
+    employment_type?: string | null;
     experience?: Array<{
         role: string;
         company: string;

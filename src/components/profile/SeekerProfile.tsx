@@ -17,7 +17,9 @@ import { useOptionalUser } from "@/context/UserContext";
 interface SeekerProfileData extends JobSeeker {
     completion: number;
     searchIntent?: "ACTIVELY_LOOKING" | "OPEN_TO_OFFERS" | "SEEKING_INTERNSHIP" | "NOT_LOOKING";
+    search_intent?: "ACTIVELY_LOOKING" | "OPEN_TO_OFFERS" | "SEEKING_INTERNSHIP" | "NOT_LOOKING";
     profileVisibility?: "PUBLIC" | "ANONYMOUS" | "HIDDEN";
+    profile_visibility?: "PUBLIC" | "ANONYMOUS" | "HIDDEN";
     publicSlug?: string | null;
     profileViews?: number;
 }
@@ -70,13 +72,13 @@ export default function SeekerProfile({
             experience: (profile as any).experience ?? [],
             education: (profile as any).education ?? [],
             qualification: profile.qualification ?? "",
-            salaryExpectation: profile.salaryExpectation ?? "",
-            seniorityLevel: profile.seniorityLevel ?? "",
-            employmentType: profile.employmentType ?? "",
+            salaryExpectation: profile.salary_expectation ?? profile.salaryExpectation ?? "",
+            seniorityLevel: profile.seniority_level ?? profile.seniorityLevel ?? "",
+            employmentType: profile.employment_type ?? profile.employmentType ?? "",
             phone: profile.phone ?? "",
             whatsapp: profile.whatsapp ?? false,
-            searchIntent: profile.searchIntent ?? "ACTIVELY_LOOKING",
-            profileVisibility: profile.profileVisibility ?? "HIDDEN",
+            searchIntent: profile.search_intent ?? profile.searchIntent ?? "ACTIVELY_LOOKING",
+            profileVisibility: profile.profile_visibility ?? profile.profileVisibility ?? "HIDDEN",
             employmentStatus: (profile as any).employment_status ?? profile.employmentStatus ?? "",
         } : undefined,
     });
@@ -167,7 +169,8 @@ export default function SeekerProfile({
         return certificate.length > 0 || institution.length > 0;
     });
     const publicCareerPath = profile.publicSlug ? `/in/${profile.publicSlug}` : profile.id ? `/career/${profile.id}` : null;
-    const isPublicCareerVisible = profile.profileVisibility === "PUBLIC" || profile.profileVisibility === "ANONYMOUS";
+    const visibility = profile.profile_visibility ?? profile.profileVisibility;
+    const isPublicCareerVisible = visibility === "PUBLIC" || visibility === "ANONYMOUS";
 
     return (
         <div className="space-y-6 pb-20">
@@ -241,8 +244,8 @@ export default function SeekerProfile({
                                 <div className="md:col-span-2">
                                     <select {...register("seniorityLevel")} className={inputClass}>
                                         <option value="" disabled>Select seniority level</option>
-                                        {profile?.seniorityLevel && !["Intern", "Junior", "Mid-Level", "Senior", "Lead", "Executive"].includes(profile.seniorityLevel) && (
-                                            <option value={profile.seniorityLevel}>{profile.seniorityLevel}</option>
+                                        {(profile?.seniority_level || profile?.seniorityLevel) && !["Intern", "Junior", "Mid-Level", "Senior", "Lead", "Executive"].includes((profile.seniority_level || profile.seniorityLevel)!) && (
+                                            <option value={(profile.seniority_level || profile.seniorityLevel)!}>{profile.seniority_level || profile.seniorityLevel}</option>
                                         )}
                                         <option value="Intern">Intern</option>
                                         <option value="Junior">Junior</option>
@@ -255,8 +258,8 @@ export default function SeekerProfile({
                                 <div className="md:col-span-2">
                                     <select {...register("employmentType")} className={inputClass}>
                                         <option value="" disabled>Select employment type</option>
-                                        {profile?.employmentType && !["Full-time", "Part-time", "Contract", "Freelance", "Internship"].includes(profile.employmentType) && (
-                                            <option value={profile.employmentType}>{profile.employmentType}</option>
+                                        {(profile?.employment_type || profile?.employmentType) && !["Full-time", "Part-time", "Contract", "Freelance", "Internship"].includes((profile.employment_type || profile.employmentType)!) && (
+                                            <option value={(profile.employment_type || profile.employmentType)!}>{profile.employment_type || profile.employmentType}</option>
                                         )}
                                         <option value="Full-time">Full-time</option>
                                         <option value="Part-time">Part-time</option>
