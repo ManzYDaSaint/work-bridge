@@ -162,7 +162,8 @@ export default function SeekerProfile({
     };
 
     const inputClass = "w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900 dark:text-white";
-    const hasGenericQualification = profile.qualification && ["High School", "Diploma", "Bachelor's Degree", "Master's Degree", "PhD / Doctorate", "Professional Certification", "Other"].includes(profile.qualification);
+    const standardQualifications = ["High School", "Certificate", "Diploma", "Bachelor's Degree", "Master's Degree", "PhD / Doctorate", "Professional Certification", "Other"];
+    const hasGenericQualification = profile.qualification && standardQualifications.includes(profile.qualification);
     const hasDetailedEducation = (profile.education || []).some((entry: any) => {
         const certificate = (entry?.certificate || "").trim();
         const institution = (entry?.institution || "").trim();
@@ -199,7 +200,7 @@ export default function SeekerProfile({
 
                             {(hasGenericQualification || !hasDetailedEducation) && (
                                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-                                    Improve job matching: add your exact degree or programme, for example “BSc in Information Technology”, in the Education section below.
+                                    Improve job matching: specify your exact qualification title, for example “Bachelors Degree in Administration Studies”, in the Education section below.
                                 </div>
                             )}
 
@@ -223,13 +224,14 @@ export default function SeekerProfile({
                                 <div>
                                     <input {...register("salaryExpectation")} placeholder="Salary expectation" className={inputClass} />
                                 </div>
-                                <div className="md:col-span-2">
+                                <div className="md:col-span-2 space-y-1">
+                                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Highest Qualification</label>
                                     <select {...register("qualification")} className={inputClass}>
-                                        <option value="" disabled>Select qualification</option>
-                                        {profile && (profile as any).qualification && !["High School", "Diploma", "Bachelor's Degree", "Master's Degree", "PhD / Doctorate", "Professional Certification", "Other"].includes((profile as any).qualification) && (
+                                        <option value="" disabled>Select highest qualification</option>
+                                        {profile && (profile as any).qualification && !standardQualifications.includes((profile as any).qualification) && (
                                             <option value={(profile as any).qualification}>{(profile as any).qualification}</option>
                                         )}
-                                        <option value="High School">High School</option>
+                                        <option value="Certificate">Certificate</option>
                                         <option value="Diploma">Diploma</option>
                                         <option value="Bachelor's Degree">Bachelor's Degree</option>
                                         <option value="Master's Degree">Master's Degree</option>
@@ -237,8 +239,8 @@ export default function SeekerProfile({
                                         <option value="Professional Certification">Professional Certification</option>
                                         <option value="Other">Other</option>
                                     </select>
-                                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                                        For better matching, use the exact degree and field when possible, for example “BSc in Information Technology”.
+                                    <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                                        Select your general highest level. Specific degree or programme details (e.g. “Bachelors Degree in Administration Studies”) are specified in the Education section below.
                                     </p>
                                 </div>
                                 <div className="md:col-span-2">
@@ -287,12 +289,12 @@ export default function SeekerProfile({
                     <SectionCard title="Education">
                         <div className="space-y-4 p-6">
                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                                Add the exact programme or degree title for stronger job matching, such as “BSc in Information Technology” or “Diploma in Accounting”.
+                                Add your specific qualification title and institution for stronger job matching, such as “Bachelors Degree in Administration Studies” or “Diploma in Accounting”.
                             </p>
                             {educationFields.map((field, index) => (
                                 <div key={field.id} className="rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-slate-800 dark:bg-slate-900">
                                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                        <input {...register(`education.${index}.certificate`)} placeholder="e.g. Bachelor's Degree In Business Administration" className={inputClass} />
+                                        <input {...register(`education.${index}.certificate`)} placeholder="e.g. Bachelors Degree in Business Administration" className={inputClass} />
                                         <input {...register(`education.${index}.institution`)} placeholder="e.g. University of Malawi (UNIMA)" className={inputClass} />
                                         <input {...register(`education.${index}.startDate`)} placeholder="Start date" className={inputClass} />
                                         <input {...register(`education.${index}.endDate`)} placeholder="End date" className={inputClass} />

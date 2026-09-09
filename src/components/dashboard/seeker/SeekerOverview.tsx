@@ -73,11 +73,15 @@ export default function SeekerOverview({
     const strength = calculateProfileStrength(seeker);
     const nextActions = [
         !seeker?.full_name ? { title: "Add your full name", detail: "Personalise your professional profile.", href: "/dashboard/seeker/profile" } : null,
-        !seeker?.qualification ? { title: "Add your qualification", detail: "Highlight your highest education level.", href: "/dashboard/seeker/profile" } : null,
+        !seeker?.qualification ? { title: "Add highest qualification", detail: "Highlight your highest level of education.", href: "/dashboard/seeker/profile" } : null,
         !seeker?.phone ? { title: "Connect WhatsApp", detail: "Get instant alerts and faster responses.", href: "/dashboard/seeker/profile" } : null,
         !seeker?.skills?.length ? { title: "Add your skills", detail: "Improve discovery and match quality.", href: "/dashboard/seeker/profile" } : null,
         !(seeker?.experience?.length) ? { title: "Add work experience", detail: "Show employers the value you bring.", href: "/dashboard/seeker/profile" } : null,
     ].filter(Boolean) as Array<{ title: string; detail: string; href: string }>;
+
+    const primaryEdu = Array.isArray(seeker?.education) && seeker.education.length > 0 ? (seeker.education[0] as any) : null;
+    const specificQualification = (primaryEdu?.certificate || primaryEdu?.degree || primaryEdu?.qualification || "").trim();
+    const displayQualification = specificQualification || seeker?.qualification || "Not set";
 
     return (
         <div className="space-y-6 pb-20">
@@ -251,11 +255,21 @@ export default function SeekerOverview({
                             </div>
 
                             <div className="space-y-2 border-t border-stone-100 dark:border-slate-800 pt-3 text-xs">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-slate-400 font-medium">Qualification:</span>
-                                    <span className="font-bold text-slate-800 dark:text-slate-200 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 px-2.5 py-0.5 rounded-md border border-amber-200/60 dark:border-amber-900/40">
-                                        {seeker?.qualification || "Not set"}
-                                    </span>
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-slate-400 font-medium shrink-0">Qualification:</span>
+                                        <span
+                                            className="font-bold text-slate-800 dark:text-slate-200 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 px-2.5 py-0.5 rounded-md border border-amber-200/60 dark:border-amber-900/40 text-right truncate max-w-[210px]"
+                                            title={displayQualification}
+                                        >
+                                            {displayQualification}
+                                        </span>
+                                    </div>
+                                    {specificQualification && seeker?.qualification && specificQualification !== seeker.qualification && (
+                                        <div className="flex items-center justify-end text-[10px] text-slate-400">
+                                            Level: {seeker.qualification}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex items-center justify-between">

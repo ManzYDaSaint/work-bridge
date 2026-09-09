@@ -83,6 +83,7 @@ const EMPLOYMENT_TYPES = [
 
 const QUALIFICATIONS = [
     "High School",
+    "Certificate",
     "Diploma",
     "Bachelor's Degree",
     "Master's Degree",
@@ -297,11 +298,11 @@ function EducationEntry({
             </button>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Certification</label>
+                    <label className="text-xs font-medium text-slate-600 dark:text-slate-300">Type of Qualification / Degree Title</label>
                     <input
                         value={edu.certificate}
                         onChange={(e) => onChange({ ...edu, certificate: e.target.value })}
-                        placeholder="e.g. Bachelors Degree In Business Administration"
+                        placeholder="e.g. Bachelors Degree in Administration Studies"
                         className={inputCls}
                     />
                 </div>
@@ -501,11 +502,14 @@ function Step1({
                     required
                     className={inputCls}
                 >
-                    <option value="">Select qualification</option>
+                    <option value="">Select highest qualification</option>
                     {QUALIFICATIONS.map((q) => (
                         <option key={q} value={q}>{q}</option>
                     ))}
                 </select>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Select your highest level. Specific qualification details (e.g. "Bachelors Degree in Administration Studies") are added in Step 2 (Education).
+                </p>
             </div>
             <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
