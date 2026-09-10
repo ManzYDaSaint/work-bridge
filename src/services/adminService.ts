@@ -24,6 +24,10 @@ export interface AdminStats {
     pendingCloseRequests: number;
     badgeHolders: number;
     pendingJobs: number;
+    premiumSeekers: number;
+    premiumEmployers: number;
+    paidSubscriptionsCount: number;
+    grossRevenue: number;
     ingestionMetrics: {
         avgConfidence: number;
         highCount: number;
@@ -114,23 +118,49 @@ export const adminService = {
             ),
             safeQuery(
                 () => supabase
-                    .from("ingestion_queue")
+                    .from("ingested_jobs_queue")
                     .select("overall_confidence, status"),
                 { data: [], error: null } as any,
-                "ingestion queue stats"
+                "ingested jobs queue stats"
+            ),
+            safeQuery(
+                () => supabase.from("premium_subscriptions").select("*", { count: "exact", head: true }).eq("status", "ACTIVE"),
+                { count: 0, error: null } as any,
+                "premium subscriptions count"
+            ),
+            safeQuery(
+                () => supabase.from("employers").select("*", { count: "exact", head: true }).eq("is_premium", true),
+                { count: 0, error: null } as any,
+                "premium employers count"
+            ),
+            safeQuery(
+                () => supabase.from("subscription_payments").select("amount").eq("status", "PAID"),
+                { data: [], error: null } as any,
+                "subscription payments sum"
             ),
         ]);
 
         const [
             usersRes, seekersRes, employersRes, jobsRes, appsRes,
             eventsRes,
-            closeRequestsRes, pendingJobsRes, badgeHoldersRes,
+            closeRequestsRes, badgeHoldersRes, pendingJobsRes,
             signupTrendRes,
             ingestionQueueRes,
+            premiumSubscriptionsRes,
+            premiumEmployersRes,
+            subscriptionPaymentsRes,
         ] = results;
 
         const stats = [usersRes, seekersRes, employersRes, jobsRes, appsRes].map(r => (r as any).count || 0);
         const events = (eventsRes as any).data || [];
+
+        // Premium calculation
+        const premiumSeekersCount = (premiumSubscriptionsRes as any).count || 0;
+        const premiumEmployersCount = (premiumEmployersRes as any).count || 0;
+        const paymentsList: { amount: number | string }[] = (subscriptionPaymentsRes as any).data || [];
+        const paymentsTotal = paymentsList.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+        // Fallback revenue calculation if payments table has 0 rows but active premium exists
+        const grossRevenue = paymentsTotal > 0 ? paymentsTotal : (premiumSeekersCount + premiumEmployersCount) * 15000;
 
         // Ingestion metrics calculation
         const ingestionRows: { overall_confidence?: number; status?: string }[] = (ingestionQueueRes as any).data || [];
@@ -213,6 +243,10 @@ export const adminService = {
             pendingCloseRequests: (closeRequestsRes as any).count || 0,
             badgeHolders: (badgeHoldersRes as any).count || 0,
             pendingJobs: (pendingJobsRes as any).count || 0,
+            premiumSeekers: premiumSeekersCount,
+            premiumEmployers: premiumEmployersCount,
+            paidSubscriptionsCount: premiumSeekersCount + premiumEmployersCount,
+            grossRevenue,
             ingestionMetrics,
             funnel30d: {
                 seekers: stages.map((stage) => ({

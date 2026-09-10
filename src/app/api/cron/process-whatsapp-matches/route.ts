@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runJobMatchingOrchestration } from "@/lib/notification/orchestrator";
+import { runStandardJobMatchingCron, runJobMatchingOrchestration } from "@/lib/notification/orchestrator";
 import { processNotificationQueue } from "@/lib/notification/worker";
 import { emitSystemEvent } from "@/lib/mission-control";
 
@@ -19,42 +19,43 @@ export async function GET(req: Request) {
         await emitSystemEvent({
             category: "MATCHING",
             severity: "INFO",
-            event: "WHATSAPP_MATCHING_CRON_STARTED",
-            message: "Running WhatsApp job matching orchestration & queue delivery",
+            event: "JOB_MATCHING_CRON_STARTED",
+            message: "Running standard job matching (Email) & processing pending WhatsApp notifications",
             metadata: {}
         });
 
-        // Run orchestration to match active jobs with premium seekers & queue notifications
+        // 1. Run standard (non-premium) seeker job matching & send emails
+        const emailResult = await runStandardJobMatchingCron();
+
+        // 2. Also run general orchestration check
         await runJobMatchingOrchestration();
 
-        // Process any remaining pending items in notification_queue
+        // 3. Process any remaining approved pending items in notification_queue
         await processNotificationQueue();
 
         await emitSystemEvent({
             category: "MATCHING",
             severity: "SUCCESS",
-            event: "WHATSAPP_MATCHING_CRON_COMPLETED",
-            message: "WhatsApp job matching and delivery processed successfully",
-            metadata: {}
+            event: "JOB_MATCHING_CRON_COMPLETED",
+            message: `Job matching CRON completed. Standard emails sent: ${emailResult.sent}`,
+            metadata: emailResult
         });
 
         return NextResponse.json({
             success: true,
-            message: "WhatsApp job matching and delivery completed."
+            message: "Two-tier job matching and delivery completed.",
+            emailStats: emailResult
         });
     } catch (err: any) {
         console.error("[CRON] process-whatsapp-matches error:", err);
         await emitSystemEvent({
             category: "MATCHING",
             severity: "CRITICAL",
-            event: "WHATSAPP_MATCHING_CRON_FAILED",
-            message: `WhatsApp matching cron failed: ${err.message}`,
+            event: "JOB_MATCHING_CRON_FAILED",
+            message: err.message || "Failed to process job matching CRON",
             metadata: { error: err.message }
         });
 
-        return NextResponse.json(
-            { success: false, error: err.message },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

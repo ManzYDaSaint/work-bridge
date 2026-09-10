@@ -400,9 +400,11 @@ export default function DiscoverTalentClient({
                                                 </div>
                                             )}
                                             {seeker.qualification && (
-                                                <div className="flex items-center gap-1.5 line-clamp-1">
-                                                    <GraduationCap size={14} className="opacity-70" />
-                                                    {seeker.qualification}
+                                                <div className="flex items-center gap-1.5 line-clamp-1" title={(Array.isArray(seeker.education) && seeker.education[0]?.certificate) || seeker.qualification}>
+                                                    <GraduationCap size={14} className="shrink-0 opacity-70" />
+                                                    <span className="truncate">
+                                                        {(Array.isArray(seeker.education) && (seeker.education[0]?.certificate || seeker.education[0]?.degree || seeker.education[0]?.qualification)) || seeker.qualification}
+                                                    </span>
                                                 </div>
                                             )}
                                         </div>

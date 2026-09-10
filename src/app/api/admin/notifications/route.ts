@@ -5,6 +5,7 @@ import { getMatchDispatchMode, setMatchDispatchMode } from "@/lib/notification/s
 import { processNotificationQueue } from "@/lib/notification/worker";
 import { recordAuditLog } from "@/lib/audit";
 import { emitSystemEvent } from "@/lib/mission-control";
+import { runJobMatchingOrchestration } from "@/lib/notification/orchestrator";
 
 export async function GET(request: Request) {
     const auth = await validateAuth(['ADMIN'], false);
@@ -31,6 +32,7 @@ export async function GET(request: Request) {
                     id,
                     full_name,
                     qualification,
+                    education,
                     experience,
                     skills,
                     phone
@@ -61,8 +63,8 @@ export async function GET(request: Request) {
             .order("created_at", { ascending: false })
             .limit(200);
 
-        // Dead-letter items for admin inspection
-        const { data: deadLetter } = await supabase
+        // Fetch failed/rejected notifications for admin inspection (removing DEAD_LETTER check which isn't in DB constraint)
+        const { data: failedItems } = await supabase
             .from("notification_queue")
             .select(`
                 id,
@@ -75,7 +77,7 @@ export async function GET(request: Request) {
                 job_seekers ( full_name, phone ),
                 jobs ( title, display_company_name )
             `)
-            .eq("status", "DEAD_LETTER")
+            .eq("status", "FAILED")
             .order("created_at", { ascending: false })
             .limit(200);
 
@@ -93,12 +95,23 @@ export async function GET(request: Request) {
             `)
             .in("status", ["SENT", "FAILED", "REJECTED", "PENDING"])
             .order("created_at", { ascending: false })
-            .limit(30);
+            .limit(50);
+
+        // System telemetry for stats UI
+        const { count: activeJobsCount } = await supabase.from("jobs").select("id", { count: "exact", head: true }).eq("status", "ACTIVE");
+        const { count: activeSeekersCount } = await supabase.from("job_seekers").select("id", { count: "exact", head: true });
+        
+        const nowIso = new Date().toISOString();
+        const { count: premiumSeekersCount } = await supabase
+            .from("premium_subscriptions")
+            .select("seeker_id", { count: "exact", head: true })
+            .eq("status", "ACTIVE")
+            .gt("ends_at", nowIso);
 
         // Counts
         const pendingCount = requiresApproval?.length || 0;
         const pendingQueueCount = pendingQueue?.length || 0;
-        const deadLetterCount = deadLetter?.length || 0;
+        const deadLetterCount = failedItems?.length || 0;
         const sentCount = recentHistory?.filter(h => h.status === "SENT").length || 0;
         const rejectedCount = recentHistory?.filter(h => h.status === "REJECTED").length || 0;
 
@@ -111,8 +124,13 @@ export async function GET(request: Request) {
             rejectedCount,
             requiresApproval: requiresApproval || [],
             pendingQueue: pendingQueue || [],
-            deadLetter: deadLetter || [],
-            recentHistory: recentHistory || []
+            deadLetter: failedItems || [],
+            recentHistory: recentHistory || [],
+            diagnostics: {
+                activeJobs: activeJobsCount || 0,
+                activeSeekers: activeSeekersCount || 0,
+                premiumSeekers: premiumSeekersCount || 0
+            }
         });
 
     } catch (error: any) {
@@ -133,6 +151,12 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
         const { action, notificationId, notificationIds, dispatchMode, minScore = 80 } = body;
+
+        // Manual trigger matching run
+        if (action === "TRIGGER_MATCHING") {
+            runJobMatchingOrchestration().catch(err => console.error("Manual matching error:", err));
+            return NextResponse.json({ success: true, message: "Matching orchestration started in background." });
+        }
 
         // Mode settings update
         if (action === "SET_MODE" && dispatchMode) {
@@ -234,7 +258,7 @@ export async function POST(request: Request) {
             });
         }
 
-        // Requeue dead-letter or other notifications for retry
+        // Requeue failed notifications for retry
         if (action === "REQUEUE") {
             const targetIds = notificationIds || (notificationId ? [notificationId] : []);
             if (targetIds.length === 0) {

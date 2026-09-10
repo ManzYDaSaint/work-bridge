@@ -57,16 +57,20 @@ export async function triggerMatchNotifications(jobId: string) {
     const seekerIds = matches.map((m: any) => m.id);
     const { data: seekers } = await supabase
       .from("job_seekers")
-      .select("id, user_id, skills, experience, qualification, certifications")
+      .select("id, user_id, skills, experience, qualification, education, certifications")
       .in("id", seekerIds);
       
     if (!seekers) return;
 
+    const { resolveHighestEducationQualification } = await import("@/lib/matching-helpers");
+
     const filteredSeekers = seekers.filter((seeker: any) => {
+      const resolvedQual = resolveHighestEducationQualification(seeker.qualification, seeker.education) || seeker.qualification;
       const seekerProfile: SeekerProfile = {
         skills: seeker.skills || [],
         experience: seeker.experience || [],
-        qualification: seeker.qualification || null,
+        qualification: resolvedQual || null,
+        education: seeker.education || [],
         certifications: seeker.certifications || [],
       };
       return passesJobHardRequirements(job, seekerProfile).passed;

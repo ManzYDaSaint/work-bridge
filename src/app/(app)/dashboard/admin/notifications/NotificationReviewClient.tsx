@@ -5,16 +5,18 @@ import { apiFetch } from "@/lib/api";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
 import { 
     CheckCircle2, XCircle, ShieldCheck, Zap, RefreshCw, Loader2, 
-    Send, Sparkles, AlertCircle, Building2, User, Phone, BookOpen, Clock, Layers
+    Send, Sparkles, AlertCircle, Building2, User, Phone, BookOpen, Clock, Layers, Mail
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function NotificationReviewClient() {
     const [loading, setLoading] = useState(true);
     const [actioningId, setActioningId] = useState<string | null>(null);
+    const [triggeringMatching, setTriggeringMatching] = useState(false);
     const [dispatchMode, setDispatchMode] = useState<"MANUAL" | "AUTO">("MANUAL");
     const [pendingItems, setPendingItems] = useState<any[]>([]);
     const [recentHistory, setRecentHistory] = useState<any[]>([]);
+    const [diagnostics, setDiagnostics] = useState<any>({ activeJobs: 0, activeSeekers: 0, premiumSeekers: 0 });
     const [activeTab, setActiveTab] = useState<"PENDING" | "HISTORY">("PENDING");
 
     const fetchData = async () => {
@@ -26,6 +28,7 @@ export default function NotificationReviewClient() {
                 setDispatchMode(data.dispatchMode || "MANUAL");
                 setPendingItems(data.requiresApproval || []);
                 setRecentHistory(data.recentHistory || []);
+                if (data.diagnostics) setDiagnostics(data.diagnostics);
             } else {
                 toast.error("Failed to load match approval queue");
             }
@@ -39,6 +42,27 @@ export default function NotificationReviewClient() {
     useEffect(() => {
         fetchData();
     }, []);
+
+    const handleTriggerMatchingNow = async () => {
+        setTriggeringMatching(true);
+        try {
+            const res = await apiFetch("/api/admin/notifications", {
+                method: "POST",
+                body: JSON.stringify({ action: "TRIGGER_MATCHING" })
+            });
+
+            if (res.ok) {
+                toast.success("Matching orchestration started! WhatsApp queue and emails are being processed.");
+                setTimeout(() => fetchData(), 3000);
+            } else {
+                toast.error("Failed to start matching routine");
+            }
+        } catch {
+            toast.error("Network error starting matching routine");
+        } finally {
+            setTriggeringMatching(false);
+        }
+    };
 
     const handleToggleDispatchMode = async (newMode: "MANUAL" | "AUTO") => {
         try {
@@ -123,9 +147,38 @@ export default function NotificationReviewClient() {
     return (
         <div className="space-y-6 pb-20">
             <PageHeader
-                title="Match Approvals & WhatsApp Queue"
-                subtitle="Human-in-the-Loop moderation engine for verifying candidate-job matches before WhatsApp dispatch."
+                title="Match Approvals & Delivery Engine"
+                subtitle="Two-Tier Match Management: Instant WhatsApp for Premium candidates (Admin Approved) and Automated CRON Emails for Standard candidates."
             />
+
+            {/* Diagnostics Telemetry Banner */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <p className="text-[11px] font-semibold uppercase text-slate-400">Active Jobs</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{diagnostics.activeJobs}</p>
+                </div>
+                <div className="rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <p className="text-[11px] font-semibold uppercase text-slate-400">Registered Seekers</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{diagnostics.activeSeekers}</p>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3.5 shadow-sm dark:border-amber-900/40 dark:bg-amber-950/20">
+                    <p className="text-[11px] font-semibold uppercase text-amber-600 dark:text-amber-400">Premium Seekers</p>
+                    <p className="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{diagnostics.premiumSeekers}</p>
+                </div>
+                <div className="rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between">
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase text-slate-400">System Action</p>
+                        <button
+                            onClick={handleTriggerMatchingNow}
+                            disabled={triggeringMatching}
+                            className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                            {triggeringMatching ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                            Run Matching
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             {/* Mode Switcher & Stats Bar */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -148,8 +201,8 @@ export default function NotificationReviewClient() {
                     </div>
                     <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                         {dispatchMode === "MANUAL"
-                            ? "Matches require Admin approval before WhatsApp messages are sent."
-                            : "High-confidence matches are automatically dispatched via Meta Cloud API."}
+                            ? "Premium WhatsApp matches require Admin approval before messages are sent."
+                            : "High-confidence premium WhatsApp matches are automatically dispatched."}
                     </p>
 
                     <div className="mt-4 flex gap-2">
@@ -179,9 +232,9 @@ export default function NotificationReviewClient() {
                 {/* Queue Summary */}
                 <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between">
                     <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Pending Approvals</p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Pending WhatsApp Approvals</p>
                         <p className="mt-1 text-3xl font-extrabold text-amber-600 dark:text-amber-400">{pendingItems.length}</p>
-                        <p className="mt-1 text-xs text-slate-500">Awaiting your approval</p>
+                        <p className="mt-1 text-xs text-slate-500">Premium Seeker Instant Alerts</p>
                     </div>
                     {pendingItems.length > 0 && (
                         <button
@@ -198,7 +251,7 @@ export default function NotificationReviewClient() {
                     <div>
                         <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Delivery History</p>
                         <p className="mt-1 text-3xl font-extrabold text-slate-900 dark:text-white">{recentHistory.length}</p>
-                        <p className="mt-1 text-xs text-slate-500">Total recent logs</p>
+                        <p className="mt-1 text-xs text-slate-500">WhatsApp + Resend Email Logs</p>
                     </div>
                     <div className="text-right">
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
@@ -243,15 +296,20 @@ export default function NotificationReviewClient() {
                         <div className="rounded-2xl border border-stone-200 bg-white/80 p-12 text-center dark:border-slate-800 dark:bg-slate-900/70">
                             <CheckCircle2 className="mx-auto text-emerald-500" size={36} />
                             <p className="mt-3 text-base font-semibold text-slate-900 dark:text-white">Queue is clear!</p>
-                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">There are no pending WhatsApp matches requiring manual review.</p>
+                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">There are no pending premium WhatsApp matches requiring manual review.</p>
+                            <button
+                                onClick={handleTriggerMatchingNow}
+                                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white dark:bg-slate-100 dark:text-slate-900"
+                            >
+                                <Sparkles size={14} /> Run Job Matching Algorithm Now
+                            </button>
                         </div>
                     ) : (
                         pendingItems.map((item) => {
                             const seeker = item.job_seekers || {};
                             const job = item.jobs || {};
                             const matchScore = item.payload?.matchScore || 0;
-                            const ruleScore = item.payload?.ruleScore || 0;
-                            const vectorScore = item.payload?.vectorScore || 0;
+                            const ruleScore = item.payload?._scoring?.qualScore || 0;
 
                             return (
                                 <div key={item.id} className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -262,9 +320,8 @@ export default function NotificationReviewClient() {
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Hybrid Score Match</span>
-                                                    <Badge label={`Rule: ${ruleScore}%`} variant="blue" />
-                                                    <Badge label={`Vector: ${vectorScore}%`} variant="yellow" />
+                                                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Premium WhatsApp Alert</span>
+                                                    <Badge label={`Qual: ${ruleScore}%`} variant="blue" />
                                                 </div>
                                                 <p className="text-xs text-slate-400 mt-0.5">Queued {new Date(item.created_at).toLocaleString()}</p>
                                             </div>
@@ -294,14 +351,23 @@ export default function NotificationReviewClient() {
                                         {/* Candidate Side */}
                                         <div className="rounded-xl bg-stone-50/80 p-3.5 dark:bg-slate-800/50">
                                             <div className="flex items-center gap-2 text-xs font-bold uppercase text-slate-400">
-                                                <User size={14} /> Job Seeker Profile
+                                                <User size={14} /> Premium Job Seeker Profile
                                             </div>
                                             <p className="mt-1.5 text-sm font-bold text-slate-900 dark:text-white">{seeker.full_name || "Unnamed Seeker"}</p>
                                             <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
                                                 <Phone size={12} /> {seeker.phone || "No phone number"}
                                             </p>
                                             <div className="mt-2 text-xs space-y-1 text-slate-600 dark:text-slate-300">
-                                                <p><span className="font-semibold text-slate-400">Qualification:</span> {seeker.qualification || "Unlisted"}</p>
+                                                <p>
+                                                    <span className="font-semibold text-slate-400">Education Certification:</span>{" "}
+                                                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                                                        {item.payload?._scoring?.resolvedQual ||
+                                                            (Array.isArray(seeker.education) && seeker.education[0]?.certificate) ||
+                                                            (Array.isArray(seeker.education) && seeker.education[0]?.qualification) ||
+                                                            seeker.qualification ||
+                                                            "Unlisted"}
+                                                    </span>
+                                                </p>
                                                 <p><span className="font-semibold text-slate-400">Skills:</span> {Array.isArray(seeker.skills) ? seeker.skills.join(", ") : (seeker.skills || "None")}</p>
                                             </div>
                                         </div>
@@ -319,30 +385,6 @@ export default function NotificationReviewClient() {
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* AI Match Reasoning & Scoring Breakdown */}
-                                    {item.payload?._scoring && (
-                                        <div className="mt-3 rounded-xl border border-amber-200/80 bg-amber-50/50 p-3.5 dark:border-amber-900/40 dark:bg-amber-950/20">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">
-                                                    <Sparkles size={14} /> Stage 2: Gemini LLM Skills Evaluation
-                                                </div>
-                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                                                    {item.payload._scoring.llmSkillScore}/100 Score ({item.payload._scoring.llmFromGemini ? "Gemini AI" : "Rule Fallback"})
-                                                </span>
-                                            </div>
-                                            {item.payload._scoring.llmReasoning && (
-                                                <p className="mt-1.5 text-xs text-slate-700 dark:text-slate-300 italic">
-                                                    &ldquo;{item.payload._scoring.llmReasoning}&rdquo;
-                                                </p>
-                                            )}
-                                            <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-slate-500 border-t border-amber-200/50 pt-2 dark:border-amber-900/30">
-                                                <span><strong className="text-slate-700 dark:text-slate-300">Qual (80%):</strong> {item.payload._scoring.qualScore}</span>
-                                                <span><strong className="text-slate-700 dark:text-slate-300">Exp (10%):</strong> {item.payload._scoring.expScore}</span>
-                                                <span><strong className="text-slate-700 dark:text-slate-300">Vector Boost:</strong> {item.payload._scoring.vectorBoost > 0 ? `+${item.payload._scoring.vectorBoost}` : item.payload._scoring.vectorBoost} pts ({item.payload._scoring.vectorSimilarity}%)</span>
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             );
                         })
@@ -354,7 +396,7 @@ export default function NotificationReviewClient() {
             {activeTab === "HISTORY" && (
                 <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white dark:border-slate-800 dark:bg-slate-900">
                     <div className="grid grid-cols-1 gap-2 border-b border-stone-200/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:border-slate-800 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1.5fr)_minmax(0,1fr)_auto]">
-                        <span>Candidate</span>
+                        <span>Candidate & Channel</span>
                         <span>Job Title</span>
                         <span>Match Score</span>
                         <span className="sm:text-right">Status</span>
@@ -363,32 +405,38 @@ export default function NotificationReviewClient() {
                     {recentHistory.length === 0 ? (
                         <div className="p-8 text-center text-sm text-slate-500">No delivery history recorded yet.</div>
                     ) : (
-                        recentHistory.map((hist) => (
-                            <div key={hist.id} className="grid grid-cols-1 gap-3 border-b border-stone-200/70 px-4 py-3.5 last:border-b-0 dark:border-slate-800 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1.5fr)_minmax(0,1fr)_auto] sm:items-center">
-                                <div>
-                                    <p className="text-xs font-semibold text-slate-900 dark:text-white">{hist.job_seekers?.full_name || "Seeker"}</p>
-                                    <p className="text-[11px] text-slate-400">{hist.job_seekers?.phone}</p>
+                        recentHistory.map((hist) => {
+                            const isEmail = hist.payload?.channel === "EMAIL" || hist.template_id === "standard_email_job_alert";
+                            return (
+                                <div key={hist.id} className="grid grid-cols-1 gap-3 border-b border-stone-200/70 px-4 py-3.5 last:border-b-0 dark:border-slate-800 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1.5fr)_minmax(0,1fr)_auto] sm:items-center">
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                            {isEmail ? <Mail size={12} className="text-blue-500" /> : <Phone size={12} className="text-emerald-500" />}
+                                            {hist.job_seekers?.full_name || hist.payload?.seekerName || "Seeker"}
+                                        </p>
+                                        <p className="text-[11px] text-slate-400">{isEmail ? hist.payload?.email : hist.job_seekers?.phone}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-900 dark:text-white">{hist.jobs?.title || hist.payload?.jobTitle}</p>
+                                        <p className="text-[11px] text-slate-400">{hist.jobs?.display_company_name || hist.payload?.company}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs font-bold text-amber-600 dark:text-amber-400">{hist.payload?.matchScore || 0}%</span>
+                                    </div>
+                                    <div className="sm:text-right">
+                                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                                            hist.status === "SENT"
+                                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                                : hist.status === "REJECTED"
+                                                ? "bg-stone-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                                                : "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
+                                        }`}>
+                                            {hist.status} {isEmail ? "(Email)" : "(WhatsApp)"}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-xs font-semibold text-slate-900 dark:text-white">{hist.jobs?.title || hist.payload?.jobTitle}</p>
-                                    <p className="text-[11px] text-slate-400">{hist.jobs?.display_company_name || hist.payload?.company}</p>
-                                </div>
-                                <div>
-                                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400">{hist.payload?.matchScore || 0}%</span>
-                                </div>
-                                <div className="sm:text-right">
-                                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
-                                        hist.status === "SENT"
-                                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                                            : hist.status === "REJECTED"
-                                            ? "bg-stone-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                                            : "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
-                                    }`}>
-                                        {hist.status}
-                                    </span>
-                                </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             )}

@@ -293,7 +293,7 @@ export default function AdminOverviewClient({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
                 <StatCard
                     label="Gross Revenue"
-                    value={`MWK ${((stats?.paidSubscriptionsCount || stats?.premiumEmployers || 0) * 1000).toLocaleString()}`}
+                    value={`MWK ${(stats?.grossRevenue || 0).toLocaleString()}`}
                     icon={Crown}
                     iconBg="bg-emerald-50 dark:bg-emerald-950/30"
                     iconColor="text-emerald-600"
@@ -401,11 +401,11 @@ export default function AdminOverviewClient({
 
             {/* ── Modern Extraction Accuracy Telemetry Card ── */}
             {(() => {
-                const ing = stats?.ingestionMetrics || { avgConfidence: 88, highCount: 15, medCount: 3, repairCount: 1, total: 19 };
-                const total = ing.total || 1;
-                const highPct = Math.round((ing.highCount / total) * 100);
-                const medPct = Math.round((ing.medCount / total) * 100);
-                const repairPct = Math.round((ing.repairCount / total) * 100);
+                const ing = stats?.ingestionMetrics || { avgConfidence: 0, highCount: 0, medCount: 0, repairCount: 0, total: 0 };
+                const total = ing.total || 0;
+                const highPct = total > 0 ? Math.round((ing.highCount / total) * 100) : 0;
+                const medPct = total > 0 ? Math.round((ing.medCount / total) * 100) : 0;
+                const repairPct = total > 0 ? Math.round((ing.repairCount / total) * 100) : 0;
 
                 return (
                     <div className="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
@@ -418,9 +418,15 @@ export default function AdminOverviewClient({
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <h3 className="text-base font-bold text-slate-900 dark:text-white">AI Extraction Accuracy</h3>
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1" /> Realtime Telemetry
-                                        </span>
+                                        {total > 0 ? (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1" /> Realtime · {total} items
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mr-1" /> No ingestion queue data
+                                            </span>
+                                        )}
                                     </div>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                                         Gemini Flash parsing accuracy across ingested job payloads.

@@ -5,6 +5,7 @@ import { BrainCircuit, Briefcase, ClipboardList, LayoutDashboard, ShieldCheck, U
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
 import { UserProvider } from "@/context/UserContext";
 import { signOutAndRedirect } from "@/lib/auth-utils";
+import AdminCommandPalette from "@/components/dashboard/admin/AdminCommandPalette";
 
 const adminNavGroups: NavGroup[] = [
     {
@@ -61,6 +62,7 @@ export default function AdminLayoutClient({
                 userInitials={initials}
                 userRoleLabel="System Administrator"
                 onLogout={handleLogout}
+                topBarChildren={<AdminCommandPalette />}
             >
                 {children}
             </DashboardLayout>
