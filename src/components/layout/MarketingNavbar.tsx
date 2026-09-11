@@ -141,72 +141,80 @@ export default function MarketingNavbar() {
                 </div>
             </nav>
 
-            {/* Mobile Menu Overlay */}
+            {/* Mobile Menu Sheet Overlay */}
             <AnimatePresence>
                 {isMenuOpen && (
                     <motion.div
-                        initial={{ opacity: 0, y: -10 }}
+                        initial={{ opacity: 0, y: -16 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute inset-x-3 sm:inset-x-4 top-[calc(100%+0.5rem)] z-40 md:hidden"
+                        exit={{ opacity: 0, y: -16 }}
+                        transition={{ duration: 0.25, ease: "easeOut" }}
+                        className="fixed inset-x-3 top-[4.5rem] z-40 md:hidden max-w-lg mx-auto"
                     >
-                        <div className="rounded-[1.5rem] border border-stone-200/80 bg-[#fbf8f1]/95 px-5 py-6 shadow-xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/95 overflow-hidden">
-                            <div className="flex flex-col gap-4">
+                        <div className="rounded-[1.75rem] border border-stone-200/90 bg-[#fbf8f1]/95 dark:bg-slate-900/95 p-5 shadow-2xl backdrop-blur-xl dark:border-slate-700/80 overflow-hidden space-y-4">
+                            {/* Navigation Links with 48px+ Touch Targets */}
+                            <div className="flex flex-col gap-1.5">
                                 <Link
                                     href="/jobs"
                                     onClick={() => setIsMenuOpen(false)}
-                                    className="flex items-center justify-between text-lg font-semibold text-slate-900 dark:text-white px-2 py-1"
+                                    className="flex items-center justify-between text-base font-semibold text-slate-900 dark:text-white px-3.5 py-3 rounded-2xl hover:bg-stone-200/60 dark:hover:bg-slate-800/80 transition-all active:scale-[0.98]"
                                 >
-                                    Browse Jobs
+                                    <span className="flex items-center gap-2.5">
+                                        <span className="text-lg">🔥</span> Browse Jobs
+                                    </span>
                                     <ChevronRight size={18} className="text-slate-400" />
                                 </Link>
                                 <Link
                                     href="/opportunities"
                                     onClick={() => setIsMenuOpen(false)}
-                                    className="flex items-center justify-between text-lg font-semibold text-slate-900 dark:text-white px-2 py-1"
+                                    className="flex items-center justify-between text-base font-semibold text-slate-900 dark:text-white px-3.5 py-3 rounded-2xl hover:bg-stone-200/60 dark:hover:bg-slate-800/80 transition-all active:scale-[0.98]"
                                 >
-                                    Opportunities
+                                    <span className="flex items-center gap-2.5">
+                                        <span className="text-lg">🎓</span> Opportunities &amp; Grants
+                                    </span>
                                     <ChevronRight size={18} className="text-slate-400" />
                                 </Link>
                                 <Link
                                     href={postJobHref}
                                     onClick={() => setIsMenuOpen(false)}
-                                    className="flex items-center justify-between text-lg font-semibold text-slate-900 dark:text-white px-2 py-1"
+                                    className="flex items-center justify-between text-base font-semibold text-slate-900 dark:text-white px-3.5 py-3 rounded-2xl hover:bg-stone-200/60 dark:hover:bg-slate-800/80 transition-all active:scale-[0.98]"
                                 >
-                                    Post a Job
+                                    <span className="flex items-center gap-2.5">
+                                        <span className="text-lg">💼</span> Post a Job
+                                    </span>
                                     <ChevronRight size={18} className="text-slate-400" />
                                 </Link>
-
-                                <div className="h-px bg-stone-200 dark:bg-slate-800 my-2" />
-
-                                {authUser ? (
-                                    <Link
-                                        href="/dashboard"
-                                        onClick={() => setIsMenuOpen(false)}
-                                        className="w-full flex items-center justify-center rounded-xl bg-slate-900 px-5 py-3 text-base font-semibold text-white dark:bg-white dark:text-slate-900 shadow-sm"
-                                    >
-                                        Go to Dashboard
-                                    </Link>
-                                ) : (
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <Link
-                                            href="/login"
-                                            onClick={() => setIsMenuOpen(false)}
-                                            className="flex items-center justify-center rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                                        >
-                                            Log in
-                                        </Link>
-                                        <Link
-                                            href="/register"
-                                            onClick={() => setIsMenuOpen(false)}
-                                            className="flex items-center justify-center rounded-xl bg-[#16324f] px-4 py-3 text-sm font-semibold text-white dark:bg-white dark:text-slate-900 shadow-sm"
-                                        >
-                                            Sign up
-                                        </Link>
-                                    </div>
-                                )}
                             </div>
+
+                            <div className="h-px bg-stone-200/80 dark:bg-slate-800 my-1" />
+
+                            {/* Authentication CTAs */}
+                            {authUser ? (
+                                <Link
+                                    href="/dashboard"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="w-full flex items-center justify-center rounded-2xl bg-[#16324f] dark:bg-white text-white dark:text-slate-900 px-5 py-3.5 text-base font-bold shadow-md active:scale-98 transition-all"
+                                >
+                                    Go to Dashboard
+                                </Link>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-3 pt-1">
+                                    <Link
+                                        href="/login"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="flex items-center justify-center rounded-2xl border border-stone-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3.5 text-sm font-bold text-slate-900 dark:text-white shadow-sm active:scale-98 transition-all"
+                                    >
+                                        Log in
+                                    </Link>
+                                    <Link
+                                        href="/register"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        className="flex items-center justify-center rounded-2xl bg-[#16324f] dark:bg-white text-white dark:text-slate-900 px-4 py-3.5 text-sm font-bold shadow-md active:scale-98 transition-all"
+                                    >
+                                        Sign up
+                                    </Link>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 )}

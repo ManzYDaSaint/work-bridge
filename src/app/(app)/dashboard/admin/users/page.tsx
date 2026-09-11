@@ -46,6 +46,7 @@ export default async function UserManagementPage({
                     : employer?.location,
                 seekerId: seeker?.id || null,
                 phone: seeker?.phone || null,
+                seekerProfile: seeker || null,
                 subscription: activeSub ? {
                     id: activeSub.id,
                     status: activeSub.status,

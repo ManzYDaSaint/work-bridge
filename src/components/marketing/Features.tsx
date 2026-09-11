@@ -59,7 +59,7 @@ export default function Features() {
                     <p className="inline-flex items-center rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-stone-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 mb-4">
                         Platform features
                     </p>
-                    <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    <h2 className="text-2xl xs:text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
                         Everything you need to hire — or be hired
                     </h2>
                     <p className="mt-4 text-base text-slate-500 dark:text-slate-400 leading-relaxed">

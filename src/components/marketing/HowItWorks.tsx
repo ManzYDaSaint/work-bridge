@@ -63,13 +63,13 @@ export default function HowItWorks() {
     const steps = activeTab === "seeker" ? seekerSteps : employerSteps;
 
     return (
-        <section className="py-24 bg-white dark:bg-slate-950">
+        <section className="py-16 sm:py-20 bg-slate-900/5 dark:bg-slate-950/60 border-y border-slate-200/60 dark:border-slate-800/60">
             <div className="max-w-6xl mx-auto px-4 sm:px-6">
                 <div className="text-center max-w-2xl mx-auto mb-16">
                     <p className="inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-stone-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 mb-4">
                         How it works
                     </p>
-                    <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    <h2 className="text-2xl xs:text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
                         Built for both sides of the table
                     </h2>
                     <p className="mt-4 text-base text-slate-500 dark:text-slate-400 leading-relaxed">

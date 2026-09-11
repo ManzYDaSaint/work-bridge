@@ -337,13 +337,34 @@ export default function PublicOpportunitiesClient({ initialOpportunities }: { in
                                                     )}
                                                 </div>
 
-                                                <Link
-                                                    href={`/opportunities/${opp.slug}`}
-                                                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 py-2.5 text-xs font-semibold hover:bg-slate-800 dark:hover:bg-slate-100 active:scale-[0.98] transition-all shadow-sm group/btn"
-                                                >
-                                                    View Opportunity
-                                                    <ArrowUpRight size={15} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
-                                                </Link>
+                                                <div className="flex items-center gap-2">
+                                                    <Link
+                                                        href={`/opportunities/${opp.slug}`}
+                                                        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 py-2.5 text-xs font-semibold hover:bg-slate-800 dark:hover:bg-slate-100 active:scale-[0.98] transition-all shadow-sm group/btn"
+                                                    >
+                                                        View Opportunity
+                                                        <ArrowUpRight size={15} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
+                                                    </Link>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            const url = `${window.location.origin}/opportunities/${opp.slug}`;
+                                                            if (navigator.share) {
+                                                                navigator.share({ title: opp.title, url }).catch(() => {});
+                                                            } else {
+                                                                navigator.clipboard.writeText(url);
+                                                                alert("Opportunity link copied to clipboard!");
+                                                            }
+                                                        }}
+                                                        className="p-2.5 rounded-xl border border-stone-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-stone-100 dark:hover:bg-slate-800 transition active:scale-95 shrink-0"
+                                                        title="Share Opportunity"
+                                                        aria-label="Share opportunity"
+                                                    >
+                                                        <Globe size={15} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </motion.div>
                                     </div>

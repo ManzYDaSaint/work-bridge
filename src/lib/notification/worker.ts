@@ -23,6 +23,24 @@ export async function processNotificationQueue() {
 
   for (const item of queueItems) {
     try {
+      // Security Check: Verify candidate has an active Premium subscription before sending WhatsApp
+      const { data: activeSub } = await supabase
+        .from("premium_subscriptions")
+        .select("id")
+        .eq("seeker_id", item.seeker_id)
+        .eq("status", "ACTIVE")
+        .gt("ends_at", nowIso)
+        .maybeSingle();
+
+      if (!activeSub) {
+        console.warn(`[WhatsApp Worker] Skipping notification ${item.id}: Seeker ${item.seeker_id} is not an active Premium subscriber.`);
+        await supabase
+          .from("notification_queue")
+          .update({ status: "CANCELLED", last_error: "WhatsApp notifications reserved for Premium seekers only" })
+          .eq("id", item.id);
+        continue;
+      }
+
       // 2. Send via WhatsApp API
       await sendWhatsAppTemplate(
         item.job_seekers.phone,

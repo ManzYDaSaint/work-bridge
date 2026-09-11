@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
-import { Users, Search, Loader2, UserX, Crown, Sparkles, X, CheckCircle2, UserCheck, Building2, Shield, Download } from "lucide-react";
+import { Users, Search, Loader2, UserX, Crown, Sparkles, X, CheckCircle2, UserCheck, Building2, Shield, Download, Target, AlertTriangle, Eye, Send, FileText, RefreshCw, Cpu } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { calculateProfileStrength } from "@/lib/profile-strength";
+
 
 export default function UserManagementClient({ 
     initialUsers, 
@@ -21,6 +23,9 @@ export default function UserManagementClient({
 }) {
     const [actioning, setActioning] = useState<string | null>(null);
     const [selectedUserForPremium, setSelectedUserForPremium] = useState<any | null>(null);
+    const [inspectingUser, setInspectingUser] = useState<any | null>(null);
+    const [inspectData, setInspectData] = useState<any | null>(null);
+    const [loadingInspect, setLoadingInspect] = useState<boolean>(false);
     const [durationMonths, setDurationMonths] = useState<number>(1);
     const [updatingSub, setUpdatingSub] = useState<boolean>(false);
 
@@ -134,6 +139,57 @@ export default function UserManagementClient({
         }
     };
 
+    const handleInspectUser = async (user: any) => {
+        setInspectingUser(user);
+        setLoadingInspect(true);
+        setInspectData(null);
+        try {
+            const params = new URLSearchParams();
+            params.set("userId", user.id);
+            if (user.seekerId) params.set("seekerId", user.seekerId);
+
+            const res = await apiFetch(`/api/admin/users/inspect?${params.toString()}`);
+            if (res.ok) {
+                const data = await res.json();
+                setInspectData(data);
+            } else {
+                toast.error("Failed to load user inspection details");
+            }
+        } catch {
+            toast.error("Network error while inspecting user");
+        } finally {
+            setLoadingInspect(false);
+        }
+    };
+
+    const handleRecalculateEmbedding = async (user: any) => {
+        toast.loading("Recalculating AI embeddings & DNA hash...");
+        try {
+            const res = await apiFetch("/api/admin/users/actions", {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "RECALCULATE_EMBEDDING",
+                    userId: user.id,
+                    seekerId: user.seekerId
+                })
+            });
+
+            const data = await res.json();
+            toast.dismiss();
+            if (res.ok && data.success) {
+                toast.success(data.message || "AI profile embedding updated!");
+                if (inspectingUser?.id === user.id) {
+                    handleInspectUser(user);
+                }
+            } else {
+                toast.error(data.error || "Failed to recalculate embeddings");
+            }
+        } catch {
+            toast.dismiss();
+            toast.error("Embedding request failed");
+        }
+    };
+
     const tabs = [
         { key: "ALL", label: "All Users", icon: <Users size={14} /> },
         { key: "PREMIUM", label: "Premium Subscribers", icon: <Crown size={14} className="text-amber-500" /> },
@@ -187,9 +243,10 @@ export default function UserManagementClient({
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
-                <div className="grid grid-cols-1 gap-2 border-b border-stone-200/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:border-slate-800 sm:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_auto]">
+                <div className="grid grid-cols-1 gap-2 border-b border-stone-200/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:border-slate-800 sm:grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_auto]">
                     <span>User & Contact</span>
                     <span>Role & Plan</span>
+                    <span>Match Readiness</span>
                     <span className="sm:text-right">Actions</span>
                 </div>
 
@@ -210,9 +267,10 @@ export default function UserManagementClient({
 
                     return displayedUsers.map((user) => {
                         const isPremium = user.plan === "PREMIUM" || user.plan === "PRO" || user.subscription?.status === "ACTIVE";
+                        const seekerStrength = user.role === "JOB_SEEKER" ? calculateProfileStrength(user.seekerProfile) : null;
 
                         return (
-                            <div key={user.id} className="grid grid-cols-1 gap-4 border-b border-stone-200/70 px-4 py-4 last:border-b-0 dark:border-slate-800 sm:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_auto] sm:items-center">
+                            <div key={user.id} className="grid grid-cols-1 gap-4 border-b border-stone-200/70 px-4 py-4 last:border-b-0 dark:border-slate-800 sm:grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_auto] sm:items-center">
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2">
                                         <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{user.name || "Unnamed user"}</p>
@@ -237,13 +295,63 @@ export default function UserManagementClient({
                                     </span>
                                 </div>
 
+                                <div>
+                                    {seekerStrength ? (
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-2 w-24 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                                                    <div
+                                                        className={`h-full rounded-full transition-all ${
+                                                            seekerStrength.percentage >= 80
+                                                                ? "bg-emerald-500"
+                                                                : seekerStrength.percentage >= 50
+                                                                ? "bg-amber-500"
+                                                                : "bg-red-500"
+                                                        }`}
+                                                        style={{ width: `${seekerStrength.percentage}%` }}
+                                                    />
+                                                </div>
+                                                <span className={`text-xs font-bold ${
+                                                    seekerStrength.percentage >= 80
+                                                        ? "text-emerald-600 dark:text-emerald-400"
+                                                        : seekerStrength.percentage >= 50
+                                                        ? "text-amber-600 dark:text-amber-400"
+                                                        : "text-red-600 dark:text-red-400"
+                                                }`}>
+                                                    {seekerStrength.percentage}%
+                                                </span>
+                                            </div>
+                                            {seekerStrength.suggestions.length > 0 ? (
+                                                <p className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400" title={seekerStrength.suggestions.join(" • ")}>
+                                                    <AlertTriangle size={11} className="shrink-0" />
+                                                    <span className="truncate max-w-[160px]">{seekerStrength.suggestions[0]}</span>
+                                                </p>
+                                            ) : (
+                                                <p className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+                                                    <Target size={11} className="shrink-0" /> Ready for AI Match
+                                                </p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <span className="text-xs text-slate-400 italic">N/A ({user.role})</span>
+                                    )}
+                                </div>
+
                                 <div className="flex items-center gap-2 sm:justify-end">
+                                    <button
+                                        onClick={() => handleInspectUser(user)}
+                                        className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-stone-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                                        title="Inspect matches & details"
+                                    >
+                                        <Eye size={14} /> Inspect
+                                    </button>
+
                                     {user.role === "JOB_SEEKER" && (
                                         <button
                                             onClick={() => setSelectedUserForPremium(user)}
                                             className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50/50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300"
                                         >
-                                            <Sparkles size={14} /> Manage Premium
+                                            <Sparkles size={14} /> Premium
                                         </button>
                                     )}
 
@@ -365,6 +473,155 @@ export default function UserManagementClient({
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Slide-over User Inspection Drawer */}
+            {inspectingUser && (
+                <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs">
+                    <div className="h-full w-full max-w-xl overflow-y-auto border-l border-stone-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+                        <div className="flex items-center justify-between border-b border-stone-200 pb-4 dark:border-slate-800">
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <Target className="text-amber-500" size={20} /> Match Inspection Drawer
+                                </h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    Inspecting real-time matching telemetry for {inspectingUser.name}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setInspectingUser(null)}
+                                className="rounded-xl border border-stone-200 p-2 text-slate-400 hover:text-slate-700 dark:border-slate-700 dark:hover:text-slate-200"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {loadingInspect ? (
+                            <div className="flex h-64 items-center justify-center">
+                                <Loader2 size={24} className="animate-spin text-amber-500" />
+                                <span className="ml-2 text-sm text-slate-500">Fetching matching telemetry...</span>
+                            </div>
+                        ) : inspectData ? (
+                            <div className="mt-6 space-y-6">
+                                {/* Admin AI Control Toolbar */}
+                                {inspectingUser.role === "JOB_SEEKER" && (
+                                    <div className="flex items-center justify-between rounded-2xl border border-amber-200/80 bg-amber-50/40 p-3.5 dark:border-amber-900/40 dark:bg-amber-950/20">
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                                <Cpu size={14} className="text-amber-500" /> AI Engine Controls
+                                            </p>
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                                Refresh candidate DNA vector embeddings for real-time matching
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => handleRecalculateEmbedding(inspectingUser)}
+                                            className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-600 shadow-xs"
+                                        >
+                                            <RefreshCw size={12} /> Refresh Embeddings
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Profile Summary */}
+                                <div className="rounded-2xl border border-stone-200/80 bg-stone-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-bold text-slate-900 dark:text-white">{inspectData.user.email}</p>
+                                            <p className="text-xs text-slate-500">Role: <Badge label={inspectData.user.role} variant="blue" /></p>
+                                        </div>
+                                        {inspectingUser.seekerProfile && (
+                                            <div className="text-right">
+                                                <span className="text-xs text-slate-400">Readiness:</span>
+                                                <p className="text-sm font-extrabold text-amber-600 dark:text-amber-400">
+                                                    {calculateProfileStrength(inspectingUser.seekerProfile).percentage}%
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {inspectingUser.seekerProfile?.skills?.length > 0 && (
+                                        <div className="mt-3">
+                                            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Key Tags & Skills</p>
+                                            <div className="mt-1 flex flex-wrap gap-1">
+                                                {inspectingUser.seekerProfile.skills.map((s: string, idx: number) => (
+                                                    <span key={idx} className="rounded-md bg-stone-200 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                                        {s}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Recent AI Matches Section */}
+                                <div>
+                                    <h4 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                                        <Sparkles size={14} className="text-amber-500" /> Recent Opportunity Matches ({inspectData.matches.length})
+                                    </h4>
+                                    {inspectData.matches.length === 0 ? (
+                                        <div className="mt-2 rounded-xl border border-stone-200/60 p-4 text-center text-xs text-slate-400 dark:border-slate-800">
+                                            No AI matches recorded yet. Matcher will process on next cron run.
+                                        </div>
+                                    ) : (
+                                        <div className="mt-2 space-y-2">
+                                            {inspectData.matches.map((m: any) => (
+                                                <div key={m.id} className="rounded-xl border border-stone-200 bg-white p-3 shadow-xs dark:border-slate-800 dark:bg-slate-900">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
+                                                            {m.opportunity?.title || "Match Record"}
+                                                        </p>
+                                                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                                                            m.match_score >= 80 
+                                                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" 
+                                                                : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                                                        }`}>
+                                                            {m.match_score}% Match
+                                                        </span>
+                                                    </div>
+                                                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                                        Org: {m.opportunity?.organization_name || "N/A"} • Category: {m.opportunity?.category || "N/A"}
+                                                    </p>
+                                                    {m.match_reason && (
+                                                        <p className="mt-1.5 text-[11px] italic text-slate-600 dark:text-slate-300">
+                                                            "{m.match_reason}"
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Channel Notification Logs */}
+                                <div>
+                                    <h4 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                                        <Send size={14} className="text-emerald-500" /> WhatsApp & Dispatch Telemetry
+                                    </h4>
+                                    {inspectData.notifications.length === 0 ? (
+                                        <div className="mt-2 rounded-xl border border-stone-200/60 p-4 text-center text-xs text-slate-400 dark:border-slate-800">
+                                            No outbound notification logs recorded.
+                                        </div>
+                                    ) : (
+                                        <div className="mt-2 space-y-2">
+                                            {inspectData.notifications.map((n: any) => (
+                                                <div key={n.id} className="flex items-center justify-between rounded-xl border border-stone-200 p-2.5 text-xs dark:border-slate-800">
+                                                    <div>
+                                                        <p className="font-semibold text-slate-800 dark:text-slate-200">{n.template_name || "Match Alert"}</p>
+                                                        <p className="text-[10px] text-slate-400">{new Date(n.created_at).toLocaleString()}</p>
+                                                    </div>
+                                                    <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                                                        {n.status || "SENT"}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : null}
                     </div>
                 </div>
             )}

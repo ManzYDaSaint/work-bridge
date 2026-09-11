@@ -17,11 +17,11 @@ const formatTimeAgo = (dateString: string) => {
 };
 
 const dummyActivities = [
-    { company: "Google", role: "Senior Frontend Engineer", location: "Mountain View, CA", time: "2m ago" },
-    { company: "Airbnb", role: "Product Designer", location: "Remote", time: "5m ago" },
-    { company: "Meta", role: "Backend Developer", location: "Menlo Park, CA", time: "12m ago" },
-    { company: "Spotify", role: "Engineering Manager", location: "New York, NY", time: "18m ago" },
-    { company: "Netflix", role: "Fullstack Engineer", location: "Los Gatos, CA", time: "25m ago" },
+    { company: "TNM Malawi", role: "Frontend Developer", location: "Blantyre", time: "5m ago" },
+    { company: "BancABC", role: "Data Analyst", location: "Lilongwe", time: "12m ago" },
+    { company: "Airtel Malawi", role: "Software Engineer", location: "Lilongwe", time: "25m ago" },
+    { company: "Sunbird Hotels", role: "Marketing Specialist", location: "Blantyre", time: "40m ago" },
+    { company: "National Bank of Malawi", role: "DevOps Engineer", location: "Lilongwe", time: "1h ago" },
 ];
 
 export default function LiveActivity() {
