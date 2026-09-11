@@ -631,31 +631,83 @@ export default function UserManagementClient({
                                     ) : (
                                         <div className="mt-2 space-y-2.5">
                                             {inspectData.matches.map((m: any) => (
-                                                <div key={m.id} className="rounded-xl border border-stone-200 bg-white p-3 shadow-xs dark:border-slate-800 dark:bg-slate-900">
-                                                    <div className="flex items-center justify-between">
-                                                        <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
-                                                            {m.title}
-                                                        </p>
-                                                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                                                <div key={m.id} className="rounded-xl border border-stone-200 bg-white p-3.5 shadow-xs space-y-2.5 dark:border-slate-800 dark:bg-slate-900">
+                                                    {/* Header: Job title + composite score */}
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div>
+                                                            <p className="text-xs font-bold text-slate-900 dark:text-white">{m.title}</p>
+                                                            <p className="text-[11px] text-slate-500 dark:text-slate-400">{m.company} • {m.location} ({m.workMode || "REMOTE"})</p>
+                                                        </div>
+                                                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
                                                             m.match_score >= 80 
                                                                 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" 
-                                                                : m.match_score >= 50
-                                                                ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                                                                : m.match_score >= 50 
+                                                                ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300" 
                                                                 : "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
                                                         }`}>
                                                             {m.match_score}% Match
                                                         </span>
                                                     </div>
-                                                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                                                        {m.company} • {m.location} ({m.workMode || "REMOTE"})
-                                                    </p>
-                                                    {m.match_reasons?.length > 0 && (
-                                                        <div className="mt-1.5 flex flex-wrap gap-1">
-                                                            {m.match_reasons.map((r: string, idx: number) => (
-                                                                <span key={idx} className="inline-block rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
-                                                                    {r}
-                                                                </span>
-                                                            ))}
+
+                                                    {/* 🎓 Qualification Gate (80% weight) */}
+                                                    <div className={`rounded-lg border p-2.5 space-y-1 ${
+                                                        m.qual_gate_passed 
+                                                            ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/40 dark:bg-emerald-950/20" 
+                                                            : "border-red-200 bg-red-50/50 dark:border-red-900/40 dark:bg-red-950/20"
+                                                    }`}>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">🎓 Qualification Gate · 80%</span>
+                                                            <span className={`text-[10px] font-bold ${m.qual_gate_passed ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                                                                {m.qual_gate_passed ? `✓ MET (${m.qual_gate_score || 80}/80 pts)` : "✗ FAILED (0/80 pts)"}
+                                                            </span>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-1 text-[10px]">
+                                                            <div><span className="text-slate-400 dark:text-slate-500">Job Requires:</span> <strong className="text-slate-700 dark:text-slate-200">{m.job_qualification_required || "Any"}</strong></div>
+                                                            <div><span className="text-slate-400 dark:text-slate-500">Seeker Has:</span> <strong className={m.qual_gate_passed ? "text-emerald-700 dark:text-emerald-300" : "text-red-600 dark:text-red-400"}>{m.seeker_qualification_actual || "Not specified"}</strong></div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 💼 Experience Metric (10% weight) */}
+                                                    <div className="rounded-lg border border-stone-200 bg-stone-50/50 p-2.5 space-y-1 dark:border-slate-800 dark:bg-slate-800/30">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">💼 Experience · 10%</span>
+                                                            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">{m.exp_score ?? 0}/10 pts</span>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-1 text-[10px]">
+                                                            <div><span className="text-slate-400 dark:text-slate-500">Job Requires:</span> <strong className="text-slate-700 dark:text-slate-200">{m.job_min_years_experience ?? 0} yrs</strong></div>
+                                                            <div><span className="text-slate-400 dark:text-slate-500">Seeker Has:</span> <strong className={
+                                                                (m.seeker_experience_actual ?? 0) >= (m.job_min_years_experience ?? 0) 
+                                                                    ? "text-emerald-700 dark:text-emerald-300" 
+                                                                    : "text-amber-600 dark:text-amber-400"
+                                                            }>{m.seeker_experience_actual ?? 0} yrs</strong></div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 🧠 Skills & Key Tags (10% weight) */}
+                                                    {((m.skills_matched && m.skills_matched.length > 0) || (m.skills_missing && m.skills_missing.length > 0)) && (
+                                                        <div className="rounded-lg border border-stone-200 bg-stone-50/50 p-2.5 space-y-1.5 dark:border-slate-800 dark:bg-slate-800/30">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">🧠 Skills · 10%</span>
+                                                                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{m.skills_score ?? 0}/10 pts</span>
+                                                            </div>
+                                                            {m.skills_matched?.length > 0 && (
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {m.skills_matched.map((s: string, idx: number) => (
+                                                                        <span key={idx} className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                                                                            ✓ {s}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                            {m.skills_missing?.length > 0 && (
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {m.skills_missing.map((s: string, idx: number) => (
+                                                                        <span key={idx} className="rounded-md bg-red-50 px-1.5 py-0.5 text-[9px] font-semibold text-red-500 dark:bg-red-950 dark:text-red-400">
+                                                                            ✗ {s}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>

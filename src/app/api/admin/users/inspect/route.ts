@@ -62,7 +62,7 @@ export async function GET(request: Request) {
                     .limit(20)
             ]);
 
-            // Map recommended jobs to structured format
+            // Map recommended jobs to structured format — include full breakdown for telemetry display
             matches = recommendedJobs.map((j) => ({
                 id: j.id,
                 title: j.title,
@@ -72,7 +72,21 @@ export async function GET(request: Request) {
                 match_score: j.hard_match_score,
                 match_reasons: j.hard_match_reasons,
                 match_passed: j.hard_match_passed,
-                breakdown: j.hard_match_breakdown
+                // Full scoring breakdown for admin telemetry
+                breakdown: j.hard_match_breakdown,
+                // Job-side requirements (what the job demands)
+                job_qualification_required: (j as any).qualification || null,
+                job_min_years_experience: (j as any).minimum_years_experience ?? null,
+                job_must_have_skills: (j as any).must_have_skills || [],
+                // Seeker-side actuals (what the seeker has) pulled from breakdown
+                seeker_qualification_actual: j.hard_match_breakdown?.qualification?.actual ?? null,
+                seeker_experience_actual: j.hard_match_breakdown?.experience?.actual ?? null,
+                qual_gate_passed: j.hard_match_breakdown?.qualification?.passed ?? false,
+                qual_gate_score: j.hard_match_breakdown?.qualification?.score ?? 0,
+                exp_score: j.hard_match_breakdown?.experience?.score ?? 0,
+                skills_matched: j.hard_match_breakdown?.skills?.matched ?? [],
+                skills_missing: j.hard_match_breakdown?.skills?.missing ?? [],
+                skills_score: j.hard_match_breakdown?.skills?.score ?? 0,
             }));
 
             applications = appsRes.data || [];
