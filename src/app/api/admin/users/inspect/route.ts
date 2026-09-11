@@ -1,5 +1,6 @@
 import { validateAuth } from "@/lib/auth-guard";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
+import { RecommendationService } from "@/services/recommendation.service";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -39,22 +40,13 @@ export async function GET(request: Request) {
         let applications: any[] = [];
         let postedJobs: any[] = [];
 
-        // 2. Fetch matches & applications for Job Seekers
+        // 2. Fetch Active Job Recommendations & Applications for Job Seekers
         if (effectiveSeekerId) {
-            const [matchesRes, appsRes] = await Promise.all([
-                supabase
-                    .from("opportunity_matches")
-                    .select(`
-                        id,
-                        match_score,
-                        match_reason,
-                        status,
-                        created_at,
-                        opportunity:opportunities(id, title, category, organization_name, country, location_type, status)
-                    `)
-                    .eq("job_seeker_id", effectiveSeekerId)
-                    .order("created_at", { ascending: false })
-                    .limit(20),
+            const [recommendedJobs, appsRes] = await Promise.all([
+                RecommendationService.getRecommendedJobs(effectiveSeekerId, { limit: 15 }).catch((err) => {
+                    console.warn("[Admin Inspect] Failed to fetch recommended jobs:", err);
+                    return [];
+                }),
 
                 supabase
                     .from("applications")
@@ -70,7 +62,19 @@ export async function GET(request: Request) {
                     .limit(20)
             ]);
 
-            matches = matchesRes.data || [];
+            // Map recommended jobs to structured format
+            matches = recommendedJobs.map((j) => ({
+                id: j.id,
+                title: j.title,
+                company: j.display_company_name || (j as any).employer?.company_name || "Direct Employer",
+                location: j.location,
+                workMode: j.work_mode,
+                match_score: j.hard_match_score,
+                match_reasons: j.hard_match_reasons,
+                match_passed: j.hard_match_passed,
+                breakdown: j.hard_match_breakdown
+            }));
+
             applications = appsRes.data || [];
         }
 

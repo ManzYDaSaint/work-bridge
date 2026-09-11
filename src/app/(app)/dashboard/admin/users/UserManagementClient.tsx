@@ -28,6 +28,7 @@ export default function UserManagementClient({
     const [loadingInspect, setLoadingInspect] = useState<boolean>(false);
     const [durationMonths, setDurationMonths] = useState<number>(1);
     const [updatingSub, setUpdatingSub] = useState<boolean>(false);
+    const [sendingNotification, setSendingNotification] = useState<boolean>(false);
 
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -187,6 +188,45 @@ export default function UserManagementClient({
         } catch {
             toast.dismiss();
             toast.error("Embedding request failed");
+        }
+    };
+
+    const handleSendMatchNotifications = async (user: any) => {
+        if (!user.seekerId) {
+            toast.error("This user has no seeker profile to notify.");
+            return;
+        }
+        const isPremium = user.plan === "PREMIUM" || user.subscription?.status === "ACTIVE";
+        const channel = isPremium ? "WhatsApp" : "Email";
+        if (!confirm(`Send ${channel} match notifications to ${user.name || user.email}?\n\nChannel: ${channel}${isPremium ? ` → ${user.phone || "(no phone number)"}` : ` → ${user.email}`}`)) return;
+
+        setSendingNotification(true);
+        toast.loading(`Sending ${channel} match notifications...`);
+        try {
+            const res = await apiFetch("/api/admin/users/actions", {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "SEND_MATCH_NOTIFICATIONS",
+                    userId: user.id,
+                    seekerId: user.seekerId
+                })
+            });
+            const data = await res.json();
+            toast.dismiss();
+            if (res.ok && data.success) {
+                toast.success(data.message || `${channel} notifications sent!`);
+                // Reload the drawer to refresh telemetry logs
+                if (inspectingUser?.id === user.id) {
+                    handleInspectUser(user);
+                }
+            } else {
+                toast.warning(data.message || data.error || `${channel} notification failed.`);
+            }
+        } catch {
+            toast.dismiss();
+            toast.error(`Failed to send ${channel} notifications.`);
+        } finally {
+            setSendingNotification(false);
         }
     };
 
@@ -556,38 +596,67 @@ export default function UserManagementClient({
                                     )}
                                 </div>
 
-                                {/* Recent AI Matches Section */}
+                                {/* Active Recommended Jobs Section */}
                                 <div>
-                                    <h4 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-slate-500">
-                                        <Sparkles size={14} className="text-amber-500" /> Recent Opportunity Matches ({inspectData.matches.length})
-                                    </h4>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h4 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                                            <Sparkles size={14} className="text-amber-500" /> Active Job Matches ({inspectData.matches.length})
+                                        </h4>
+                                        {inspectData.matches.length > 0 && (
+                                            <button
+                                                onClick={() => handleSendMatchNotifications(inspectingUser)}
+                                                disabled={sendingNotification}
+                                                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-bold shadow-sm transition-all disabled:opacity-60 ${
+                                                    (inspectingUser.plan === "PREMIUM" || inspectingUser.subscription?.status === "ACTIVE")
+                                                        ? "bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-500/20"
+                                                        : "bg-blue-500 text-white hover:bg-blue-600 shadow-blue-500/20"
+                                                }`}
+                                                title={(inspectingUser.plan === "PREMIUM" || inspectingUser.subscription?.status === "ACTIVE") ? "Send WhatsApp notifications (Premium)" : "Send Email notifications (Non-Premium)"}
+                                            >
+                                                {sendingNotification ? (
+                                                    <Loader2 size={12} className="animate-spin" />
+                                                ) : (inspectingUser.plan === "PREMIUM" || inspectingUser.subscription?.status === "ACTIVE") ? (
+                                                    <Send size={12} />
+                                                ) : (
+                                                    <FileText size={12} />
+                                                )}
+                                                {(inspectingUser.plan === "PREMIUM" || inspectingUser.subscription?.status === "ACTIVE") ? "Notify via WhatsApp" : "Notify via Email"}
+                                            </button>
+                                        )}
+                                    </div>
                                     {inspectData.matches.length === 0 ? (
                                         <div className="mt-2 rounded-xl border border-stone-200/60 p-4 text-center text-xs text-slate-400 dark:border-slate-800">
-                                            No AI matches recorded yet. Matcher will process on next cron run.
+                                            No active job matches found for this candidate.
                                         </div>
                                     ) : (
-                                        <div className="mt-2 space-y-2">
+                                        <div className="mt-2 space-y-2.5">
                                             {inspectData.matches.map((m: any) => (
                                                 <div key={m.id} className="rounded-xl border border-stone-200 bg-white p-3 shadow-xs dark:border-slate-800 dark:bg-slate-900">
                                                     <div className="flex items-center justify-between">
                                                         <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
-                                                            {m.opportunity?.title || "Match Record"}
+                                                            {m.title}
                                                         </p>
                                                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
                                                             m.match_score >= 80 
                                                                 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" 
-                                                                : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                                                                : m.match_score >= 50
+                                                                ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                                                                : "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
                                                         }`}>
                                                             {m.match_score}% Match
                                                         </span>
                                                     </div>
                                                     <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                                                        Org: {m.opportunity?.organization_name || "N/A"} • Category: {m.opportunity?.category || "N/A"}
+                                                        {m.company} • {m.location} ({m.workMode || "REMOTE"})
                                                     </p>
-                                                    {m.match_reason && (
-                                                        <p className="mt-1.5 text-[11px] italic text-slate-600 dark:text-slate-300">
-                                                            "{m.match_reason}"
-                                                        </p>
+                                                    {m.match_reasons?.length > 0 && (
+                                                        <div className="mt-1.5 flex flex-wrap gap-1">
+                                                            {m.match_reasons.map((r: string, idx: number) => (
+                                                                <span key={idx} className="inline-block rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                                                                    {r}
+                                                                </span>
+                                                            ))}
+                                                        </div>
                                                     )}
                                                 </div>
                                             ))}
