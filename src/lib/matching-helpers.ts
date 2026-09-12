@@ -352,12 +352,14 @@ export function scoreJobSeekerMatch(
   );
 
   // Missing required skills/certifications cannot be hidden behind a strong qualification score.
-  // If the role explicitly lists must-have competencies, they must drag the match below the
-  // recommendation threshold instead of appearing as a 90% fit.
   const hardRequirementPenalty =
     (!skillMatch.passed ? 45 : 0) +
     (!certMatch.passed ? 25 : 0);
-  const score = Math.max(0, Math.min(100, baseScore - hardRequirementPenalty));
+  
+  // Qualification Gate Knockout: if candidate failed qualification gate, composite match score MUST be 0
+  const score = !qualificationPassed
+    ? 0
+    : Math.max(0, Math.min(100, baseScore - hardRequirementPenalty));
 
   // HR-first match gate for this product: the candidate must meet education, experience,
   // and must-have skill/certification requirements before the role is eligible for recommendation.

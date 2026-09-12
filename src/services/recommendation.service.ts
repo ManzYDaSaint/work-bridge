@@ -158,11 +158,11 @@ export class RecommendationService {
     );
 
     // Second pass fallback: if not enough passed jobs, include high-scoring
-    // failed jobs (e.g. missing experience but right qualification/field)
+    // failed jobs (e.g. missing 1 yr experience, but MUST pass the Qualification Gate)
     const fallbackJobs =
       passedJobs.length < 3
         ? scoredJobs.filter(
-            (j) => !j.hard_match_passed && j.hard_match_score >= MIN_RELEVANCE_SCORE
+            (j) => !j.hard_match_passed && j.hard_match_breakdown.qualification.passed && j.hard_match_score >= MIN_RELEVANCE_SCORE
           )
         : [];
 
