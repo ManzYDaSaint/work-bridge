@@ -228,11 +228,8 @@ export function evaluateQualificationMatch(
       // Check if seeker possesses AT LEAST ONE of the job's accepted domains
       const hasDomainOverlap = seekerDomains.some((sd) => jobDomains.includes(sd));
 
-      // Also check if the job accepts generic/flexible qualifications (e.g. "or equivalent")
-      const isJobGeneric = GENERIC_QUAL_PHRASES.some((phrase) => jobQualLower.includes(phrase));
-
-      if (!hasDomainOverlap && !isJobGeneric) {
-        // Cross-discipline / domain mismatch: fail qualification gate
+      if (!hasDomainOverlap) {
+        // Cross-discipline / domain mismatch: fail qualification gate completely
         return { passed: false, score: 0, mismatchedDomain: true };
       }
     }
