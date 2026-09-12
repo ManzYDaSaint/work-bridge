@@ -175,23 +175,26 @@ const GENERIC_QUAL_PHRASES = [
   "relevant field",
 ];
 
-/**
- * Returns all matching domain keys for a qualification string.
- * Returns an empty array [] if no specific domain is detected or if it's domain-agnostic.
- */
 export function getQualificationDomains(qualString?: string | null): string[] {
   if (!qualString) return [];
   const q = qualString.toLowerCase();
 
   const foundDomains: string[] = [];
   for (const [domain, keywords] of Object.entries(DISCIPLINE_DOMAINS)) {
-    if (keywords.some((kw) => q.includes(kw))) {
+    if (
+      keywords.some((kw) => {
+        // For short keywords (<= 4 chars), enforce word boundaries so "cia" doesn't match inside "social"
+        if (kw.length <= 4) {
+          const regex = new RegExp(`\\b${kw.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&")}\\b`, "i");
+          return regex.test(q);
+        }
+        return q.includes(kw);
+      })
+    ) {
       foundDomains.push(domain);
     }
   }
 
-  // If generic phrases are present AND specific domains were also found (e.g. "Computer Science or an equivalent"),
-  // treat the specific domains as acceptable options.
   return foundDomains;
 }
 
