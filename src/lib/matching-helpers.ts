@@ -91,42 +91,65 @@ const DISCIPLINE_DOMAINS: Record<string, string[]> = {
     "software engineering", "software development", "computer engineering",
     "information systems", "ict", "data science", "cybersecurity",
     "artificial intelligence", "programming", "computer studies",
-    "network engineering", "telecommunications",
+    "network engineering", "telecommunications", "communication technology",
+    "systems support", "information science",
   ],
   nursing_health: [
     "nursing", "midwif", "clinical medicine", "clinical science",
     "medical laboratory", "pharmacy", "pharmaceutical", "laboratory sciences",
     "biomedical", "public health", "occupational health", "health science",
     "clinical medicine", "physiotherapy", "radiography", "environmental health",
-    "medical imaging", "optometry", "dentistry",
+    "medical imaging", "optometry", "dentistry", "medicine",
   ],
   education: [
     "education", "teaching", "pedagogy", "curriculum",
     "early childhood", "primary education", "secondary education",
+    "civic education",
   ],
   finance_accounting: [
     "accountancy", "accounting", "finance", "economics", "commerce",
-    "financial management", "banking", "actuarial",
+    "financial management", "banking", "actuarial", "audit", "taxation",
+    "bcom", "acca", "cima", "cia",
   ],
   engineering: [
     "engineering", "civil engineering", "mechanical engineering",
-    "electrical engineering", "structural engineering",
-    "chemical engineering", "materials science",
+    "electrical engineering", "electronics engineering", "structural engineering",
+    "chemical engineering", "materials science", "telecommunication engineering",
   ],
   agriculture: [
     "agriculture", "agronomy", "soil science", "agribusiness",
     "horticulture", "veterinary", "fisheries", "food science",
-    "natural resources", "forestry",
+    "natural resources", "forestry", "climate smart agriculture",
+    "environmental science", "environmental management", "biomass",
   ],
-  law: ["law", "legal studies", "jurisprudence"],
+  law: ["law", "legal studies", "jurisprudence", "llb"],
   social_science: [
     "social science", "sociology", "psychology", "social work",
     "anthropology", "political science", "development studies",
+    "community development", "transformative community", "gender studies",
+    "humanities", "public policy", "human rights", "governance",
+    "rural development", "international relations",
   ],
-  business: [
-    "business administration", "business management",
+  media_journalism: [
+    "mass communication", "journalism", "media", "public relations",
+    "communication studies", "corporate communication", "broadcasting",
+    "media and development", "media and culture",
+  ],
+  library_information: [
+    "library science", "information management", "records management",
+    "archives", "documentation", "library studies",
+  ],
+  procurement_logistics: [
     "procurement", "supply chain management", "logistics management",
-    "marketing management", "human resource management",
+    "purchasing", "supply chain", "logistics",
+  ],
+  human_resources: [
+    "human resource", "human resources", "hr management", "personnel management",
+    "industrial relations",
+  ],
+  business_admin: [
+    "business administration", "business management", "management studies",
+    "office administration", "public administration", "bba", "mba",
   ],
 };
 
@@ -192,20 +215,17 @@ export function evaluateQualificationMatch(
 
   if (jobRank > 0 && seekerRank > 0) {
     // 3. Discipline / field-of-study check
-    //    If the job specifies a particular domain AND the seeker's degree
-    //    is in a *different* specific domain, apply a cross-field penalty.
     const jobDomain = getQualificationDomain(jobQualification);
     const seekerDomain = getQualificationDomain(seekerQualification);
 
+    // If job explicitly requires a specific domain (e.g. engineering, accounting, computing),
+    // and the seeker either has a different domain or an un-matched domain, apply domain mismatch penalty.
     const hasDomainMismatch =
-      jobDomain !== null &&
-      seekerDomain !== null &&
-      jobDomain !== seekerDomain;
+      jobDomain !== null && (seekerDomain === null || jobDomain !== seekerDomain);
 
     if (hasDomainMismatch) {
-      // Cross-discipline: fail the qualification gate and give a low score
-      // so the job is ranked well below genuinely relevant matches.
-      return { passed: false, score: 20, mismatchedDomain: true };
+      // Cross-discipline / domain mismatch: fail qualification gate
+      return { passed: false, score: 0, mismatchedDomain: true };
     }
 
     if (seekerRank >= jobRank) {
