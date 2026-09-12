@@ -206,8 +206,8 @@ export function evaluateQualificationMatch(
   const jobQualLower = jobQualification.toLowerCase().trim();
   const seekerQualLower = seekerQualification.toLowerCase().trim();
 
-  // 1. Direct or Substring match check
-  if (seekerQualLower.includes(jobQualLower) || jobQualLower.includes(seekerQualLower)) {
+  // 1. Exact string match check
+  if (seekerQualLower === jobQualLower) {
     return { passed: true, score: 100 };
   }
 
