@@ -173,21 +173,23 @@ const GENERIC_QUAL_PHRASES = [
 ];
 
 /**
- * Returns the domain key for a qualification string, or null if no
- * specific domain is detected (meaning it's a general/broad requirement).
- * Also returns null for broad postings that explicitly accept "any relevant field".
+ * Returns all matching domain keys for a qualification string.
+ * Returns an empty array [] if no specific domain is detected or if it's domain-agnostic.
  */
-export function getQualificationDomain(qualString?: string | null): string | null {
-  if (!qualString) return null;
+export function getQualificationDomains(qualString?: string | null): string[] {
+  if (!qualString) return [];
   const q = qualString.toLowerCase();
 
-  // If the job uses a broad/flexible phrase, treat it as domain-agnostic
-  if (GENERIC_QUAL_PHRASES.some((phrase) => q.includes(phrase))) return null;
-
+  const foundDomains: string[] = [];
   for (const [domain, keywords] of Object.entries(DISCIPLINE_DOMAINS)) {
-    if (keywords.some((kw) => q.includes(kw))) return domain;
+    if (keywords.some((kw) => q.includes(kw))) {
+      foundDomains.push(domain);
+    }
   }
-  return null; // no specific domain → treat as general
+
+  // If generic phrases are present AND specific domains were also found (e.g. "Computer Science or an equivalent"),
+  // treat the specific domains as acceptable options.
+  return foundDomains;
 }
 
 export function evaluateQualificationMatch(
@@ -214,18 +216,22 @@ export function evaluateQualificationMatch(
   const seekerRank = getQualificationRank(seekerQualification);
 
   if (jobRank > 0 && seekerRank > 0) {
-    // 3. Discipline / field-of-study check
-    const jobDomain = getQualificationDomain(jobQualification);
-    const seekerDomain = getQualificationDomain(seekerQualification);
+    // 3. Discipline / field-of-study check (Multi-domain matching)
+    const jobDomains = getQualificationDomains(jobQualification);
+    const seekerDomains = getQualificationDomains(seekerQualification);
 
-    // If job explicitly requires a specific domain (e.g. engineering, accounting, computing),
-    // and the seeker either has a different domain or an un-matched domain, apply domain mismatch penalty.
-    const hasDomainMismatch =
-      jobDomain !== null && (seekerDomain === null || jobDomain !== seekerDomain);
+    // If job explicitly mentions one or more specific required domains (e.g., ["finance_accounting"], ["computing"])
+    if (jobDomains.length > 0) {
+      // Check if seeker possesses AT LEAST ONE of the job's accepted domains
+      const hasDomainOverlap = seekerDomains.some((sd) => jobDomains.includes(sd));
 
-    if (hasDomainMismatch) {
-      // Cross-discipline / domain mismatch: fail qualification gate
-      return { passed: false, score: 0, mismatchedDomain: true };
+      // Also check if the job accepts generic/flexible qualifications (e.g. "or equivalent")
+      const isJobGeneric = GENERIC_QUAL_PHRASES.some((phrase) => jobQualLower.includes(phrase));
+
+      if (!hasDomainOverlap && !isJobGeneric) {
+        // Cross-discipline / domain mismatch: fail qualification gate
+        return { passed: false, score: 0, mismatchedDomain: true };
+      }
     }
 
     if (seekerRank >= jobRank) {
