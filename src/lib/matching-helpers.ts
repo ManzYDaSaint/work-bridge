@@ -127,8 +127,11 @@ const DISCIPLINE_DOMAINS: Record<string, string[]> = {
     "social science", "sociology", "psychology", "social work",
     "anthropology", "political science", "development studies",
     "community development", "transformative community", "gender studies",
-    "humanities", "public policy", "human rights", "governance",
+    "public policy", "human rights", "governance",
     "rural development", "international relations",
+  ],
+  humanities: [
+    "humanities", "arts", "philosophy", "history", "languages", "literature",
   ],
   media_journalism: [
     "mass communication", "journalism", "media", "public relations",
