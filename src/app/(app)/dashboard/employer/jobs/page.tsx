@@ -7,12 +7,12 @@ import JobListTable from "@/components/dashboard/employer/JobListTable";
 export default async function EmployerJobsPage({
     searchParams,
 }: {
-    searchParams: Promise<{ status?: string; page?: string }>;
+    searchParams: Promise<{ status?: string; tab?: string; page?: string }>;
 }) {
     const { profile: user } = await requireDashboardProfile("EMPLOYER");
     const params = await searchParams;
     
-    const status = params.status || "all";
+    const status = params.status || params.tab || "all";
     const page = parseInt(params.page || "1");
     const limit = 20;
     const { jobs, totalPages } = await jobService.getEmployerJobs(
@@ -46,6 +46,7 @@ export default async function EmployerJobsPage({
                 tabs={tabs}
                 activeTab={status}
                 basePath="/dashboard/employer/jobs"
+                paramName="status"
             />
 
             {jobs.length === 0 ? (
@@ -60,6 +61,7 @@ export default async function EmployerJobsPage({
                 </div>
             ) : (
                 <JobListTable 
+                    key={`${status}-${page}`}
                     initialJobs={jobs} 
                     employerStatus={user.employer?.status || "PENDING"} 
                 />

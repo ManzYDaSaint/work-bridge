@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Pencil, Trash2, RefreshCw, ArrowRightLeft, CheckCircle, Link as LinkIcon, BarChart2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/dashboard/ui";
 import Link from "next/link";
@@ -17,6 +17,10 @@ export default function JobListTable({
         employerStatus?: string;
 }) {
     const [jobs, setJobs] = useState<Job[]>(initialJobs);
+
+    useEffect(() => {
+        setJobs(initialJobs);
+    }, [initialJobs]);
     const [deleting, setDeleting] = useState<string | null>(null);
     const [reposting, setReposting] = useState<string | null>(null);
     const [closing, setClosing] = useState<string | null>(null);

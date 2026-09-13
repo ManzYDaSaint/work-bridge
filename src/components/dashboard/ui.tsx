@@ -212,9 +212,10 @@ interface TabsProps {
     activeTab: string;
     basePath?: string;
     onChange?: (tabId: string) => void;
+    paramName?: string;
 }
 
-export function Tabs({ tabs, activeTab, basePath, onChange }: TabsProps) {
+export function Tabs({ tabs, activeTab, basePath, onChange, paramName = "status" }: TabsProps) {
     return (
         <div className="flex w-fit rounded-2xl border border-stone-200 bg-stone-50 p-1 dark:border-slate-700/50 dark:bg-slate-800/50">
             {tabs.map((tab) => {
@@ -242,7 +243,7 @@ export function Tabs({ tabs, activeTab, basePath, onChange }: TabsProps) {
                 return (
                     <Link
                         key={tab.id}
-                        href={basePath ? `${basePath}?tab=${tab.id}` : "#"}
+                        href={basePath ? `${basePath}?${paramName}=${tab.id}` : "#"}
                         className={sharedClassName}
                     >
                         {tab.label}
