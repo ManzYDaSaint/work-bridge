@@ -41,9 +41,8 @@ export default async function JobDiscoveryPage({
     // 3. Use the unified discovery service for matched candidates
     let candidates: any[] = [];
     try {
-        candidates = await RecommendationService.discoverTalent(jobId, user.id, {
+        candidates = await RecommendationService.discoverTalent(job, user.id, {
             limit: 20,
-            threshold: 0.50,
         });
     } catch (error: any) {
         console.error("Employer discovery service failed:", error);

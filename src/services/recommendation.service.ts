@@ -176,8 +176,8 @@ export class RecommendationService {
   /**
    * Discover talents based on a job's requirements.
    */
-  static async discoverTalent(jobId: string, employerId: string, options: RecommendationOptions = {}) {
-    const { limit = 10, threshold = 0.3 } = options;
+  static async discoverTalent(jobOrId: string | any, employerId: string, options: RecommendationOptions = {}) {
+    const { limit = 10 } = options;
 
     // 1. Quota Check (Free users: 30 candidate profile views/month)
     try {
@@ -189,16 +189,26 @@ export class RecommendationService {
       console.warn(`[RecommendationService] Quota check failed gracefully:`, quotaErr?.message);
     }
 
-    // 2. Fetch Job's requirement fields (no embedding required)
+    // 2. Resolve job object (either passed directly or fetched by ID)
     const supabase = await this.getSupabase();
-    const { data: job, error: jobError } = await supabase
-      .from('jobs')
-      .select('id, title, must_have_skills, minimum_years_experience, qualification, required_certifications, skills')
-      .eq('id', jobId)
-      .single();
+    let job: any = null;
 
-    if (jobError || !job) {
-      throw new Error("Job details not found.");
+    if (typeof jobOrId === "object" && jobOrId !== null) {
+      job = jobOrId;
+    } else if (typeof jobOrId === "string") {
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('id', jobOrId)
+        .maybeSingle();
+      
+      if (!error && data) {
+        job = data;
+      }
+    }
+
+    if (!job) {
+      throw new Error("Unable to retrieve job requirements for candidate matching.");
     }
 
     // 3. Fetch candidate job seekers directly (same approach as Admin Drawer)
