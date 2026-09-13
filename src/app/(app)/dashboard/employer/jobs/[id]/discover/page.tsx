@@ -26,14 +26,7 @@ export default async function JobDiscoveryPage({
         return <div className="p-6 text-red-500">Job not found or unauthorized.</div>;
     }
 
-    if (!job.embedding) {
-        return (
-            <div className="flex min-h-[60vh] flex-col items-center justify-center p-6 text-center">
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">AI Processing</h2>
-                <p className="mt-2 text-slate-500">We are still processing the AI embedding for this job. Please check back in a few moments.</p>
-            </div>
-        );
-    }
+    // (Note: embedding check removed — matching uses rule engine directly)
 
     // 2. Fetch Quota
     const { data: quota } = await supabase

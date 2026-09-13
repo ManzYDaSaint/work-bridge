@@ -189,50 +189,23 @@ export class RecommendationService {
       console.warn(`[RecommendationService] Quota check failed gracefully:`, quotaErr?.message);
     }
 
-    // 2. Get Job's embedding and hard requirements
+    // 2. Fetch Job's requirement fields (no embedding required)
     const supabase = await this.getSupabase();
     const { data: job, error: jobError } = await supabase
       .from('jobs')
-      .select('id, embedding, must_have_skills, minimum_years_experience, qualification, required_certifications, skills')
+      .select('id, title, must_have_skills, minimum_years_experience, qualification, required_certifications, skills')
       .eq('id', jobId)
       .single();
 
-    if (jobError || !job?.embedding) {
-      throw new Error("Job embedding not found.");
+    if (jobError || !job) {
+      throw new Error("Job details not found.");
     }
 
-    // 3. Call pgvector matching function
-    let validCandidates: any[] = [];
-    try {
-      const candidateCount = Math.max(limit * 4, 100);
-      const { data: candidates, error: candError } = await supabase.rpc('match_candidates', {
-        query_embedding: job.embedding,
-        match_threshold: Math.min(threshold, 0.15), // lowered threshold for broader initial recall
-        match_count: candidateCount,
-      });
-
-      if (!candError && Array.isArray(candidates)) {
-        validCandidates = candidates;
-      }
-    } catch (err: any) {
-      console.warn("[RecommendationService] pgvector match_candidates failed, falling back to database query:", err?.message);
-    }
-
-    // Fallback: fetch candidates directly if pgvector returned empty or errored
-    if (validCandidates.length === 0) {
-      const { data: fallbackSeekers } = await supabase
-        .from('job_seekers')
-        .select('id')
-        .limit(100);
-      validCandidates = (fallbackSeekers || []).map((s: any) => ({ id: s.id, similarity: 0.5 }));
-    }
-    
-    const candidateSeekerIds = validCandidates.map((item: any) => item.id);
-
+    // 3. Fetch candidate job seekers directly (same approach as Admin Drawer)
     const { data: seekerRows, error: seekerRowsError } = await supabase
       .from('job_seekers')
       .select('id, full_name, bio, location, skills, completion, experience, education, qualification, seniority_level, employment_status, profile_visibility, avatar_url')
-      .in('id', candidateSeekerIds);
+      .limit(200);
 
     if (seekerRowsError) {
       console.error("[RecommendationService] Error fetching candidate rows:", seekerRowsError);
@@ -244,24 +217,17 @@ export class RecommendationService {
       const hasSkills = Array.isArray(seeker.skills) && seeker.skills.length > 0;
       const hasBio = typeof seeker.bio === 'string' && seeker.bio.trim().length > 10;
       const isCompleteEnough = (seeker.completion ?? 0) >= 25;
-      return isCompleteEnough || hasSkills || hasBio;
+      return isCompleteEnough || hasSkills || hasBio || seeker.qualification;
     });
 
-    const seekerMap = new Map(filteredSeekers.map((row: any) => [row.id, row]));
-
-    // Pass 1: candidates passing all hard requirements
-    // Pass 2 fallback: candidates passing qualification gate (domain & level match)
-    const evaluatedCandidates = validCandidates
-      .map((match: any) => {
-        const seeker = seekerMap.get(match.id);
-        if (!seeker) return null;
-
-        const s = seeker as any;
+    // Score all candidates using scoreJobSeekerMatch
+    const evaluatedCandidates = filteredSeekers
+      .map((seeker: any) => {
         const seekerProfile: SeekerProfile = {
-          skills: s.skills || [],
-          experience: s.experience || [],
-          qualification: resolveHighestEducationQualification(s.qualification || null, s.education || []),
-          education: s.education || [],
+          skills: seeker.skills || [],
+          experience: seeker.experience || [],
+          qualification: resolveHighestEducationQualification(seeker.qualification || null, seeker.education || []),
+          education: seeker.education || [],
           certifications: [],
         };
 
@@ -269,28 +235,27 @@ export class RecommendationService {
 
         return {
           seeker,
-          match,
           structuredMatch,
         };
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null);
+      });
 
-    const pass1 = evaluatedCandidates.filter(item => item.structuredMatch.passed);
-    const pass2 = evaluatedCandidates.filter(item => !item.structuredMatch.passed && item.structuredMatch.breakdown.qualification.passed);
+    // Pass 1: candidates passing all hard requirements
+    // Pass 2 fallback: candidates passing qualification gate (domain & level match)
+    const pass1 = evaluatedCandidates.filter((item: any) => item.structuredMatch.passed);
+    const pass2 = evaluatedCandidates.filter((item: any) => !item.structuredMatch.passed && item.structuredMatch.breakdown.qualification.passed);
 
     const finalCandidatesPool = pass1.length >= 3 ? pass1 : [...pass1, ...pass2];
 
     const seekerMatches: RecommendedCandidate[] = finalCandidatesPool
-      .map(({ seeker, match, structuredMatch }) => ({
+      .map(({ seeker, structuredMatch }: any) => ({
         ...seeker,
-        ...match,
-        similarity: match.similarity || 0,
+        similarity: structuredMatch.score / 100,
         hard_match_score: structuredMatch.score,
         hard_match_breakdown: structuredMatch.breakdown,
         hard_match_reasons: structuredMatch.reasons,
         hard_match_passed: structuredMatch.passed,
       }))
-      .sort((a, b) => b.hard_match_score - a.hard_match_score)
+      .sort((a: any, b: any) => b.hard_match_score - a.hard_match_score)
       .slice(0, limit);
 
     let validCandidatesWithRoles = seekerMatches;
