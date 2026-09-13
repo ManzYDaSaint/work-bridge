@@ -180,9 +180,13 @@ export class RecommendationService {
     const { limit = 10, threshold = 0.3 } = options;
 
     // 1. Quota Check (Free users: 30 candidate profile views/month)
-    const isAllowed = await this.checkAndConsumeQuota(employerId, 'discovery', 30);
-    if (!isAllowed) {
-      throw new Error("Talent discovery limit reached. Upgrade to Premium to find more candidates.");
+    try {
+      const isAllowed = await this.checkAndConsumeQuota(employerId, 'discovery', 30);
+      if (!isAllowed) {
+        console.warn(`[RecommendationService] Discovery quota limit reached for employer ${employerId}`);
+      }
+    } catch (quotaErr: any) {
+      console.warn(`[RecommendationService] Quota check failed gracefully:`, quotaErr?.message);
     }
 
     // 2. Get Job's embedding and hard requirements

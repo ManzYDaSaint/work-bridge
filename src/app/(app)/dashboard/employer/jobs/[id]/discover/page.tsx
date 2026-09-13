@@ -54,7 +54,12 @@ export default async function JobDiscoveryPage({
         });
     } catch (error: any) {
         console.error("Employer discovery service failed:", error);
-        return <div className="p-6 text-red-500">Failed to load recommendations.</div>;
+        return (
+            <div className="p-8 text-center border border-red-200 bg-red-50/50 rounded-2xl dark:border-red-900/30 dark:bg-red-950/20">
+                <h3 className="text-base font-semibold text-red-700 dark:text-red-400">Failed to load candidate recommendations</h3>
+                <p className="mt-1 text-xs text-red-600/80 dark:text-red-400/80">{error?.message || "An unexpected error occurred while fetching AI recommendations."}</p>
+            </div>
+        );
     }
 
     return (
