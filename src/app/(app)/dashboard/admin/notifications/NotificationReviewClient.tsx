@@ -52,8 +52,10 @@ export default function NotificationReviewClient() {
             });
 
             if (res.ok) {
-                toast.success("Matching orchestration started! WhatsApp queue and emails are being processed.");
-                setTimeout(() => fetchData(), 3000);
+                toast.success("Matching orchestration started — checking for results in ~6s...");
+                // Async orchestration takes time (LLM calls, vector lookups)
+                setTimeout(() => fetchData(), 6000);
+                setTimeout(() => fetchData(), 12000);
             } else {
                 toast.error("Failed to start matching routine");
             }
@@ -318,10 +320,20 @@ export default function NotificationReviewClient() {
                                             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 font-extrabold text-lg">
                                                 {matchScore}%
                                             </div>
-                                            <div>
-                                                <div className="flex items-center gap-2">
+                                        <div>
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                     <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Premium WhatsApp Alert</span>
                                                     <Badge label={`Qual: ${ruleScore}%`} variant="blue" />
+                                                    {!item.payload?._dispatch?.hasPhone && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-950 dark:text-red-300">
+                                                            <Phone size={10} /> No Phone
+                                                        </span>
+                                                    )}
+                                                    {item.payload?._dispatch?.hasPhone && !item.payload?._dispatch?.meetsThreshold && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-bold text-orange-700 dark:bg-orange-950 dark:text-orange-300">
+                                                            <AlertCircle size={10} /> Below Threshold ({item.payload._dispatch.minThreshold}%)
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <p className="text-xs text-slate-400 mt-0.5">Queued {new Date(item.created_at).toLocaleString()}</p>
                                             </div>

@@ -123,19 +123,25 @@ export async function runPremiumJobMatchingForJob(jobId: string) {
   const initialStatus = dispatchMode === "AUTO" ? "PENDING" : "REQUIRES_APPROVAL";
 
   for (const seeker of seekers) {
-    if (!seeker.phone) continue;
-
     const userPrefs = Array.isArray(seeker.notification_preferences)
       ? seeker.notification_preferences[0]
       : seeker.notification_preferences;
 
-    if (userPrefs?.whatsapp_enabled === false) continue;
-    const requiredThreshold = userPrefs?.min_match_score || 50;
-
     const matchRes = await computeMatchScore(supabase, job, seeker);
-    if (!matchRes.passedKnockout || matchRes.finalScore < requiredThreshold) continue;
 
-    // Check if notification already queued
+    // --- Dispatch mode: AUTO → immediate WhatsApp send requires phone + prefs + threshold ---
+    if (dispatchMode === "AUTO") {
+      if (!seeker.phone) continue;
+      if (userPrefs?.whatsapp_enabled === false) continue;
+      const requiredThreshold = userPrefs?.min_match_score || 50;
+      if (!matchRes.passedKnockout || matchRes.finalScore < requiredThreshold) continue;
+    } else {
+      // --- Dispatch mode: REQUIRES_APPROVAL → queue any viable candidate for admin review ---
+      // Only hard filter: must have cleared the qualification knockout gate
+      if (!matchRes.passedKnockout || matchRes.finalScore < 1) continue;
+    }
+
+    // Check if notification already queued for this seeker+job pair
     const { data: existingNotif } = await supabase
       .from("notification_queue")
       .select("id")
@@ -154,6 +160,13 @@ export async function runPremiumJobMatchingForJob(jobId: string) {
       location: job.location || "Malawi",
       matchScore: matchRes.finalScore,
       jobId: job.id,
+      // Dispatch readiness flags — admin can see these before approving
+      _dispatch: {
+        hasPhone: !!seeker.phone,
+        whatsappEnabled: userPrefs?.whatsapp_enabled !== false,
+        minThreshold: userPrefs?.min_match_score || 50,
+        meetsThreshold: matchRes.finalScore >= (userPrefs?.min_match_score || 50),
+      },
       _scoring: {
         qualScore: matchRes.ruleMatch.breakdown.qualification.score,
         qualPassed: matchRes.ruleMatch.breakdown.qualification.passed,

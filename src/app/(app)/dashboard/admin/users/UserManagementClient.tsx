@@ -7,6 +7,7 @@ import { Users, Search, Loader2, UserX, Crown, Sparkles, X, CheckCircle2, UserCh
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { calculateProfileStrength } from "@/lib/profile-strength";
+import { calculateYearsExperience } from "@/lib/matching-helpers";
 
 
 export default function UserManagementClient({ 
@@ -566,11 +567,18 @@ export default function UserManagementClient({
                                 )}
 
                                 {/* Profile Summary */}
-                                <div className="rounded-2xl border border-stone-200/80 bg-stone-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
+                                <div className="rounded-2xl border border-stone-200/80 bg-stone-50/50 p-4 space-y-3 dark:border-slate-800 dark:bg-slate-800/40">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="font-bold text-slate-900 dark:text-white">{inspectData.user.email}</p>
-                                            <p className="text-xs text-slate-500">Role: <Badge label={inspectData.user.role} variant="blue" /></p>
+                                            <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
+                                                Role: <Badge label={inspectData.user.role} variant="blue" />
+                                                {inspectingUser.seekerProfile && (
+                                                    <span className="rounded-md bg-stone-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                                                        💼 {calculateYearsExperience(inspectingUser.seekerProfile?.experience)} yrs exp
+                                                    </span>
+                                                )}
+                                            </p>
                                         </div>
                                         {inspectingUser.seekerProfile && (
                                             <div className="text-right">
@@ -582,18 +590,50 @@ export default function UserManagementClient({
                                         )}
                                     </div>
 
-                                    {inspectingUser.seekerProfile?.skills?.length > 0 && (
-                                        <div className="mt-3">
-                                            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Key Tags & Skills</p>
-                                            <div className="mt-1 flex flex-wrap gap-1">
-                                                {inspectingUser.seekerProfile.skills.map((s: string, idx: number) => (
-                                                    <span key={idx} className="rounded-md bg-stone-200 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                                        {s}
+                                    {/* Dispatch Channel Readiness Badges & Last Alert Telemetry */}
+                                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-stone-200/60 dark:border-slate-800">
+                                        <div className="rounded-xl border border-stone-200/80 bg-white p-2.5 dark:border-slate-800 dark:bg-slate-900">
+                                            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                                📱 Dispatch Channel
+                                            </p>
+                                            <div className="mt-1 flex items-center gap-1.5">
+                                                {(inspectingUser.plan === "PREMIUM" || inspectingUser.subscription?.status === "ACTIVE") ? (
+                                                    <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                                                        ✓ WhatsApp ({inspectingUser.phone || inspectingUser.seekerProfile?.phone || "No phone"})
                                                     </span>
-                                                ))}
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                                                        ✓ Email ({inspectData.user.email})
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
-                                    )}
+
+                                        <div className="rounded-xl border border-stone-200/80 bg-white p-2.5 dark:border-slate-800 dark:bg-slate-900">
+                                            <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                                🕒 Last Alert Dispatched
+                                            </p>
+                                            <p className="mt-1 text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
+                                                {inspectData.notifications && inspectData.notifications.length > 0
+                                                    ? new Date(inspectData.notifications[0].created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                                                    : "Never notified"}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Education Qualification */}
+                                    <div className="rounded-xl border border-stone-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+                                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                                            🎓 Education Qualification
+                                        </p>
+                                        <p className="mt-1 text-xs font-bold text-slate-800 dark:text-slate-200">
+                                            {inspectingUser.seekerProfile?.qualification ||
+                                             (Array.isArray(inspectingUser.seekerProfile?.education) && inspectingUser.seekerProfile.education[0]?.degree) ||
+                                             (Array.isArray(inspectingUser.seekerProfile?.education) && inspectingUser.seekerProfile.education[0]?.certificate) ||
+                                             inspectingUser.qualification ||
+                                             "Not specified"}
+                                        </p>
+                                    </div>
                                 </div>
 
                                 {/* Active Recommended Jobs Section */}

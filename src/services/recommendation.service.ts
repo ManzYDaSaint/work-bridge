@@ -198,16 +198,31 @@ export class RecommendationService {
     }
 
     // 3. Call pgvector matching function
-    const candidateCount = Math.max(limit * 4, 100);
-    const { data: candidates, error: candError } = await supabase.rpc('match_candidates', {
-      query_embedding: job.embedding,
-      match_threshold: threshold,
-      match_count: candidateCount,
-    });
+    let validCandidates: any[] = [];
+    try {
+      const candidateCount = Math.max(limit * 4, 100);
+      const { data: candidates, error: candError } = await supabase.rpc('match_candidates', {
+        query_embedding: job.embedding,
+        match_threshold: Math.min(threshold, 0.15), // lowered threshold for broader initial recall
+        match_count: candidateCount,
+      });
 
-    if (candError) throw candError;
+      if (!candError && Array.isArray(candidates)) {
+        validCandidates = candidates;
+      }
+    } catch (err: any) {
+      console.warn("[RecommendationService] pgvector match_candidates failed, falling back to database query:", err?.message);
+    }
+
+    // Fallback: fetch candidates directly if pgvector returned empty or errored
+    if (validCandidates.length === 0) {
+      const { data: fallbackSeekers } = await supabase
+        .from('job_seekers')
+        .select('id')
+        .limit(100);
+      validCandidates = (fallbackSeekers || []).map((s: any) => ({ id: s.id, similarity: 0.5 }));
+    }
     
-    const validCandidates = Array.isArray(candidates) ? candidates : [];
     const candidateSeekerIds = validCandidates.map((item: any) => item.id);
 
     const { data: seekerRows, error: seekerRowsError } = await supabase
@@ -216,7 +231,8 @@ export class RecommendationService {
       .in('id', candidateSeekerIds);
 
     if (seekerRowsError) {
-      throw seekerRowsError;
+      console.error("[RecommendationService] Error fetching candidate rows:", seekerRowsError);
+      return [];
     }
 
     const filteredSeekers = (seekerRows || []).filter((seeker: any) => {
@@ -229,7 +245,9 @@ export class RecommendationService {
 
     const seekerMap = new Map(filteredSeekers.map((row: any) => [row.id, row]));
 
-    const seekerMatches: RecommendedCandidate[] = validCandidates
+    // Pass 1: candidates passing all hard requirements
+    // Pass 2 fallback: candidates passing qualification gate (domain & level match)
+    const evaluatedCandidates = validCandidates
       .map((match: any) => {
         const seeker = seekerMap.get(match.id);
         if (!seeker) return null;
@@ -244,20 +262,31 @@ export class RecommendationService {
         };
 
         const structuredMatch = scoreJobSeekerMatch(job, seekerProfile);
-        if (!structuredMatch.passed) return null;
 
         return {
-          ...seeker,
-          ...match,
-          similarity: match.similarity || 0,
-          hard_match_score: structuredMatch.score,
-          hard_match_breakdown: structuredMatch.breakdown,
-          hard_match_reasons: structuredMatch.reasons,
-          hard_match_passed: structuredMatch.passed,
-        } as RecommendedCandidate;
+          seeker,
+          match,
+          structuredMatch,
+        };
       })
-      .filter((item): item is RecommendedCandidate => item !== null)
-      .sort((a, b) => b.similarity - a.similarity)
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+
+    const pass1 = evaluatedCandidates.filter(item => item.structuredMatch.passed);
+    const pass2 = evaluatedCandidates.filter(item => !item.structuredMatch.passed && item.structuredMatch.breakdown.qualification.passed);
+
+    const finalCandidatesPool = pass1.length >= 3 ? pass1 : [...pass1, ...pass2];
+
+    const seekerMatches: RecommendedCandidate[] = finalCandidatesPool
+      .map(({ seeker, match, structuredMatch }) => ({
+        ...seeker,
+        ...match,
+        similarity: match.similarity || 0,
+        hard_match_score: structuredMatch.score,
+        hard_match_breakdown: structuredMatch.breakdown,
+        hard_match_reasons: structuredMatch.reasons,
+        hard_match_passed: structuredMatch.passed,
+      }))
+      .sort((a, b) => b.hard_match_score - a.hard_match_score)
       .slice(0, limit);
 
     let validCandidatesWithRoles = seekerMatches;
