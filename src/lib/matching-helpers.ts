@@ -9,6 +9,7 @@ export interface SeekerProfile {
 }
 
 export interface JobRequirements {
+  title?: string | null;
   must_have_skills?: string[] | string | null;
   minimum_years_experience?: number | null;
   qualification?: string | null;
@@ -154,6 +155,12 @@ const DISCIPLINE_DOMAINS: Record<string, string[]> = {
     "business administration", "business management", "management studies",
     "office administration", "public administration", "bba", "mba",
   ],
+  trades_construction: [
+    "foreman", "construction", "building", "masonry", "carpentry",
+    "plumbing", "electrical installation", "welding", "artisan",
+    "site supervisor", "site foreman", "mechanic", "civil works",
+    "pipefitting", "scaffolding", "bricklaying",
+  ],
 };
 
 /**
@@ -200,8 +207,31 @@ export function getQualificationDomains(qualString?: string | null): string[] {
 
 export function evaluateQualificationMatch(
   jobQualification?: string | null,
-  seekerQualification?: string | null
+  seekerQualification?: string | null,
+  jobTitle?: string | null,
+  seekerSkills?: string[] | string | null
 ): { passed: boolean; score: number; mismatchedDomain?: boolean } {
+  // Extract domains from qualification text AND job title / seeker skills
+  const jobDomains = Array.from(new Set([
+    ...getQualificationDomains(jobQualification),
+    ...getQualificationDomains(jobTitle)
+  ]));
+
+  const seekerSkillStr = Array.isArray(seekerSkills) ? seekerSkills.join(" ") : (seekerSkills || "");
+  const seekerDomains = Array.from(new Set([
+    ...getQualificationDomains(seekerQualification),
+    ...getQualificationDomains(seekerSkillStr)
+  ]));
+
+  // Domain mismatch check: if job belongs to specific discipline(s) and candidate belongs to other discipline(s)
+  if (jobDomains.length > 0 && seekerDomains.length > 0) {
+    const hasDomainOverlap = seekerDomains.some((sd) => jobDomains.includes(sd));
+    if (!hasDomainOverlap) {
+      // Cross-discipline domain mismatch (e.g. Software Engineer applying for Foreman)
+      return { passed: false, score: 0, mismatchedDomain: true };
+    }
+  }
+
   if (!jobQualification || !jobQualification.trim()) {
     return { passed: true, score: 100 };
   }
@@ -222,38 +252,25 @@ export function evaluateQualificationMatch(
   const seekerRank = getQualificationRank(seekerQualification);
 
   if (jobRank > 0 && seekerRank > 0) {
-    // 3. Discipline / field-of-study check (Multi-domain matching)
-    const jobDomains = getQualificationDomains(jobQualification);
-    const seekerDomains = getQualificationDomains(seekerQualification);
-
-    // If job explicitly mentions one or more specific required domains (e.g., ["finance_accounting"], ["computing"])
-    if (jobDomains.length > 0) {
-      // Check if seeker possesses AT LEAST ONE of the job's accepted domains
-      const hasDomainOverlap = seekerDomains.some((sd) => jobDomains.includes(sd));
-
-      if (!hasDomainOverlap) {
-        // Cross-discipline / domain mismatch: fail qualification gate completely
-        return { passed: false, score: 0, mismatchedDomain: true };
-      }
-    }
-
     if (seekerRank >= jobRank) {
-      // Equal or higher qualification, same/compatible domain
       return { passed: true, score: 100 };
     }
     if (seekerRank === jobRank - 1) {
-      // 1 level below (e.g. Diploma for a Bachelor's job) → Partial (40%)
       return { passed: false, score: 40 };
     }
-    // 2+ levels below → Knockout (0%)
     return { passed: false, score: 0 };
   }
 
   return { passed: false, score: 0 };
 }
 
-export function qualificationMatches(jobQualification?: string | null, seekerQualification?: string | null): boolean {
-  return evaluateQualificationMatch(jobQualification, seekerQualification).passed;
+export function qualificationMatches(
+  jobQualification?: string | null,
+  seekerQualification?: string | null,
+  jobTitle?: string | null,
+  seekerSkills?: string[] | string | null
+): boolean {
+  return evaluateQualificationMatch(jobQualification, seekerQualification, jobTitle, seekerSkills).passed;
 }
 
 export function resolveHighestEducationQualification(
@@ -326,7 +343,7 @@ export function scoreJobSeekerMatch(
   seeker: SeekerProfile,
   weights: MatchWeights = DEFAULT_MATCH_WEIGHTS
 ): StructuredMatchResult {
-  const qualEval = evaluateQualificationMatch(job.qualification, seeker.qualification);
+  const qualEval = evaluateQualificationMatch(job.qualification, seeker.qualification, (job as any).title, seeker.skills);
   const qualificationPassed = qualEval.passed;
   const qualificationScore = qualEval.score;
 
