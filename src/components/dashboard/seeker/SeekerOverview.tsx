@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Briefcase, BookmarkCheck, CheckCircle2, Copy, AlertCircle, Crown, Sparkles, MessageSquare } from "lucide-react";
 import { PageHeader, StatCard, SectionCard, Badge } from "@/components/dashboard/ui";
 import JobAlertsManager from "@/components/dashboard/seeker/JobAlertsManager";
+import ProfileAnalyticsCard from "@/components/dashboard/seeker/ProfileAnalyticsCard";
 import { toast } from "sonner";
 import OnboardingChecklist from "@/components/dashboard/OnboardingChecklist";
 import JobDetailModal, { ExtendedJob } from "@/components/jobs/JobDetailModal";
@@ -213,6 +214,8 @@ export default function SeekerOverview({
                             </Link>
                         </div>
                     </SectionCard>
+
+                    <ProfileAnalyticsCard />
 
                     <JobAlertsManager />
 

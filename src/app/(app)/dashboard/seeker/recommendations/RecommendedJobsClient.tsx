@@ -4,9 +4,11 @@ import { useState } from "react";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
 import JobDetailModal from "@/components/jobs/JobDetailModal";
 import { RecommendedJob } from "@/services/recommendation.service";
-import { Sparkles, Briefcase, Zap } from "lucide-react";
+import { Sparkles, Briefcase, Zap, Target } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import SkillGapModal from "@/components/dashboard/seeker/SkillGapModal";
+import { SkillGapService, SkillGapAnalysis } from "@/services/skill-gap.service";
 
 export default function RecommendedJobsClient({ 
     jobs, 
@@ -15,7 +17,15 @@ export default function RecommendedJobsClient({
 }) {
     const [selectedJob, setSelectedJob] = useState<RecommendedJob | null>(null);
     const [breakdownModalJob, setBreakdownModalJob] = useState<RecommendedJob | null>(null);
+    const [skillGapAnalysis, setSkillGapAnalysis] = useState<SkillGapAnalysis | null>(null);
     const [matchFilter, setMatchFilter] = useState<"ALL" | "HIGH" | "MEDIUM">("ALL");
+
+    const handleOpenSkillGap = (job: RecommendedJob) => {
+        const matched = job.hard_match_breakdown.skills.matched || [];
+        const required = job.hard_match_breakdown.skills.required || [];
+        const analysis = SkillGapService.analyze(matched, "", job);
+        setSkillGapAnalysis(analysis);
+    };
 
     const filteredJobs = jobs.filter((j) => {
         const score = j.hard_match_score;
@@ -76,10 +86,16 @@ export default function RecommendedJobsClient({
                             {job.hard_match_breakdown.qualification.passed ? "Matches" : "Needs review"}
                         </p>
                     </div>
-                    <div className="rounded-2xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                        <p className="font-bold text-slate-900 dark:text-white">Skills</p>
-                        <p className="mt-1 text-sm font-black text-slate-800 dark:text-slate-200">{matchedSkillsCount}/{requiredSkillsCount}</p>
-                    </div>
+                    <button
+                        onClick={() => handleOpenSkillGap(job)}
+                        className="text-left rounded-2xl border border-amber-200/80 bg-amber-50/80 p-3 text-xs text-amber-900 transition hover:bg-amber-100/70 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300"
+                    >
+                        <p className="font-bold text-amber-900 dark:text-amber-200 flex items-center justify-between">
+                            <span className="flex items-center gap-1"><Target size={12} /> Skill Gap</span>
+                            <span className="text-[10px] underline">Analyze</span>
+                        </p>
+                        <p className="mt-1 font-semibold text-amber-800 dark:text-amber-300">{matchedSkillsCount}/{requiredSkillsCount} skills matched</p>
+                    </button>
                     <button
                         onClick={() => setBreakdownModalJob(job)}
                         className="text-left rounded-2xl border border-emerald-200/80 bg-emerald-50/80 p-3 text-xs text-emerald-800 transition hover:bg-emerald-100/70 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300"
@@ -257,6 +273,12 @@ export default function RecommendedJobsClient({
                     }}
                 />
             )}
+
+            <SkillGapModal
+                isOpen={Boolean(skillGapAnalysis)}
+                onClose={() => setSkillGapAnalysis(null)}
+                analysis={skillGapAnalysis}
+            />
         </div>
     );
 }
