@@ -1,8 +1,8 @@
-'use client';
-
 import React, { useEffect, useState } from 'react';
 import { Users, Plus, Trash2, UserPlus, FolderOpen, Loader2, ArrowRight, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import CandidateDetailDrawer, { ApplicantProfile } from '@/components/dashboard/employer/CandidateDetailDrawer';
+import { toggleSaveTalent } from '@/app/(app)/dashboard/employer/actions';
 
 export default function EmployerTalentPoolsPage() {
   const [pools, setPools] = useState<any[]>([]);
@@ -11,6 +11,12 @@ export default function EmployerTalentPoolsPage() {
   const [members, setMembers] = useState<any[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   
+  // Selected Drawer State
+  const [selectedSeekerId, setSelectedSeekerId] = useState<string | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<ApplicantProfile | null>(null);
+  const [drawerLoading, setDrawerLoading] = useState(false);
+  const [drawerError, setDrawerError] = useState<string | null>(null);
+
   // New Pool Form State
   const [isCreating, setIsCreating] = useState(false);
   const [newPoolName, setNewPoolName] = useState('');
@@ -21,6 +27,41 @@ export default function EmployerTalentPoolsPage() {
   useEffect(() => {
     fetchPools();
   }, []);
+
+  const openCandidateDrawer = (seekerId: string) => {
+    setSelectedSeekerId(seekerId);
+    setSelectedProfile(null);
+    setDrawerError(null);
+  };
+
+  useEffect(() => {
+    if (!selectedSeekerId) return;
+
+    setDrawerLoading(true);
+    setDrawerError(null);
+
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/employer/discover/${selectedSeekerId}`);
+        if (!active) return;
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "Candidate profile not available");
+        }
+        const data = await res.json();
+        if (active) setSelectedProfile(data);
+      } catch (err: any) {
+        if (active) setDrawerError(err.message || "Failed to load candidate details");
+      } finally {
+        if (active) setDrawerLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedSeekerId]);
 
   const fetchPools = async () => {
     setLoading(true);
@@ -329,12 +370,13 @@ export default function EmployerTalentPoolsPage() {
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #E5E7EB', marginTop: '10px' }}>
-                          <Link
-                            href={`/talent/${seeker?.public_slug || seeker?.id}`}
-                            style={{ fontSize: '12px', color: '#2563EB', fontWeight: 600, textDecoration: 'none' }}
+                          <button
+                            type="button"
+                            onClick={() => openCandidateDrawer(seeker.id)}
+                            style={{ fontSize: '12px', color: '#2563EB', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                           >
-                            View Profile
-                          </Link>
+                            View Profile & Actions
+                          </button>
                           <button
                             onClick={() => handleRemoveMember(seeker.id)}
                             style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
@@ -353,6 +395,19 @@ export default function EmployerTalentPoolsPage() {
             )}
           </div>
         </div>
+
+        <CandidateDetailDrawer
+          open={!!selectedSeekerId}
+          profile={selectedProfile}
+          loading={drawerLoading}
+          error={drawerError}
+          isSaved={false}
+          onClose={() => setSelectedSeekerId(null)}
+          onToggleSave={async (e) => {
+            if (!selectedSeekerId) return;
+            await toggleSaveTalent(selectedSeekerId, false);
+          }}
+        />
       </div>
   );
 }
