@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { EmailPreferences } from "@/components/dashboard/EmailPreferences";
 import { useOptionalUser } from "@/context/UserContext";
-import CVImportModal from "@/components/dashboard/seeker/CVImportModal";
 import PDFExportButton from "@/components/dashboard/seeker/PDFExportButton";
 
 interface SeekerProfileData extends JobSeeker {
@@ -55,18 +54,6 @@ export default function SeekerProfile({
     const [certificates, setCertificates] = useState<Certificate[]>(initialCertificates);
     const [newCert, setNewCert] = useState({ title: "", issuer: "", issue_date: "", credential_url: "" });
     const [addingCert, setAddingCert] = useState(false);
-    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-
-    const handleApplyCVData = (extracted: any) => {
-        if (extracted.full_name) setValue("full_name", extracted.full_name, { shouldDirty: true });
-        if (extracted.phone) setValue("phone", extracted.phone, { shouldDirty: true });
-        if (extracted.bio) setValue("bio", extracted.bio, { shouldDirty: true });
-        if (extracted.qualification) setValue("qualification", extracted.qualification, { shouldDirty: true });
-        if (extracted.skills && Array.isArray(extracted.skills)) {
-            const merged = Array.from(new Set([...watchedSkills, ...extracted.skills]));
-            setValue("skills", merged, { shouldDirty: true });
-        }
-    };
 
     const router = useRouter();
     const userContext = useOptionalUser();
@@ -199,14 +186,6 @@ export default function SeekerProfile({
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <PageHeader title="Profile" subtitle="Keep your profile complete, clear, and ready for employers." />
                 <div className="flex items-center gap-2.5">
-                    <button
-                        type="button"
-                        onClick={() => setIsImportModalOpen(true)}
-                        className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-slate-950 shadow-sm transition hover:bg-amber-400"
-                    >
-                        <Sparkles size={14} />
-                        Import from CV
-                    </button>
                     <PDFExportButton
                         profile={{
                             full_name: profile.full_name || "",
@@ -215,20 +194,14 @@ export default function SeekerProfile({
                             bio: profile.bio || undefined,
                             qualification: profile.qualification || undefined,
                             skills: watchedSkills,
-                            experience: (profile as any).experience || [],
-                            education: (profile as any).education || [],
+                            experience: (watch("experience") && (watch("experience")?.length ?? 0) > 0) ? watch("experience") : ((profile as any).experience || []),
+                            education: (watch("education") && (watch("education")?.length ?? 0) > 0) ? watch("education") : ((profile as any).education || []),
                             certificates: certificates,
                             hasBadge: profile.hasBadge ?? (profile as any).has_badge,
                         }}
                     />
                 </div>
             </div>
-
-            <CVImportModal
-                isOpen={isImportModalOpen}
-                onClose={() => setIsImportModalOpen(false)}
-                onApplyToProfile={handleApplyCVData}
-            />
 
             {/* Mobile & Desktop Responsive Tab Navigation */}
             <div className="no-scrollbar flex overflow-x-auto rounded-2xl border border-stone-200 bg-stone-100/80 p-1.5 dark:border-slate-800 dark:bg-slate-900/80">
