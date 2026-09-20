@@ -1,9 +1,20 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { 
-  X, MapPin, Briefcase, GraduationCap, Bookmark, Mail, Phone, 
-  Send, Loader2, FolderPlus 
+import {
+  X,
+  MapPin,
+  Briefcase,
+  GraduationCap,
+  Bookmark,
+  Mail,
+  Phone,
+  Send,
+  Loader2,
+  FolderPlus,
+  MessageCircle,
+  Trash2,
+  ChevronDown,
 } from "lucide-react";
 import { Badge } from "../ui";
 import { useEffect, useState, type MouseEvent } from "react";
@@ -78,6 +89,10 @@ interface CandidateDetailDrawerProps {
   error: string | null;
   onClose: () => void;
   onToggleSave: (e: MouseEvent<HTMLButtonElement>) => void;
+  /** Optional: called when employer removes this candidate from the current pool */
+  onRemoveFromPool?: () => void;
+  /** Optional: show remove-from-pool button when viewing from inside a pool */
+  showRemoveFromPool?: boolean;
 }
 
 function formatDate(date?: string | null): string | null {
@@ -101,14 +116,20 @@ export default function CandidateDetailDrawer({
   error,
   onClose,
   onToggleSave,
+  onRemoveFromPool,
+  showRemoveFromPool = false,
 }: CandidateDetailDrawerProps) {
   const [jobs, setJobs] = useState<Array<{ id: string; title: string }>>([]);
   const [selectedJobId, setSelectedJobId] = useState<string>("");
   const [inviting, setInviting] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const [pools, setPools] = useState<Array<{ id: string; name: string; color_tag: string }>>([]);
   const [selectedPoolId, setSelectedPoolId] = useState<string>("");
   const [addingToPool, setAddingToPool] = useState(false);
+  const [poolOpen, setPoolOpen] = useState(false);
+
+  const [removing, setRemoving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -117,7 +138,7 @@ export default function CandidateDetailDrawer({
       try {
         const [jobsRes, poolsRes] = await Promise.all([
           fetch("/api/employer/jobs"),
-          fetch("/api/employer/talent-pools")
+          fetch("/api/employer/talent-pools"),
         ]);
 
         if (jobsRes.ok) {
@@ -135,6 +156,16 @@ export default function CandidateDetailDrawer({
     };
 
     fetchActiveJobsAndPools();
+  }, [open]);
+
+  // Reset dropdowns when drawer closes
+  useEffect(() => {
+    if (!open) {
+      setSelectedJobId("");
+      setSelectedPoolId("");
+      setInviteOpen(false);
+      setPoolOpen(false);
+    }
   }, [open]);
 
   const handleInvite = async () => {
@@ -169,6 +200,7 @@ export default function CandidateDetailDrawer({
 
       toast.success("Invitation sent!");
       setSelectedJobId("");
+      setInviteOpen(false);
     } catch (err: any) {
       toast.error(err.message || "An error occurred");
     } finally {
@@ -197,8 +229,9 @@ export default function CandidateDetailDrawer({
       }
 
       const poolObj = pools.find((p) => p.id === selectedPoolId);
-      toast.success(`Added to ${poolObj?.name || 'Talent Pool'}`);
+      toast.success(`Added to ${poolObj?.name || "Talent Pool"}`);
       setSelectedPoolId("");
+      setPoolOpen(false);
     } catch (err: any) {
       toast.error(err.message || "Failed to add candidate");
     } finally {
@@ -206,11 +239,26 @@ export default function CandidateDetailDrawer({
     }
   };
 
+  const handleRemove = async () => {
+    if (!onRemoveFromPool) return;
+    setRemoving(true);
+    try {
+      await onRemoveFromPool();
+      onClose();
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  const phone = profile?.contact?.phone;
+  const email = profile?.contact?.email;
+  const hasWhatsApp = profile?.contact?.whatsapp;
+
   return (
     <AnimatePresence>
       {open && (
         <>
-          {/* Glassmorphic Minimalist Overlay */}
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -219,7 +267,7 @@ export default function CandidateDetailDrawer({
             onClick={onClose}
           />
 
-          {/* Minimalist Slide-Over Sheet */}
+          {/* Drawer Sheet */}
           <motion.aside
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
@@ -230,7 +278,7 @@ export default function CandidateDetailDrawer({
             aria-modal="true"
             onClick={(event) => event.stopPropagation()}
           >
-            {/* Minimalist Sticky Header */}
+            {/* ── Sticky Header ── */}
             <div className="sticky top-0 z-20 flex items-center justify-between border-b border-stone-100 bg-white/80 px-6 py-4 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/80">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white shadow-inner dark:bg-slate-100 dark:text-slate-900">
@@ -258,7 +306,7 @@ export default function CandidateDetailDrawer({
                   type="button"
                   onClick={onToggleSave}
                   className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold transition-all ${
-                    isSaved 
+                    isSaved
                       ? "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300"
                       : "border-stone-200 bg-white text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                   }`}
@@ -270,14 +318,14 @@ export default function CandidateDetailDrawer({
                   type="button"
                   onClick={onClose}
                   className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-stone-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                  aria-label="Close sheet"
+                  aria-label="Close"
                 >
                   <X size={18} />
                 </button>
               </div>
             </div>
 
-            {/* Scrollable Main Sheet Content */}
+            {/* ── Scrollable Profile Body ── */}
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
               {loading ? (
                 <div className="flex h-64 items-center justify-center">
@@ -308,59 +356,7 @@ export default function CandidateDetailDrawer({
                     )}
                   </div>
 
-                  {/* Integrated Quick Action Dock (Invite & Talent Pool) */}
-                  <div className="rounded-2xl border border-stone-200/70 bg-stone-50/80 p-4 dark:border-slate-800/80 dark:bg-slate-900/50">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
-                      Recruiter Actions
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Invite to Apply */}
-                      <div className="flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white p-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-                        <select
-                          className="flex-1 bg-transparent px-2 text-xs font-medium text-slate-800 outline-none dark:text-white"
-                          value={selectedJobId}
-                          onChange={(e) => setSelectedJobId(e.target.value)}
-                        >
-                          <option value="">Invite to job...</option>
-                          {jobs.map((j) => (
-                            <option key={j.id} value={j.id}>{j.title}</option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={handleInvite}
-                          disabled={inviting}
-                          className="flex h-8 items-center gap-1.5 rounded-lg bg-[#16324f] px-3 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                        >
-                          {inviting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-                          Invite
-                        </button>
-                      </div>
-
-                      {/* Add to Talent Pool Folder */}
-                      <div className="flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white p-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-                        <select
-                          className="flex-1 bg-transparent px-2 text-xs font-medium text-slate-800 outline-none dark:text-white"
-                          value={selectedPoolId}
-                          onChange={(e) => setSelectedPoolId(e.target.value)}
-                        >
-                          <option value="">Add to pool...</option>
-                          {pools.map((p) => (
-                            <option key={p.id} value={p.id}>📁 {p.name}</option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={handleAddToPool}
-                          disabled={addingToPool}
-                          className="flex h-8 items-center gap-1.5 rounded-lg bg-blue-600 px-3 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                        >
-                          {addingToPool ? <Loader2 size={13} className="animate-spin" /> : <FolderPlus size={13} />}
-                          Add
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Summary / Bio */}
+                  {/* Bio */}
                   {profile.bio && (
                     <div className="space-y-2">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">About</h3>
@@ -370,7 +366,7 @@ export default function CandidateDetailDrawer({
                     </div>
                   )}
 
-                  {/* Skills Pills */}
+                  {/* Skills */}
                   {profile.skills?.length > 0 && (
                     <div className="space-y-2">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Skills</h3>
@@ -384,7 +380,7 @@ export default function CandidateDetailDrawer({
                     </div>
                   )}
 
-                  {/* Experience Timeline */}
+                  {/* Experience */}
                   <div className="space-y-3 pt-2">
                     <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                       <Briefcase size={14} />
@@ -407,7 +403,7 @@ export default function CandidateDetailDrawer({
                     )}
                   </div>
 
-                  {/* Education Timeline */}
+                  {/* Education */}
                   <div className="space-y-3 pt-2">
                     <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                       <GraduationCap size={14} />
@@ -429,29 +425,162 @@ export default function CandidateDetailDrawer({
                     )}
                   </div>
 
-                  {/* Contact Layer */}
-                  <div className="pt-2 border-t border-stone-100 dark:border-slate-800">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
-                      Direct Contact
-                    </p>
-                    {profile.contact ? (
-                      <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-700 dark:text-slate-300">
-                        {profile.contact.email && (
-                          <span className="flex items-center gap-1.5"><Mail size={13} className="text-slate-400" /> {profile.contact.email}</span>
-                        )}
-                        {profile.contact.phone && (
-                          <span className="flex items-center gap-1.5"><Phone size={13} className="text-slate-400" /> {profile.contact.phone}</span>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-400">
-                        {profile.isContactGated ? "Contact details are gated." : "Contact not available."}
-                      </p>
-                    )}
-                  </div>
+                  {/* Spacer so footer doesn't cover content */}
+                  <div className="h-4" />
                 </>
               ) : null}
             </div>
+
+            {/* ── Sticky Action Footer ── */}
+            {profile && !loading && !error && (
+              <div className="shrink-0 border-t border-stone-200 bg-white dark:border-slate-800 dark:bg-slate-950 px-5 py-4 space-y-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                  Actions
+                </p>
+
+                <div className="grid grid-cols-1 gap-2">
+                  {/* ── Invite to Job ── */}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setInviteOpen((v) => !v)}
+                      className="w-full flex items-center justify-between rounded-xl bg-[#16324f] px-4 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Send size={15} />
+                        Invite to a Job
+                      </span>
+                      <ChevronDown size={15} className={`transition-transform ${inviteOpen ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {inviteOpen && (
+                      <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 p-2 dark:border-slate-800 dark:bg-slate-900">
+                        <select
+                          className="flex-1 rounded-lg bg-white border border-stone-200 px-3 py-2 text-xs font-medium text-slate-800 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                          value={selectedJobId}
+                          onChange={(e) => setSelectedJobId(e.target.value)}
+                        >
+                          <option value="">Select active job...</option>
+                          {jobs.length === 0 && (
+                            <option disabled>No active jobs found</option>
+                          )}
+                          {jobs.map((j) => (
+                            <option key={j.id} value={j.id}>{j.title}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={handleInvite}
+                          disabled={inviting || !selectedJobId}
+                          className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[#16324f] px-4 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                        >
+                          {inviting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                          Send
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Direct Contact Row ── */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Email */}
+                    {email ? (
+                      <a
+                        href={`mailto:${email}`}
+                        className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-50 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                      >
+                        <Mail size={14} />
+                        Email
+                      </a>
+                    ) : (
+                      <button
+                        disabled
+                        title="Email not available"
+                        className="flex items-center justify-center gap-2 rounded-xl border border-stone-100 bg-stone-50/50 py-2.5 text-xs font-semibold text-slate-300 cursor-not-allowed dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-600"
+                      >
+                        <Mail size={14} />
+                        Email
+                      </button>
+                    )}
+
+                    {/* WhatsApp / Phone */}
+                    {phone ? (
+                      <a
+                        href={hasWhatsApp ? `https://wa.me/${phone.replace(/\D/g, "")}` : `tel:${phone}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 py-2.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
+                      >
+                        <MessageCircle size={14} />
+                        {hasWhatsApp ? "WhatsApp" : "Call"}
+                      </a>
+                    ) : (
+                      <button
+                        disabled
+                        title="Phone not available"
+                        className="flex items-center justify-center gap-2 rounded-xl border border-stone-100 bg-stone-50/50 py-2.5 text-xs font-semibold text-slate-300 cursor-not-allowed dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-600"
+                      >
+                        <MessageCircle size={14} />
+                        WhatsApp
+                      </button>
+                    )}
+                  </div>
+
+                  {/* ── Add to Pool ── */}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setPoolOpen((v) => !v)}
+                      className="w-full flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                    >
+                      <span className="flex items-center gap-2">
+                        <FolderPlus size={14} />
+                        Add to Talent Pool
+                      </span>
+                      <ChevronDown size={13} className={`transition-transform ${poolOpen ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {poolOpen && (
+                      <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 p-2 dark:border-slate-800 dark:bg-slate-900">
+                        <select
+                          className="flex-1 rounded-lg bg-white border border-stone-200 px-3 py-2 text-xs font-medium text-slate-800 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                          value={selectedPoolId}
+                          onChange={(e) => setSelectedPoolId(e.target.value)}
+                        >
+                          <option value="">Select folder...</option>
+                          {pools.length === 0 && (
+                            <option disabled>No pools created yet</option>
+                          )}
+                          {pools.map((p) => (
+                            <option key={p.id} value={p.id}>📁 {p.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={handleAddToPool}
+                          disabled={addingToPool || !selectedPoolId}
+                          className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                        >
+                          {addingToPool ? <Loader2 size={13} className="animate-spin" /> : <FolderPlus size={13} />}
+                          Add
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Remove from Pool (only when inside a pool) ── */}
+                  {showRemoveFromPool && onRemoveFromPool && (
+                    <button
+                      type="button"
+                      onClick={handleRemove}
+                      disabled={removing}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 py-2.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/40"
+                    >
+                      {removing ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                      Remove from this Pool
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </motion.aside>
         </>
       )}

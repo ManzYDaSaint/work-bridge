@@ -18,6 +18,8 @@ export default function EmployerTalentPoolsPage() {
   const [selectedProfile, setSelectedProfile] = useState<ApplicantProfile | null>(null);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
+  // Track whether the drawer was opened from inside a pool (enables Remove from Pool button)
+  const [drawerFromPool, setDrawerFromPool] = useState(false);
 
   // New Pool Form State
   const [isCreating, setIsCreating] = useState(false);
@@ -30,10 +32,11 @@ export default function EmployerTalentPoolsPage() {
     fetchPools();
   }, []);
 
-  const openCandidateDrawer = (seekerId: string) => {
+  const openCandidateDrawer = (seekerId: string, fromPool = false) => {
     setSelectedSeekerId(seekerId);
     setSelectedProfile(null);
     setDrawerError(null);
+    setDrawerFromPool(fromPool);
   };
 
   useEffect(() => {
@@ -374,10 +377,10 @@ export default function EmployerTalentPoolsPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #E5E7EB', marginTop: '10px' }}>
                           <button
                             type="button"
-                            onClick={() => openCandidateDrawer(seeker.id)}
+                            onClick={() => openCandidateDrawer(seeker.id, true)}
                             style={{ fontSize: '12px', color: '#2563EB', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                           >
-                            View Profile & Actions
+                            View Profile &amp; Actions
                           </button>
                           <button
                             onClick={() => handleRemoveMember(seeker.id)}
@@ -409,6 +412,10 @@ export default function EmployerTalentPoolsPage() {
             if (!selectedSeekerId) return;
             await toggleSaveTalent(selectedSeekerId, false);
           }}
+          showRemoveFromPool={drawerFromPool}
+          onRemoveFromPool={selectedSeekerId && drawerFromPool ? async () => {
+            await handleRemoveMember(selectedSeekerId);
+          } : undefined}
         />
       </div>
   );
