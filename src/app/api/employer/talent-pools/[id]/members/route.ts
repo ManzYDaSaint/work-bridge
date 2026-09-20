@@ -27,26 +27,9 @@ export async function GET(
     }
 
     // Fetch members with seeker details
-    const { data: members, error: membersError } = await supabase
+    const { data: rawMembers, error: membersError } = await supabase
       .from('talent_pool_members')
-      .select(`
-        id,
-        notes,
-        added_at,
-        seeker:job_seekers(
-          id,
-          full_name,
-          headline,
-          location,
-          skills,
-          experience,
-          education,
-          avatar_url,
-          seniority_level,
-          has_badge,
-          public_slug
-        )
-      `)
+      .select('id, notes, added_at, seeker_id')
       .eq('pool_id', poolId)
       .order('added_at', { ascending: false });
 
@@ -54,6 +37,27 @@ export async function GET(
       console.error('Error fetching pool members:', membersError);
       return NextResponse.json({ error: membersError.message }, { status: 500 });
     }
+
+    const seekerIds = (rawMembers || []).map((m) => m.seeker_id).filter(Boolean);
+    let seekersMap: Record<string, any> = {};
+
+    if (seekerIds.length > 0) {
+      const { data: seekerList } = await supabase
+        .from('job_seekers')
+        .select('id, full_name, headline, location, skills, experience, education, avatar_url, seniority_level, has_badge, public_slug')
+        .in('id', seekerIds);
+
+      (seekerList || []).forEach((s) => {
+        seekersMap[s.id] = s;
+      });
+    }
+
+    const members = (rawMembers || []).map((m) => ({
+      id: m.id,
+      notes: m.notes,
+      added_at: m.added_at,
+      seeker: seekersMap[m.seeker_id] || { id: m.seeker_id, full_name: 'Candidate' },
+    }));
 
     return NextResponse.json({ pool, members });
   } catch (error: any) {

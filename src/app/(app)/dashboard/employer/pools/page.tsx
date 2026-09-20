@@ -47,7 +47,11 @@ export default function EmployerTalentPoolsPage() {
       const res = await fetch(`/api/employer/talent-pools/${pool.id}/members`);
       if (res.ok) {
         const data = await res.json();
-        setMembers(data.members || []);
+        const memberList = data.members || [];
+        setMembers(memberList);
+        setPools((prevPools) =>
+          prevPools.map((p) => (p.id === pool.id ? { ...p, member_count: memberList.length } : p))
+        );
       }
     } catch (err) {
       console.error('Error fetching pool members:', err);
