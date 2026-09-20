@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { Users, Plus, Trash2, UserPlus, FolderOpen, Loader2, ArrowRight, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
