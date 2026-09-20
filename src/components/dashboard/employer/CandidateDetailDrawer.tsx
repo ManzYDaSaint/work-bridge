@@ -525,46 +525,48 @@ export default function CandidateDetailDrawer({
                     )}
                   </div>
 
-                  {/* ── Add to Pool ── */}
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setPoolOpen((v) => !v)}
-                      className="w-full flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-                    >
-                      <span className="flex items-center gap-2">
-                        <FolderPlus size={14} />
-                        Add to Talent Pool
-                      </span>
-                      <ChevronDown size={13} className={`transition-transform ${poolOpen ? "rotate-180" : ""}`} />
-                    </button>
+                  {/* ── Add to Pool (hidden when already inside a pool) ── */}
+                  {!showRemoveFromPool && (
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setPoolOpen((v) => !v)}
+                        className="w-full flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                      >
+                        <span className="flex items-center gap-2">
+                          <FolderPlus size={14} />
+                          Add to Talent Pool
+                        </span>
+                        <ChevronDown size={13} className={`transition-transform ${poolOpen ? "rotate-180" : ""}`} />
+                      </button>
 
-                    {poolOpen && (
-                      <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 p-2 dark:border-slate-800 dark:bg-slate-900">
-                        <select
-                          className="flex-1 rounded-lg bg-white border border-stone-200 px-3 py-2 text-xs font-medium text-slate-800 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                          value={selectedPoolId}
-                          onChange={(e) => setSelectedPoolId(e.target.value)}
-                        >
-                          <option value="">Select folder...</option>
-                          {pools.length === 0 && (
-                            <option disabled>No pools created yet</option>
-                          )}
-                          {pools.map((p) => (
-                            <option key={p.id} value={p.id}>📁 {p.name}</option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={handleAddToPool}
-                          disabled={addingToPool || !selectedPoolId}
-                          className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-                        >
-                          {addingToPool ? <Loader2 size={13} className="animate-spin" /> : <FolderPlus size={13} />}
-                          Add
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                      {poolOpen && (
+                        <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 p-2 dark:border-slate-800 dark:bg-slate-900">
+                          <select
+                            className="flex-1 rounded-lg bg-white border border-stone-200 px-3 py-2 text-xs font-medium text-slate-800 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                            value={selectedPoolId}
+                            onChange={(e) => setSelectedPoolId(e.target.value)}
+                          >
+                            <option value="">Select folder...</option>
+                            {pools.length === 0 && (
+                              <option disabled>No pools created yet</option>
+                            )}
+                            {pools.map((p) => (
+                              <option key={p.id} value={p.id}>📁 {p.name}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={handleAddToPool}
+                            disabled={addingToPool || !selectedPoolId}
+                            className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                          >
+                            {addingToPool ? <Loader2 size={13} className="animate-spin" /> : <FolderPlus size={13} />}
+                            Add
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* ── Remove from Pool (only when inside a pool) ── */}
                   {showRemoveFromPool && onRemoveFromPool && (
