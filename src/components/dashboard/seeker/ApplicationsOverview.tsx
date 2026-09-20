@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { PageHeader, EmptyState, Badge } from "@/components/dashboard/ui";
 import { useRouter } from "next/navigation";
 import JobDetailModal, { ExtendedJob } from "@/components/jobs/JobDetailModal";
+import ApplicationTimeline from "@/components/dashboard/ApplicationTimeline";
 
 interface AppEntry {
     id: string;
@@ -165,43 +166,48 @@ export default function ApplicationsOverview({ applications }: { applications: A
                         <span className="sm:text-right">Action</span>
                     </div>
                     {filteredApplications.map((app) => (
-                        <div key={app.id} className="grid grid-cols-1 gap-4 border-b border-stone-200/70 px-4 py-4 last:border-b-0 dark:border-slate-800 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-4">
-                            <button type="button" onClick={() => app.job && setSelectedJob(app.job)} className="min-w-0 text-left">
-                                <p className="truncate text-sm font-bold text-slate-900 dark:text-white sm:text-base">{app.job?.title || "Unknown role"}</p>
-                                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{app.job?.display_company_name || app.job?.employer?.companyName || "Company"}</p>
-                            </button>
-                            <div className="flex flex-col gap-1.5 items-start sm:items-center sm:flex-row sm:gap-2">
-                                <Badge 
-                                    label={app.status} 
-                                    variant={
-                                        app.status === "ACCEPTED" || app.status === "SHORTLISTED" ? "green" : 
-                                        app.status === "INTERVIEWING" ? "blue" :
-                                        app.status === "REJECTED" ? "red" : 
-                                        app.status === "WITHDRAWN" ? "slate" :
-                                        "yellow"
-                                    } 
-                                />
-                                {app.viewedAt && (
-                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-700 bg-sky-50 dark:bg-sky-950/40 dark:text-sky-300 px-2 py-0.5 rounded-md border border-sky-200/60 dark:border-sky-900/40">
-                                        👀 Employer Viewed {formatTimeAgo(app.viewedAt)}
-                                    </span>
-                                )}
-                                {app.createdAt && (
-                                    <span className="text-xs font-medium text-slate-400">
-                                        Applied {formatTimeAgo(app.createdAt)}
-                                    </span>
-                                )}
-                            </div>
-                            <div className="flex items-center justify-between gap-3 sm:justify-end">
-                                <button onClick={() => app.job && setSelectedJob(app.job)} className="text-xs font-bold text-[#16324f] hover:underline dark:text-slate-200">
-                                    View details →
+                        <div key={app.id} className="border-b border-stone-200/70 p-4 last:border-b-0 dark:border-slate-800">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-4">
+                                <button type="button" onClick={() => app.job && setSelectedJob(app.job)} className="min-w-0 text-left">
+                                    <p className="truncate text-sm font-bold text-slate-900 dark:text-white sm:text-base">{app.job?.title || "Unknown role"}</p>
+                                    <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{app.job?.display_company_name || app.job?.employer?.companyName || "Company"}</p>
                                 </button>
-                                {app.status !== "WITHDRAWN" && app.status !== "REJECTED" && (
-                                    <button onClick={() => handleWithdraw(app.id)} className="flex h-8 items-center justify-center rounded-xl border border-stone-200 px-3 text-xs font-bold text-slate-500 hover:bg-stone-50 hover:text-rose-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900 transition">
-                                        Withdraw
+                                <div className="flex flex-col gap-1.5 items-start sm:items-center sm:flex-row sm:gap-2">
+                                    <Badge 
+                                        label={app.status} 
+                                        variant={
+                                            app.status === "ACCEPTED" || app.status === "SHORTLISTED" ? "green" : 
+                                            app.status === "INTERVIEWING" ? "blue" :
+                                            app.status === "REJECTED" ? "red" : 
+                                            app.status === "WITHDRAWN" ? "slate" :
+                                            "yellow"
+                                        } 
+                                    />
+                                    {app.viewedAt && (
+                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-700 bg-sky-50 dark:bg-sky-950/40 dark:text-sky-300 px-2 py-0.5 rounded-md border border-sky-200/60 dark:border-sky-900/40">
+                                            👀 Employer Viewed {formatTimeAgo(app.viewedAt)}
+                                        </span>
+                                    )}
+                                    {app.createdAt && (
+                                        <span className="text-xs font-medium text-slate-400">
+                                            Applied {formatTimeAgo(app.createdAt)}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center justify-between gap-3 sm:justify-end">
+                                    <button onClick={() => app.job && setSelectedJob(app.job)} className="text-xs font-bold text-[#16324f] hover:underline dark:text-slate-200">
+                                        View details →
                                     </button>
-                                )}
+                                    {app.status !== "WITHDRAWN" && app.status !== "REJECTED" && (
+                                        <button onClick={() => handleWithdraw(app.id)} className="flex h-8 items-center justify-center rounded-xl border border-stone-200 px-3 text-xs font-bold text-slate-500 hover:bg-stone-50 hover:text-rose-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900 transition">
+                                            Withdraw
+                                        </button>
+                                    )}
+                                </div>
                             </div>
+
+                            {/* Application Timeline Step Visualizer */}
+                            <ApplicationTimeline applicationId={app.id} currentStatus={app.status} />
                         </div>
                     ))}
                 </div>

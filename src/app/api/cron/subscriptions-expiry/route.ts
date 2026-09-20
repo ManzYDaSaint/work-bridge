@@ -62,20 +62,46 @@ export async function GET(request: Request) {
             }
         }
 
-        // 4. Emit audit log and system event
+        // 5. Expire Employer PRO subscriptions past their plan_expires_at date
+        const { data: expiredEmployers } = await supabase
+            .from("employers")
+            .select("id, company_name")
+            .eq("plan", "PRO")
+            .lt("plan_expires_at", now);
+
+        let expiredEmployersCount = 0;
+        if (expiredEmployers && expiredEmployers.length > 0) {
+            const empIdsToRevert = expiredEmployers.map((e) => e.id);
+            const { error: empRevertErr } = await supabase
+                .from("employers")
+                .update({ 
+                    plan: "FREE",
+                    plan_expires_at: null 
+                })
+                .in("id", empIdsToRevert);
+
+            if (!empRevertErr) {
+                expiredEmployersCount = empIdsToRevert.length;
+            } else {
+                console.error("[Subscription Expiry Cron] Error reverting employers to FREE:", empRevertErr);
+            }
+        }
+
+        // 6. Emit audit log and system event
         await emitSystemEvent({
             category: "SYSTEM",
             severity: "INFO",
             event: "SUBSCRIPTIONS_EXPIRED_BATCH",
-            message: `Expired ${expiredSubs.length} premium subscriptions past ends_at date`,
+            message: `Expired ${expiredSubs.length} seeker subscriptions & ${expiredEmployersCount} employer PRO subscriptions`,
             actorId: "CRON",
-            metadata: { count: expiredSubs.length, seekerIds }
+            metadata: { count: expiredSubs.length, seekerIds, expiredEmployersCount }
         });
 
         return NextResponse.json({
             success: true,
-            processed: expiredSubs.length,
-            message: `Successfully expired ${expiredSubs.length} subscription(s)`
+            processedSeekers: expiredSubs.length,
+            processedEmployers: expiredEmployersCount,
+            message: `Successfully expired ${expiredSubs.length} seeker sub(s) & reverted ${expiredEmployersCount} employer(s) to FREE plan.`
         });
 
     } catch (error: any) {

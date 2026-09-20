@@ -80,6 +80,17 @@ export const PATCH = withAuth(async (request, auth, { params }) => {
             return NextResponse.json({ error: "Failed to update application status" }, { status: 500 });
         }
 
+        // Record timeline history entry
+        await supabase
+            .from("application_history")
+            .insert({
+                application_id: applicationId,
+                from_status: oldStatus,
+                to_status: status,
+                changed_by: (applicationInfo.job as any)?.employer_id,
+                note: status === "INTERVIEWING" && interviewLink ? `Interview link: ${interviewLink}` : null
+            });
+
         // --- Reward System: Grant +5 contact limits for reporting a HIRE ---
         if (status === "ACCEPTED" && oldStatus !== "ACCEPTED") {
             await supabase.rpc("increment_employer_contact_limit_bonus", {

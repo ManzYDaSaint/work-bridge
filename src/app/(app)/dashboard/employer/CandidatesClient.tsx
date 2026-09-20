@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Users, Loader2, X, Mail, MapPin, Lock } from "lucide-react";
 import { PageHeader, EmptyState, Badge, CompanyAvatar } from "@/components/dashboard/ui";
 import CandidateCard from "@/components/dashboard/employer/CandidateCard";
+import CandidateScorecard from "@/components/dashboard/CandidateScorecard";
 import { AnimatePresence, motion } from "framer-motion";
 import { 
     updateApplicationStatus, 
@@ -392,6 +393,9 @@ export default function CandidatesClient({
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Candidate Evaluation Scorecard */}
+                                <CandidateScorecard applicationId={selectedApp.id} />
 
                             </div>
 

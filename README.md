@@ -72,14 +72,19 @@ To ensure a safe and professional marketplace, Aganyu implements a multi-tier tr
 
 ---
 
-### 💳 Payments & Aganyu Premium Engine
+### 💳 Payments & Subscription Engine
 
-- Powered by **PayChangu** (Airtel Money, TNM Mpamba, Card — MWK 1,000/month).
-- **Instant WhatsApp Alerts**: Direct-to-phone template delivery for matched job/opportunity alerts via Meta WhatsApp Cloud API.
-- **Human-in-the-Loop Admin Match Engine**:
-  - **Manual Review Mode**: Admins inspect AI match scores & qualification alignment before dispatching WhatsApp alerts.
-  - **Auto-Pilot Dispatch Mode**: Automatic instant delivery for high-affinity candidate job matches.
-- **Automated Lifecycle & Verification**: Real-time webhook processing, return-URL verification fallback, and daily cron job subscription expiry handling.
+- **Job Seeker Premium Tier**:
+  - Powered by **PayChangu** (MWK 1,000/month).
+  - **Instant WhatsApp Alerts**: Direct-to-phone template delivery for matched job/opportunity alerts via Meta WhatsApp Cloud API.
+  - **Human-in-the-Loop Admin Match Engine**: Manual review or auto-pilot dispatch modes.
+
+- **Employer Pro Tier & SmartRecruiters-Grade ATS**:
+  - Powered by **PayChangu** (Airtel Money only — MWK 25,000/month or MWK 60,000/quarter).
+  - **Custom Talent Pools**: Organise candidate talent in tag-colored folders with member count tracking (Free capped at 1 pool/5 members; Pro unlimited).
+  - **Structured Candidate Scorecards**: Multi-reviewer evaluation rubrics (1–5★ rating on Technical Skills, Experience, Communication + recommendation).
+  - **Application History Timeline**: Complete status audit trails (`APPLIED` → `SHORTLISTED` → `INTERVIEWING` → `HIRED`) for candidate transparency.
+  - **Side-by-Side Billing Comparison**: Integrated `/dashboard/employer/billing` matrix displaying Free tier caps alongside Pro unlimited perks before checkout.
 
 ---
 
@@ -183,6 +188,10 @@ RESEND_API_KEY=
 |---|---|
 | AI Semantic Matchmaking (HuggingFace + pgvector) | Working |
 | Aganyu Premium WhatsApp Alerts Engine | Working |
+| Employer Pro Tier & Subscription (PayChangu Airtel Money) | Working |
+| Custom Employer Talent Pools & Capacity Caps | Working |
+| Structured Candidate Scorecards (1–5★ Rubrics) | Working |
+| Application History & Status Progression Audit | Working |
 | PayChangu Payment Gateway Integration (Airtel/TNM/Card MWK) | Working |
 | Admin Human-in-the-Loop Match Approval & Dispatch Mode Switcher | Working |
 | Automated Subscription Expiry Cron & Return-URL Verification | Working |

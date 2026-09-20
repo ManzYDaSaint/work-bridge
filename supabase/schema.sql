@@ -225,6 +225,53 @@ CREATE TABLE IF NOT EXISTS public.employer_saved_candidates (
   UNIQUE(employer_id, seeker_id)
 );
 
+-- =================================================================─────────────
+-- TALENT CRM, EVALUATION SCORECARDS & APPLICATION TIMELINE
+-- =================================================================─────────────
+
+CREATE TABLE IF NOT EXISTS public.employer_talent_pools (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  employer_id UUID REFERENCES public.employers(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  color_tag TEXT DEFAULT '#3B82F6',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.talent_pool_members (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  pool_id UUID REFERENCES public.employer_talent_pools(id) ON DELETE CASCADE NOT NULL,
+  seeker_id UUID REFERENCES public.job_seekers(id) ON DELETE CASCADE NOT NULL,
+  notes TEXT,
+  added_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(pool_id, seeker_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.application_evaluations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  application_id UUID REFERENCES public.applications(id) ON DELETE CASCADE NOT NULL,
+  evaluator_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  technical_rating INTEGER CHECK (technical_rating BETWEEN 1 AND 5),
+  experience_rating INTEGER CHECK (experience_rating BETWEEN 1 AND 5),
+  communication_rating INTEGER CHECK (communication_rating BETWEEN 1 AND 5),
+  overall_score NUMERIC(3, 2),
+  recommendation TEXT CHECK (recommendation IN ('STRONG_YES', 'YES', 'NEUTRAL', 'NO')),
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(application_id, evaluator_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.application_history (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  application_id UUID REFERENCES public.applications(id) ON DELETE CASCADE NOT NULL,
+  from_status public.application_status,
+  to_status public.application_status NOT NULL,
+  changed_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  note TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public.employer_contact_views (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     employer_id UUID NOT NULL REFERENCES public.employers(id) ON DELETE CASCADE,

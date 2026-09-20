@@ -20,6 +20,45 @@ async function processPayChanguActivation(targetRef: string, durationMonths: num
         return { success: false, error: "Payment verification failed or pending" };
     }
 
+    // Check if this is an Employer Pro payment (`aganyu_emp_pro_${employerId}_${timestamp}`)
+    if (targetRef.startsWith("aganyu_emp_pro_")) {
+        const prefix = "aganyu_emp_pro_";
+        const lastUnderscore = targetRef.lastIndexOf("_");
+        const employerId = lastUnderscore > prefix.length
+            ? targetRef.substring(prefix.length, lastUnderscore)
+            : targetRef.substring(prefix.length);
+
+        if (employerId) {
+            // Set 30 days default expiration for monthly, or 90 days for quarterly
+            const daysToAdd = targetRef.includes("_QUARTERLY_") ? 90 : 30;
+            const expiresAt = new Date(Date.now() + daysToAdd * 24 * 3600 * 1000).toISOString();
+
+            const { error: empErr } = await supabase
+                .from("employers")
+                .update({ 
+                    plan: "PRO",
+                    plan_expires_at: expiresAt 
+                })
+                .eq("id", employerId);
+
+            if (empErr) {
+                console.error("[PayChangu Webhook] Failed to activate employer PRO plan:", empErr);
+                return { success: false, error: "Failed to update employer plan" };
+            }
+
+            await emitSystemEvent({
+                category: "USER",
+                severity: "SUCCESS",
+                event: "PAYCHANGU_WEBHOOK_EMPLOYER_PRO_ACTIVATED",
+                message: `PayChangu webhook upgraded employer ${employerId} to PRO plan`,
+                actorId: "SYSTEM",
+                metadata: { reference: targetRef, employerId, amount: verification.amount }
+            });
+
+            return { success: true, endsAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString() };
+        }
+    }
+
     // Derive seekerId from tx_ref: format `aganyu_prem_${seekerId}_${timestamp}`
     let finalSeekerId: string | null = null;
     if (targetRef.startsWith("aganyu_prem_")) {

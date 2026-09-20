@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import { User, Employer } from "@/types";
-import { LayoutDashboard, Briefcase, Settings, Users, PlusCircle, Lock, Search, Bookmark } from "lucide-react";
+import { LayoutDashboard, Briefcase, Settings, Users, PlusCircle, Lock, Search, Bookmark, Folder, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardLayout, { NavGroup } from "@/components/layout/DashboardLayout";
 import { UserProvider, useUser } from "@/context/UserContext";
@@ -17,6 +17,7 @@ const employerNavGroups: NavGroup[] = [
         items: [
             { label: "Overview", href: "/dashboard/employer", icon: LayoutDashboard },
             { label: "Discover", href: "/dashboard/employer/discover", icon: Search },
+            { label: "Talent Pools", href: "/dashboard/employer/pools", icon: Folder },
             { label: "Saved Talent", href: "/dashboard/employer/talent/saved", icon: Bookmark },
             { label: "Jobs", href: "/dashboard/employer/jobs", icon: Briefcase },
             { label: "Candidates", href: "/dashboard/employer/candidates", icon: Users },
@@ -26,6 +27,7 @@ const employerNavGroups: NavGroup[] = [
         title: "Company",
         items: [
             { label: "Profile", href: "/dashboard/employer/settings", icon: Settings },
+            { label: "Billing & Plans", href: "/dashboard/employer/billing", icon: CreditCard },
         ]
     }
 ];

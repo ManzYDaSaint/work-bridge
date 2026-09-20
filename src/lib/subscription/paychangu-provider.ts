@@ -22,14 +22,25 @@ export class PayChanguProvider implements IPaymentProvider {
         this.secretKey = process.env.PAYCHANGU_SECRET_KEY || "";
     }
 
-    async initiatePayment(seekerId: string, amount: number): Promise<{ paymentUrl: string; reference: string; isSimulated?: boolean }> {
-        const txRef = `aganyu_prem_${seekerId}_${Date.now()}`;
+    async initiatePayment(
+        userId: string, 
+        amount: number,
+        options?: {
+            txPrefix?: string;
+            returnUrlPath?: string;
+            title?: string;
+            description?: string;
+        }
+    ): Promise<{ paymentUrl: string; reference: string; isSimulated?: boolean }> {
+        const prefix = options?.txPrefix || "aganyu_prem_";
+        const txRef = `${prefix}${userId}_${Date.now()}`;
         const siteUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://aganyu.com";
+        const returnPath = options?.returnUrlPath || "/dashboard/seeker/subscription";
 
         if (!this.secretKey) {
             console.warn("[PayChangu] PAYCHANGU_SECRET_KEY missing. Returning simulated checkout URL for dev/testing.");
             return {
-                paymentUrl: `${siteUrl}/dashboard/seeker/subscription?reference=${txRef}_simulated&status=simulated`,
+                paymentUrl: `${siteUrl}${returnPath}?reference=${txRef}_simulated&status=simulated`,
                 reference: `${txRef}_simulated`,
                 isSimulated: true
             };
@@ -48,10 +59,10 @@ export class PayChanguProvider implements IPaymentProvider {
                     currency: "MWK",
                     tx_ref: txRef,
                     callback_url: `${siteUrl}/api/webhooks/paychangu`,
-                    return_url: `${siteUrl}/dashboard/seeker/subscription?reference=${txRef}`,
+                    return_url: `${siteUrl}${returnPath}?reference=${txRef}`,
                     customization: {
-                        title: "Aganyu Premium Subscription",
-                        description: "Instant WhatsApp Job Alerts & AI Matcher"
+                        title: options?.title || "Aganyu Premium Subscription",
+                        description: options?.description || "Instant WhatsApp Job Alerts & AI Matcher"
                     }
                 })
             });
