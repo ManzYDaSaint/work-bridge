@@ -8,7 +8,6 @@ import {
   GraduationCap,
   Bookmark,
   Mail,
-  Phone,
   Send,
   Loader2,
   FolderPlus,
@@ -16,7 +15,7 @@ import {
   Trash2,
   ChevronDown,
 } from "lucide-react";
-import { Badge } from "../ui";
+
 import { useEffect, useState, type MouseEvent } from "react";
 import { toast } from "sonner";
 
@@ -481,49 +480,34 @@ export default function CandidateDetailDrawer({
                   </div>
 
                   {/* ── Direct Contact Row ── */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Email */}
-                    {email ? (
-                      <a
-                        href={`mailto:${email}`}
-                        className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-50 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                      >
-                        <Mail size={14} />
-                        Email
-                      </a>
-                    ) : (
-                      <button
-                        disabled
-                        title="Email not available"
-                        className="flex items-center justify-center gap-2 rounded-xl border border-stone-100 bg-stone-50/50 py-2.5 text-xs font-semibold text-slate-300 cursor-not-allowed dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-600"
-                      >
-                        <Mail size={14} />
-                        Email
-                      </button>
-                    )}
-
-                    {/* WhatsApp / Phone */}
-                    {phone ? (
-                      <a
-                        href={hasWhatsApp ? `https://wa.me/${phone.replace(/\D/g, "")}` : `tel:${phone}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 py-2.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
-                      >
-                        <MessageCircle size={14} />
-                        {hasWhatsApp ? "WhatsApp" : "Call"}
-                      </a>
-                    ) : (
-                      <button
-                        disabled
-                        title="Phone not available"
-                        className="flex items-center justify-center gap-2 rounded-xl border border-stone-100 bg-stone-50/50 py-2.5 text-xs font-semibold text-slate-300 cursor-not-allowed dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-600"
-                      >
-                        <MessageCircle size={14} />
-                        WhatsApp
-                      </button>
-                    )}
-                  </div>
+                  {(email || phone) ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {email && (
+                        <a
+                          href={`mailto:${email}`}
+                          className="flex items-center justify-center gap-2 rounded-xl border border-stone-200 bg-stone-50 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                        >
+                          <Mail size={14} />
+                          Email
+                        </a>
+                      )}
+                      {phone && (
+                        <a
+                          href={hasWhatsApp ? `https://wa.me/${phone.replace(/\D/g, "")}` : `tel:${phone}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 py-2.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
+                        >
+                          <MessageCircle size={14} />
+                          {hasWhatsApp ? "WhatsApp" : "Call"}
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 dark:text-slate-600 text-center py-1">
+                      {profile?.isContactGated ? "Upgrade plan to unlock contact details" : "Contact details not available"}
+                    </p>
+                  )}
 
                   {/* ── Add to Pool (hidden when already inside a pool) ── */}
                   {!showRemoveFromPool && (

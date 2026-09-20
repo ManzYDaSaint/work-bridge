@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Users, Plus, Trash2, UserPlus, FolderOpen, Loader2, ArrowRight, ChevronRight } from 'lucide-react';
+import { Users, Plus, UserPlus, FolderOpen, Loader2, ArrowRight, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import CandidateDetailDrawer, { ApplicantProfile } from '@/components/dashboard/employer/CandidateDetailDrawer';
 import { toggleSaveTalent } from '@/app/(app)/dashboard/employer/actions';
@@ -374,20 +374,13 @@ export default function EmployerTalentPoolsPage() {
                           )}
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #E5E7EB', marginTop: '10px' }}>
+                        <div style={{ paddingTop: '10px', borderTop: '1px solid #E5E7EB', marginTop: '10px' }}>
                           <button
                             type="button"
                             onClick={() => openCandidateDrawer(seeker.id, true)}
                             style={{ fontSize: '12px', color: '#2563EB', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                           >
                             View Profile &amp; Actions
-                          </button>
-                          <button
-                            onClick={() => handleRemoveMember(seeker.id)}
-                            style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
-                            title="Remove from pool"
-                          >
-                            <Trash2 size={16} />
                           </button>
                         </div>
                       </div>
