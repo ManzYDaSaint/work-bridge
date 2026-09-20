@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { X, MapPin, Briefcase, GraduationCap, Bookmark, Mail, Phone, Globe, Send, Loader2 } from "lucide-react";
+import { X, MapPin, Briefcase, GraduationCap, Bookmark, Mail, Phone, Globe, Send, Loader2, FolderPlus, Folder } from "lucide-react";
 import { Badge } from "../ui";
 import { useEffect, useState, type MouseEvent } from "react";
 import { toast } from "sonner";
@@ -103,21 +103,35 @@ export default function CandidateDetailDrawer({
   const [selectedJobId, setSelectedJobId] = useState<string>("");
   const [inviting, setInviting] = useState(false);
 
+  const [pools, setPools] = useState<Array<{ id: string; name: string; color_tag: string }>>([]);
+  const [selectedPoolId, setSelectedPoolId] = useState<string>("");
+  const [addingToPool, setAddingToPool] = useState(false);
+
   useEffect(() => {
     if (!open) return;
 
-    const fetchActiveJobs = async () => {
+    const fetchActiveJobsAndPools = async () => {
       try {
-        const response = await fetch("/api/employer/jobs");
-        if (!response.ok) return;
-        const data = await response.json();
-        setJobs(data.jobs || []);
+        const [jobsRes, poolsRes] = await Promise.all([
+          fetch("/api/employer/jobs"),
+          fetch("/api/employer/talent-pools")
+        ]);
+
+        if (jobsRes.ok) {
+          const jobsData = await jobsRes.json();
+          setJobs(jobsData.jobs || []);
+        }
+
+        if (poolsRes.ok) {
+          const poolsData = await poolsRes.json();
+          setPools(poolsData.pools || []);
+        }
       } catch (err) {
-        console.error("Failed to fetch jobs for invite:", err);
+        console.error("Failed to fetch jobs/pools:", err);
       }
     };
 
-    fetchActiveJobs();
+    fetchActiveJobsAndPools();
   }, [open]);
 
   const handleInvite = async () => {
@@ -156,6 +170,36 @@ export default function CandidateDetailDrawer({
       toast.error(err.message || "An error occurred while sending the invite");
     } finally {
       setInviting(false);
+    }
+  };
+
+  const handleAddToPool = async () => {
+    if (!selectedPoolId || !profile) {
+      toast.error("Please select a Talent Pool folder.");
+      return;
+    }
+
+    setAddingToPool(true);
+    try {
+      const response = await fetch(`/api/employer/talent-pools/${selectedPoolId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seeker_id: profile.id }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to add candidate to pool.");
+      }
+
+      const poolObj = pools.find((p) => p.id === selectedPoolId);
+      toast.success(`Added ${profile.full_name} to ${poolObj?.name || 'Talent Pool'}!`);
+      setSelectedPoolId("");
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred while adding to Talent Pool");
+    } finally {
+      setAddingToPool(false);
     }
   };
 
@@ -233,12 +277,13 @@ export default function CandidateDetailDrawer({
                 </div>
               ) : profile ? (
                 <div className="space-y-6">
-                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
-                    <div className="space-y-4 rounded-3xl border border-stone-200 bg-stone-50 p-5 dark:border-slate-800 dark:bg-slate-900/70">
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {/* Invite to Apply Box */}
+                    <div className="space-y-3 rounded-3xl border border-stone-200 bg-stone-50 p-5 dark:border-slate-800 dark:bg-slate-900/70">
                       <div>
                         <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Invite to Apply</h3>
                         <p className="mt-1 text-xs text-slate-400">Send a direct invitation to this candidate.</p>
-                        <div className="mt-4 flex gap-2">
+                        <div className="mt-3 flex gap-2">
                           <select
                             className="flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
                             value={selectedJobId}
@@ -263,13 +308,43 @@ export default function CandidateDetailDrawer({
                       </div>
                     </div>
 
-                    <div className="space-y-4 rounded-3xl border border-stone-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900/70">
+                    {/* Add to Talent Pool Box */}
+                    <div className="space-y-3 rounded-3xl border border-stone-200 bg-stone-50 p-5 dark:border-slate-800 dark:bg-slate-900/70">
                       <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">About</h3>
-                        <p className="mt-3 text-sm leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-                          {profile.bio || "No summary available."}
-                        </p>
+                        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Add to Talent Pool</h3>
+                        <p className="mt-1 text-xs text-slate-400">Save candidate into a CRM folder.</p>
+                        <div className="mt-3 flex gap-2">
+                          <select
+                            className="flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                            value={selectedPoolId}
+                            onChange={(e) => setSelectedPoolId(e.target.value)}
+                          >
+                            <option value="">Select folder...</option>
+                            {pools.map((pool) => (
+                              <option key={pool.id} value={pool.id}>
+                                📁 {pool.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={handleAddToPool}
+                            disabled={addingToPool}
+                            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white transition-all hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            {addingToPool ? <Loader2 size={14} className="animate-spin" /> : <FolderPlus size={14} />}
+                            Add
+                          </button>
+                        </div>
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-3xl border border-stone-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900/70">
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">About</h3>
+                      <p className="mt-3 text-sm leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                        {profile.bio || "No summary available."}
+                      </p>
                     </div>
                   </div>
 
