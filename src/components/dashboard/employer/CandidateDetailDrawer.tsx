@@ -1,7 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { X, MapPin, Briefcase, GraduationCap, Bookmark, Mail, Phone, Globe, Send, Loader2, FolderPlus, Folder } from "lucide-react";
+import { 
+  X, MapPin, Briefcase, GraduationCap, Bookmark, Mail, Phone, 
+  Send, Loader2, FolderPlus 
+} from "lucide-react";
 import { Badge } from "../ui";
 import { useEffect, useState, type MouseEvent } from "react";
 import { toast } from "sonner";
@@ -136,7 +139,7 @@ export default function CandidateDetailDrawer({
 
   const handleInvite = async () => {
     if (!selectedJobId || !profile) {
-      toast.error("Please select a job to invite the candidate to.");
+      toast.error("Please select a job first.");
       return;
     }
 
@@ -164,10 +167,10 @@ export default function CandidateDetailDrawer({
         throw new Error(data.error || "Failed to send invite");
       }
 
-      toast.success("Invitation sent successfully!");
+      toast.success("Invitation sent!");
       setSelectedJobId("");
     } catch (err: any) {
-      toast.error(err.message || "An error occurred while sending the invite");
+      toast.error(err.message || "An error occurred");
     } finally {
       setInviting(false);
     }
@@ -175,7 +178,7 @@ export default function CandidateDetailDrawer({
 
   const handleAddToPool = async () => {
     if (!selectedPoolId || !profile) {
-      toast.error("Please select a Talent Pool folder.");
+      toast.error("Please select a folder.");
       return;
     }
 
@@ -190,14 +193,14 @@ export default function CandidateDetailDrawer({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to add candidate to pool.");
+        throw new Error(data.error || "Failed to add to pool.");
       }
 
       const poolObj = pools.find((p) => p.id === selectedPoolId);
-      toast.success(`Added ${profile.full_name} to ${poolObj?.name || 'Talent Pool'}!`);
+      toast.success(`Added to ${poolObj?.name || 'Talent Pool'}`);
       setSelectedPoolId("");
     } catch (err: any) {
-      toast.error(err.message || "An error occurred while adding to Talent Pool");
+      toast.error(err.message || "Failed to add candidate");
     } finally {
       setAddingToPool(false);
     }
@@ -207,290 +210,247 @@ export default function CandidateDetailDrawer({
     <AnimatePresence>
       {open && (
         <>
+          {/* Glassmorphic Minimalist Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md transition-opacity"
             onClick={onClose}
           />
+
+          {/* Minimalist Slide-Over Sheet */}
           <motion.aside
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            transition={{ type: "spring", stiffness: 260, damping: 30 }}
-            className="fixed right-0 top-0 z-[60] flex h-full w-full max-w-3xl flex-col overflow-y-auto bg-white shadow-2xl dark:bg-slate-950"
+            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+            className="fixed right-0 top-0 z-[60] flex h-full w-full max-w-2xl flex-col bg-white shadow-2xl dark:bg-slate-950 border-l border-stone-200/80 dark:border-slate-800"
             role="dialog"
             aria-modal="true"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 border-b border-stone-200 bg-white/95 px-6 py-5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Talent profile</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
-                    {profile?.full_name || "Candidate details"}
+            {/* Minimalist Sticky Header */}
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-stone-100 bg-white/80 px-6 py-4 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/80">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white shadow-inner dark:bg-slate-100 dark:text-slate-900">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Avatar" className="h-full w-full rounded-full object-cover" />
+                  ) : (
+                    (profile?.full_name || "?")[0].toUpperCase()
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
+                    {profile?.full_name || "Candidate Profile"}
                   </h2>
                   {profile?.location && (
-                    <p className="mt-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                      <MapPin size={14} />
+                    <p className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                      <MapPin size={12} className="opacity-70" />
                       {profile.location}
                     </p>
                   )}
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onToggleSave}
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold transition-all ${
+                    isSaved 
+                      ? "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300"
+                      : "border-stone-200 bg-white text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                  }`}
+                >
+                  <Bookmark size={13} className={isSaved ? "fill-amber-500 text-amber-500" : ""} />
+                  {isSaved ? "Saved" : "Save"}
+                </button>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-xl p-2 text-slate-500 transition-colors hover:bg-stone-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                  aria-label="Close candidate details"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-stone-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                  aria-label="Close sheet"
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </button>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {profile?.search_intent && (
-                  <Badge
-                    label={
-                      profile.search_intent === "SEEKING_INTERNSHIP"
-                        ? "Seeking Internship"
-                        : profile.search_intent.replace(/_/g, " ")
-                    }
-                    variant="blue"
-                  />
-                )}
-                {profile?.employment_status && (
-                  <Badge label={profile.employment_status.replace(/_/g, " ")} variant="secondary" />
-                )}
-                {profile?.seniority_level && <Badge label={profile.seniority_level} variant="secondary" />}
-                {profile?.employment_type && <Badge label={profile.employment_type} variant="secondary" />}
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-6">
+            {/* Scrollable Main Sheet Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
               {loading ? (
-                <div className="flex h-full min-h-[20rem] items-center justify-center">
-                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-700 dark:border-slate-700 dark:border-t-white" />
+                <div className="flex h-64 items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
                 </div>
               ) : error ? (
-                <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">
+                <div className="rounded-xl border border-red-200/80 bg-red-50/50 p-4 text-xs font-medium text-red-600 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
                   {error}
                 </div>
               ) : profile ? (
-                <div className="space-y-6">
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    {/* Invite to Apply Box */}
-                    <div className="space-y-3 rounded-3xl border border-stone-200 bg-stone-50 p-5 dark:border-slate-800 dark:bg-slate-900/70">
-                      <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Invite to Apply</h3>
-                        <p className="mt-1 text-xs text-slate-400">Send a direct invitation to this candidate.</p>
-                        <div className="mt-3 flex gap-2">
-                          <select
-                            className="flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                            value={selectedJobId}
-                            onChange={(e) => setSelectedJobId(e.target.value)}
-                          >
-                            <option value="">Select a job...</option>
-                            {jobs.map((job) => (
-                              <option key={job.id} value={job.id}>
-                                {job.title}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={handleInvite}
-                            disabled={inviting}
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#16324f] px-4 py-2 text-xs font-bold text-white transition-all hover:bg-[#1a4266] disabled:opacity-50"
-                          >
-                            {inviting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                            Invite
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                <>
+                  {/* Status Pills */}
+                  <div className="flex flex-wrap gap-2">
+                    {profile.search_intent && (
+                      <span className="inline-flex items-center rounded-full bg-sky-50 border border-sky-200/60 px-3 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-950/40 dark:border-sky-900/60 dark:text-sky-300">
+                        {profile.search_intent.replace(/_/g, " ")}
+                      </span>
+                    )}
+                    {profile.employment_status && (
+                      <span className="inline-flex items-center rounded-full bg-stone-100 border border-stone-200/80 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
+                        {profile.employment_status.replace(/_/g, " ")}
+                      </span>
+                    )}
+                    {profile.seniority_level && (
+                      <span className="inline-flex items-center rounded-full bg-stone-100 border border-stone-200/80 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
+                        {profile.seniority_level}
+                      </span>
+                    )}
+                  </div>
 
-                    {/* Add to Talent Pool Box */}
-                    <div className="space-y-3 rounded-3xl border border-stone-200 bg-stone-50 p-5 dark:border-slate-800 dark:bg-slate-900/70">
-                      <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Add to Talent Pool</h3>
-                        <p className="mt-1 text-xs text-slate-400">Save candidate into a CRM folder.</p>
-                        <div className="mt-3 flex gap-2">
-                          <select
-                            className="flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                            value={selectedPoolId}
-                            onChange={(e) => setSelectedPoolId(e.target.value)}
-                          >
-                            <option value="">Select folder...</option>
-                            {pools.map((pool) => (
-                              <option key={pool.id} value={pool.id}>
-                                📁 {pool.name}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={handleAddToPool}
-                            disabled={addingToPool}
-                            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white transition-all hover:bg-blue-700 disabled:opacity-50"
-                          >
-                            {addingToPool ? <Loader2 size={14} className="animate-spin" /> : <FolderPlus size={14} />}
-                            Add
-                          </button>
-                        </div>
+                  {/* Integrated Quick Action Dock (Invite & Talent Pool) */}
+                  <div className="rounded-2xl border border-stone-200/70 bg-stone-50/80 p-4 dark:border-slate-800/80 dark:bg-slate-900/50">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
+                      Recruiter Actions
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Invite to Apply */}
+                      <div className="flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white p-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                        <select
+                          className="flex-1 bg-transparent px-2 text-xs font-medium text-slate-800 outline-none dark:text-white"
+                          value={selectedJobId}
+                          onChange={(e) => setSelectedJobId(e.target.value)}
+                        >
+                          <option value="">Invite to job...</option>
+                          {jobs.map((j) => (
+                            <option key={j.id} value={j.id}>{j.title}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={handleInvite}
+                          disabled={inviting}
+                          className="flex h-8 items-center gap-1.5 rounded-lg bg-[#16324f] px-3 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                        >
+                          {inviting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                          Invite
+                        </button>
+                      </div>
+
+                      {/* Add to Talent Pool Folder */}
+                      <div className="flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white p-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                        <select
+                          className="flex-1 bg-transparent px-2 text-xs font-medium text-slate-800 outline-none dark:text-white"
+                          value={selectedPoolId}
+                          onChange={(e) => setSelectedPoolId(e.target.value)}
+                        >
+                          <option value="">Add to pool...</option>
+                          {pools.map((p) => (
+                            <option key={p.id} value={p.id}>📁 {p.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={handleAddToPool}
+                          disabled={addingToPool}
+                          className="flex h-8 items-center gap-1.5 rounded-lg bg-blue-600 px-3 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                        >
+                          {addingToPool ? <Loader2 size={13} className="animate-spin" /> : <FolderPlus size={13} />}
+                          Add
+                        </button>
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-4 rounded-3xl border border-stone-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900/70">
-                    <div>
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">About</h3>
-                      <p className="mt-3 text-sm leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-                        {profile.bio || "No summary available."}
+                  {/* Summary / Bio */}
+                  {profile.bio && (
+                    <div className="space-y-2">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">About</h3>
+                      <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+                        {profile.bio}
                       </p>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="space-y-6">
-                    {profile.qualification && (
-                      <div className="rounded-2xl border border-stone-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/40">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Qualification</p>
-                        <p className="mt-2 text-sm font-medium text-slate-800 dark:text-white">{profile.qualification}</p>
-                      </div>
-                    )}
-
-                  </div>
-
-                  <div className="space-y-4 rounded-3xl border border-stone-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900/70">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Contact</p>
-                        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                          {profile.isContactGated ? "Contact details are gated until you unlock this candidate." : "Contact available"}
-                        </p>
-                      </div>
-                      <button
-                        onClick={onToggleSave}
-                        className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
-                      >
-                        <Bookmark size={14} />
-                        {isSaved ? "Saved" : "Save"}
-                      </button>
-                    </div>
-
-                    <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
-                      {profile.contact ? (
-                        <>
-                          {profile.contact.email && (
-                            <div className="flex items-center gap-2">
-                              <Mail size={14} />
-                              <span>{profile.contact.email}</span>
-                            </div>
-                          )}
-                          {profile.contact.phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone size={14} />
-                              <span>{profile.contact.phone}</span>
-                            </div>
-                          )}
-                          {profile.contact.whatsapp && (
-                            <div className="rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">WhatsApp available</div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-400">
-                          {profile.contactLimitReached
-                            ? "You have reached your monthly contact reveal limit for this candidate. Contact details will appear next month or after upgrading."
-                            : profile.profile_visibility === "ANONYMOUS"
-                            ? "This candidate is anonymous, so only limited details are shown until they reveal contact."
-                            : "This candidate has chosen to gate contact details."}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <section className="space-y-4 rounded-3xl border border-stone-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900/70">
-                      <div className="flex items-center gap-2">
-                        <Briefcase size={16} className="text-slate-400" />
-                        <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Experience</h3>
-                      </div>
-                      {profile.experience?.length ? (
-                        <div className="space-y-4">
-                          {profile.experience.map((item, index) => (
-                            <div key={index} className="rounded-3xl border border-stone-200 bg-stone-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
-                              <p className="text-sm font-semibold text-slate-900 dark:text-white">{item.role || item.title || "Experience"}</p>
-                              <p className="text-xs text-slate-500 dark:text-slate-400">{item.company || item.organization || "Company not set"}</p>
-                              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{formatDateRange(item.startDate || item.start_date, item.endDate || item.end_date)}</p>
-                              {item.description && <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{item.description}</p>}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-slate-500 dark:text-slate-400">No experience details available.</p>
-                      )}
-                    </section>
-
-                    <section className="space-y-4 rounded-3xl border border-stone-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900/70">
-                      <div className="flex items-center gap-2">
-                        <GraduationCap size={16} className="text-slate-400" />
-                        <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Education</h3>
-                      </div>
-                      {profile.education?.length ? (
-                        <div className="space-y-4">
-                          {profile.education.map((item, index) => (
-                            <div key={index} className="rounded-3xl border border-stone-200 bg-stone-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
-                              <p className="text-sm font-semibold text-slate-900 dark:text-white">{item.degree || item.qualification || "Education"}</p>
-                              <p className="text-xs text-slate-500 dark:text-slate-400">{item.institution || item.school || item.university || "Institution not set"}</p>
-                              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{formatDateRange(item.startDate || item.start_date, item.endDate || item.end_date)}</p>
-                              {item.description && <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{item.description}</p>}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-slate-500 dark:text-slate-400">No education records found.</p>
-                      )}
-                    </section>
-                  </div>
-
-                  <section className="rounded-3xl border border-stone-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900/70">
-                    <div className="flex items-center gap-2">
-                      <GraduationCap size={16} className="text-slate-400" />
-                      <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Certificates</h3>
-                    </div>
-                    {profile.certificates?.length ? (
-                      <div className="mt-4 space-y-4">
-                        {profile.certificates.map((certificate, index) => (
-                          <div key={index} className="rounded-3xl border border-stone-200 bg-stone-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
-                            <p className="text-sm font-semibold text-slate-900 dark:text-white">{certificate.title || certificate.certificate || "Certificate"}</p>
-                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{certificate.issuer || certificate.issuing_organization || "Issuer not set"}</p>
-                            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{formatDate(certificate.issue_date || certificate.issueDate) || "Date not set"}</p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">No certificates listed.</p>
-                    )}
-                  </section>
-
-                  {profile.skills?.length ? (
-                    <section className="rounded-3xl border border-stone-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900/70">
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-400">*</span>
-                        <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Skills</h3>
-                      </div>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {profile.skills.map((skill, index) => (
-                          <span key={index} className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200">
+                  {/* Skills Pills */}
+                  {profile.skills?.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Skills</h3>
+                      <div className="flex flex-wrap gap-1.5">
+                        {profile.skills.map((skill, i) => (
+                          <span key={i} className="rounded-md bg-stone-100 px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                             {skill}
                           </span>
                         ))}
                       </div>
-                    </section>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="rounded-3xl border border-stone-200 bg-stone-50 p-6 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400">
-                  Select a candidate to view their full details.
-                </div>
-              )}
+                    </div>
+                  )}
+
+                  {/* Experience Timeline */}
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      <Briefcase size={14} />
+                      Experience
+                    </div>
+                    {profile.experience?.length ? (
+                      <div className="space-y-3 pl-2 border-l border-stone-200 dark:border-slate-800">
+                        {profile.experience.map((item, i) => (
+                          <div key={i} className="relative pl-4">
+                            <div className="absolute -left-[13px] top-1 h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-600" />
+                            <p className="text-xs font-bold text-slate-900 dark:text-white">{item.role || item.title || "Role"}</p>
+                            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{item.company || item.organization}</p>
+                            <p className="text-[10px] text-slate-400">{formatDateRange(item.startDate || item.start_date, item.endDate || item.end_date)}</p>
+                            {item.description && <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{item.description}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">No experience records listed.</p>
+                    )}
+                  </div>
+
+                  {/* Education Timeline */}
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      <GraduationCap size={14} />
+                      Education
+                    </div>
+                    {profile.education?.length ? (
+                      <div className="space-y-3 pl-2 border-l border-stone-200 dark:border-slate-800">
+                        {profile.education.map((item, i) => (
+                          <div key={i} className="relative pl-4">
+                            <div className="absolute -left-[13px] top-1 h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-600" />
+                            <p className="text-xs font-bold text-slate-900 dark:text-white">{item.degree || item.qualification || "Qualification"}</p>
+                            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{item.institution || item.school || item.university}</p>
+                            <p className="text-[10px] text-slate-400">{formatDateRange(item.startDate || item.start_date, item.endDate || item.end_date)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">No education records listed.</p>
+                    )}
+                  </div>
+
+                  {/* Contact Layer */}
+                  <div className="pt-2 border-t border-stone-100 dark:border-slate-800">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
+                      Direct Contact
+                    </p>
+                    {profile.contact ? (
+                      <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-700 dark:text-slate-300">
+                        {profile.contact.email && (
+                          <span className="flex items-center gap-1.5"><Mail size={13} className="text-slate-400" /> {profile.contact.email}</span>
+                        )}
+                        {profile.contact.phone && (
+                          <span className="flex items-center gap-1.5"><Phone size={13} className="text-slate-400" /> {profile.contact.phone}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400">
+                        {profile.isContactGated ? "Contact details are gated." : "Contact not available."}
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : null}
             </div>
           </motion.aside>
         </>
