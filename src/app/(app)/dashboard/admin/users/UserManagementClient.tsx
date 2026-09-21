@@ -7,7 +7,7 @@ import { Users, Search, Loader2, UserX, Crown, Sparkles, X, CheckCircle2, UserCh
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { calculateProfileStrength } from "@/lib/profile-strength";
-import { calculateYearsExperience } from "@/lib/matching-helpers";
+import { calculateYearsExperience, resolveHighestEducationQualification } from "@/lib/matching-helpers";
 
 
 export default function UserManagementClient({ 
@@ -627,9 +627,9 @@ export default function UserManagementClient({
                                             🎓 Education Qualification
                                         </p>
                                         <p className="mt-1 text-xs font-bold text-slate-800 dark:text-slate-200">
-                                            {inspectingUser.seekerProfile?.qualification ||
-                                             (Array.isArray(inspectingUser.seekerProfile?.education) && inspectingUser.seekerProfile.education[0]?.degree) ||
-                                             (Array.isArray(inspectingUser.seekerProfile?.education) && inspectingUser.seekerProfile.education[0]?.certificate) ||
+                                            {resolveHighestEducationQualification(null, inspectingUser.seekerProfile?.education) ||
+                                             (Array.isArray(inspectingUser.seekerProfile?.education) && (inspectingUser.seekerProfile.education[0]?.certificate || inspectingUser.seekerProfile.education[0]?.degree || inspectingUser.seekerProfile.education[0]?.qualification)) ||
+                                             inspectingUser.seekerProfile?.qualification ||
                                              inspectingUser.qualification ||
                                              "Not specified"}
                                         </p>

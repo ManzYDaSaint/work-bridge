@@ -286,13 +286,15 @@ export function resolveHighestEducationQualification(
         .filter(Boolean)
     : [];
 
+  if (educationQualifications.length === 0) {
+    return null;
+  }
+
   const detailedEducation = educationQualifications.find((value) =>
     /(bachelor|master|degree|diploma|certificate|phd|msc|bsc|ba\b|ma\b|diploma|associate|higher diploma|advanced diploma|education|teaching|business administration)/i.test(value)
   );
 
-  if (detailedEducation) return detailedEducation;
-
-  return qualification?.trim() || null;
+  return detailedEducation || educationQualifications[0] || null;
 }
 
 export function normalizeStringArray(raw?: string[] | string | null): string[] {

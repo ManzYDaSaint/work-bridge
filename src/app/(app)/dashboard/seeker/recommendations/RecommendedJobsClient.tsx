@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import SkillGapModal from "@/components/dashboard/seeker/SkillGapModal";
 import { SkillGapService, SkillGapAnalysis } from "@/services/skill-gap.service";
+import { MatchScoreBadge } from "@/components/matching/UniversalMatchComponents";
 
 export default function RecommendedJobsClient({ 
     jobs, 
@@ -59,12 +60,7 @@ export default function RecommendedJobsClient({
                     </div>
 
                     <div className="flex flex-col items-start gap-2 sm:items-end">
-                        <Badge
-                            variant={requirementPct >= 80 ? "green" : requirementPct >= 60 ? "yellow" : "slate"}
-                        >
-                            <Sparkles size={10} className="mr-1 inline" />
-                            {fitLabel} • {requirementPct}%
-                        </Badge>
+                        <MatchScoreBadge score={requirementPct} qualificationPassed={job.hard_match_breakdown.qualification.passed} />
                         {job.hard_match_reasons.length > 0 && (
                             <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/40">
                                 ✨ {job.hard_match_reasons[0]}

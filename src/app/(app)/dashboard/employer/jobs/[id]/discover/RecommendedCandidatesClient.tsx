@@ -4,6 +4,7 @@ import { PageHeader, Badge } from "@/components/dashboard/ui";
 import { Sparkles, Users, Lock, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { MatchScoreBadge } from "@/components/matching/UniversalMatchComponents";
 
 export default function RecommendedCandidatesClient({ 
     job,
@@ -23,8 +24,10 @@ export default function RecommendedCandidatesClient({
 
     const renderCandidateCard = (candidate: any, index: number) => {
         const shouldBlur = isLocked && index >= 3;
-        const semanticPct = Math.round((candidate.similarity || 0) * 100);
         const requirementPct = Math.round(candidate.hard_match_score || 0);
+        const qualBreakdown = candidate.hard_match_breakdown?.qualification;
+        const isQualPassed = qualBreakdown?.passed ?? true;
+        const verifiedCerts = candidate.verified_certificates || [];
 
         return (
             <div key={candidate.id} className="relative overflow-hidden rounded-xl border border-stone-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -39,26 +42,52 @@ export default function RecommendedCandidatesClient({
                                 <p className="text-sm text-slate-500">{candidate.location || "No Location"}</p>
                             </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
-                            <Badge 
-                                variant={requirementPct >= 80 ? "green" : requirementPct >= 60 ? "yellow" : "slate"}
-                            >
-                                <Sparkles size={10} className="mr-1 inline" />
-                                {requirementPct}% Requirements
-                            </Badge>
-                            <Badge 
-                                variant={semanticPct >= 70 ? "green" : semanticPct >= 50 ? "blue" : "slate"}
-                            >
-                                <Users size={10} className="mr-1 inline" />
-                                {semanticPct}% Semantic
-                            </Badge>
+                        <div className="flex flex-col items-end gap-1.5">
+                            <MatchScoreBadge score={requirementPct} qualificationPassed={isQualPassed} />
+                            {isQualPassed ? (
+                                <span className="inline-flex items-center text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md dark:bg-emerald-950/40 dark:text-emerald-300">
+                                    ✓ Qualification Aligned
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center text-[11px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md dark:bg-amber-950/40 dark:text-amber-300">
+                                    ⚠ Partial Qualification
+                                </span>
+                            )}
                         </div>
+                    </div>
+
+                    {/* Candidate Qualification & Experience Badges */}
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                        {candidate.qualification && (
+                            <span className="rounded-md bg-stone-100 px-2.5 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                🎓 {candidate.qualification}
+                            </span>
+                        )}
+                        {candidate.seniority_level && (
+                            <span className="rounded-md bg-stone-100 px-2.5 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                💼 {candidate.seniority_level}
+                            </span>
+                        )}
                     </div>
                     
                     {candidate.bio && (
-                        <p className="mt-4 text-sm text-slate-600 line-clamp-2 dark:text-slate-300">
+                        <p className="mt-3 text-sm text-slate-600 line-clamp-2 dark:text-slate-300">
                             {candidate.bio}
                         </p>
+                    )}
+
+                    {/* Verified Certificates Badge Section */}
+                    {verifiedCerts.length > 0 && (
+                        <div className="mt-3 space-y-1">
+                            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Verified Certificates</p>
+                            <div className="flex flex-wrap gap-1.5">
+                                {verifiedCerts.map((cert: string, i: number) => (
+                                    <span key={i} className="rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+                                        📜 {cert}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
                     )}
 
                     {/* Matching Skills Breakdown */}

@@ -109,7 +109,7 @@ export class RecommendationService {
     const seekerProfile: SeekerProfile = {
       skills: seeker.skills || [],
       experience: seeker.experience || [],
-      qualification: resolveHighestEducationQualification(seeker.qualification || null, seeker.education || []),
+      qualification: resolveHighestEducationQualification(null, seeker.education || []),
       education: seeker.education || [],
       certifications: [],
     };
@@ -211,7 +211,7 @@ export class RecommendationService {
       throw new Error("Unable to retrieve job requirements for candidate matching.");
     }
 
-    // 3. Fetch candidate job seekers directly (same approach as Admin Drawer)
+    // 3. Fetch candidate job seekers directly
     const { data: seekerRows, error: seekerRowsError } = await supabase
       .from('job_seekers')
       .select('id, full_name, bio, location, skills, completion, experience, education, qualification, seniority_level, employment_status, profile_visibility, avatar_url')
@@ -230,21 +230,45 @@ export class RecommendationService {
       return isCompleteEnough || hasSkills || hasBio || seeker.qualification;
     });
 
+    // Fetch verified certificates for filtered candidates
+    const filteredSeekerIds = filteredSeekers.map((s: any) => s.id);
+    let seekerCertsMap: Record<string, string[]> = {};
+    if (filteredSeekerIds.length > 0) {
+      const { data: certRows } = await supabase
+        .from('certificates')
+        .select('seeker_id, title')
+        .in('seeker_id', filteredSeekerIds);
+
+      if (certRows) {
+        for (const cert of certRows) {
+          if (!cert.title) continue;
+          if (!seekerCertsMap[cert.seeker_id]) {
+            seekerCertsMap[cert.seeker_id] = [];
+          }
+          seekerCertsMap[cert.seeker_id].push(cert.title);
+        }
+      }
+    }
+
     // Score all candidates using scoreJobSeekerMatch
     const evaluatedCandidates = filteredSeekers
       .map((seeker: any) => {
+        const certList = seekerCertsMap[seeker.id] || [];
         const seekerProfile: SeekerProfile = {
           skills: seeker.skills || [],
           experience: seeker.experience || [],
-          qualification: resolveHighestEducationQualification(seeker.qualification || null, seeker.education || []),
+          qualification: resolveHighestEducationQualification(null, seeker.education || []),
           education: seeker.education || [],
-          certifications: [],
+          certifications: certList,
         };
 
         const structuredMatch = scoreJobSeekerMatch(job, seekerProfile);
 
         return {
-          seeker,
+          seeker: {
+            ...seeker,
+            verified_certificates: certList,
+          },
           structuredMatch,
         };
       });
