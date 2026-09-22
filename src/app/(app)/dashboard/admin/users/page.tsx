@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 export default async function UserManagementPage({
     searchParams,
 }: {
-    searchParams: Promise<{ page?: string; search?: string; role?: string }>;
+    searchParams: Promise<{ page?: string; limit?: string; search?: string; role?: string }>;
 }) {
     const auth = await validateAuth(["ADMIN"], false);
     if (auth.error || !auth.user) {
@@ -17,7 +17,7 @@ export default async function UserManagementPage({
     const page = parseInt(params.page || "1");
     const search = params.search || "";
     const role = params.role || "ALL";
-    const limit = 50;
+    const limit = parseInt(params.limit || "20");
 
     let users: any[] = [];
     let total = 0;

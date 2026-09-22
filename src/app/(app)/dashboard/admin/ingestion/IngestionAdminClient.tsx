@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import {
     Activity, CheckCircle2, Clock, Database, RefreshCw,
     Zap, Building2, MapPin, Power, ShieldCheck, ShieldAlert,
-    Search, Filter, Check, X, Code, FileText, ChevronRight, Eye, Trash2
+    Filter, Check, X, Code, FileText, Eye, Trash2
 } from "lucide-react";
+import { Pagination, SearchInput } from "@/components/dashboard/ui";
 import { JobPostingForm } from "@/components/jobs/JobPostingForm";
 import {
     JobQuickFormValues,
@@ -39,7 +40,7 @@ export default function IngestionAdminClient() {
     const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "NEEDS_MORE_DATA">("ALL");
     const [searchQuery, setSearchQuery] = useState("");
     const [page, setPage] = useState(1);
-    const limit = 50;
+    const [limit, setLimit] = useState(20);
     const [selectedItem, setSelectedItem] = useState<any | null>(null);
     const [editedItem, setEditedItem] = useState<any | null>(null);
     const [inspectMode, setInspectMode] = useState<"form" | "raw">("form");
@@ -366,21 +367,12 @@ export default function IngestionAdminClient() {
                         {/* Search & Filter Toolbar */}
                         <div className="bg-gray-50 dark:bg-gray-800/60 p-3 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-wrap gap-3 items-center justify-between">
                             <div className="flex items-center gap-2 flex-1 min-w-[240px]">
-                                <div className="relative w-full">
-                                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search title, company, or location..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full text-xs pl-9 pr-3 py-2 border rounded-lg bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                                    />
-                                    {searchQuery && (
-                                        <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
-                                    )}
-                                </div>
+                                <SearchInput
+                                    value={searchQuery}
+                                    onChange={setSearchQuery}
+                                    placeholder="Search title, company, or location..."
+                                    className="w-full"
+                                />
                             </div>
 
                             <div className="flex items-center gap-2 flex-wrap">
@@ -549,20 +541,18 @@ export default function IngestionAdminClient() {
                                 ))}
 
                                 {/* Pagination */}
-                                {totalPages > 1 && (
-                                    <div className="flex items-center justify-center gap-2 mt-4">
-                                        <button
-                                            disabled={page === 1}
-                                            onClick={() => setPage(page - 1)}
-                                            className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-xs font-medium rounded-lg disabled:opacity-50"
-                                        >Previous</button>
-                                        <span className="text-xs text-gray-500">Page {page} of {totalPages}</span>
-                                        <button
-                                            disabled={page === totalPages}
-                                            onClick={() => setPage(page + 1)}
-                                            className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-xs font-medium rounded-lg disabled:opacity-50"
-                                        >Next</button>
-                                    </div>
+                                {data.totalCount > 0 && (
+                                    <Pagination
+                                        currentPage={page}
+                                        totalPages={totalPages}
+                                        totalItems={data.totalCount}
+                                        itemsPerPage={limit}
+                                        onPageChange={setPage}
+                                        onLimitChange={(newLimit) => {
+                                            setLimit(newLimit);
+                                            setPage(1);
+                                        }}
+                                    />
                                 )}
                             </>
                         )}

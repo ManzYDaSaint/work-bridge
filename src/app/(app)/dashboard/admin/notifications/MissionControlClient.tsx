@@ -5,9 +5,9 @@ import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import { 
     AlertCircle, AlertTriangle, CheckCircle2, Info, 
     Activity, Mail, Users, Briefcase, FileText, 
-    Zap, CreditCard, ShieldAlert, Cpu, HeartPulse, Search, Calendar
+    Zap, CreditCard, ShieldAlert, Cpu, HeartPulse, Calendar
 } from "lucide-react";
-
+import { SearchInput, Pagination } from "@/components/dashboard/ui";
 type EventCategory = "USER" | "EMPLOYER" | "JOB" | "APPLICATION" | "MATCHING" | "NOTIFICATION" | "AUTOMATION" | "PAYMENT" | "SYSTEM" | "SECURITY";
 type EventSeverity = "INFO" | "SUCCESS" | "WARNING" | "CRITICAL";
 
@@ -88,6 +88,9 @@ export default function MissionControlClient({ initialEvents }: { initialEvents:
         };
     }, []);
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const [limit, setLimit] = useState(20);
+
     const filteredEvents = useMemo(() => {
         return events.filter(e => {
             if (filterCategory !== "ALL" && e.category !== filterCategory) return false;
@@ -112,6 +115,16 @@ export default function MissionControlClient({ initialEvents }: { initialEvents:
             return true;
         });
     }, [events, filterCategory, filterSeverity, deferredSearchQuery, filterDays]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterCategory, filterSeverity, deferredSearchQuery, filterDays]);
+
+    const totalPages = Math.ceil(filteredEvents.length / limit) || 1;
+    const paginatedEvents = useMemo(() => {
+        const start = (currentPage - 1) * limit;
+        return filteredEvents.slice(start, start + limit);
+    }, [filteredEvents, currentPage, limit]);
 
     const criticalCount = events.filter(e => e.severity === "CRITICAL").length;
     const warningCount = events.filter(e => e.severity === "WARNING").length;
@@ -161,16 +174,11 @@ export default function MissionControlClient({ initialEvents }: { initialEvents:
             <div className="flex flex-col sm:flex-row flex-wrap gap-4 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
                 <div className="flex-1 min-w-[200px]">
                     <label className="block text-xs font-medium text-slate-500 mb-1">Search</label>
-                    <div className="relative">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input 
-                            type="text"
-                            placeholder="Search events..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm dark:bg-slate-800 dark:border-slate-700"
-                        />
-                    </div>
+                    <SearchInput 
+                        placeholder="Search events..."
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                    />
                 </div>
                 <div className="w-full sm:w-auto">
                     <label className="block text-xs font-medium text-slate-500 mb-1">Time Range</label>
@@ -228,7 +236,7 @@ export default function MissionControlClient({ initialEvents }: { initialEvents:
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {filteredEvents.map(event => {
+                        {paginatedEvents.map(event => {
                             const CatIcon = CATEGORY_ICONS[event.category] || Activity;
                             const SevIcon = SEVERITY_ICONS[event.severity] || Info;
                             const colorClass = SEVERITY_COLORS[event.severity] || SEVERITY_COLORS.INFO;
@@ -278,6 +286,20 @@ export default function MissionControlClient({ initialEvents }: { initialEvents:
                     </div>
                 )}
             </div>
+
+            {filteredEvents.length > 0 && (
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={filteredEvents.length}
+                    itemsPerPage={limit}
+                    onPageChange={setCurrentPage}
+                    onLimitChange={(newLimit) => {
+                        setLimit(newLimit);
+                        setCurrentPage(1);
+                    }}
+                />
+            )}
         </div>
     );
 }

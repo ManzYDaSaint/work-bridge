@@ -1,23 +1,22 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import { 
-  Crown, Sparkles, CheckCircle2, ShieldCheck, Zap, 
-  CreditCard, ArrowRight, Folder, Users, Star, 
-  MessageSquare, Lock, X
-} from 'lucide-react';
-import Link from 'next/link';
+  Crown, Sparkles, CheckCircle2, 
+  CreditCard, ArrowRight, Lock, X
+} from "lucide-react";
+import { PageHeader, Badge } from "@/components/dashboard/ui";
 
 export default function EmployerSubscriptionClient({ employer }: { employer: any }) {
-  const currentPlan = employer?.plan || 'FREE';
-  const isPro = currentPlan === 'PRO' || currentPlan === 'ENTERPRISE';
+  const currentPlan = employer?.plan || "FREE";
+  const isPro = currentPlan === "PRO" || currentPlan === "ENTERPRISE";
 
-  const [selectedPeriod, setSelectedPeriod] = useState<'MONTHLY' | 'QUARTERLY'>('MONTHLY');
+  const [selectedPeriod, setSelectedPeriod] = useState<"MONTHLY" | "QUARTERLY">("MONTHLY");
   const [submitting, setSubmitting] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
 
-  const price = selectedPeriod === 'MONTHLY' ? 25000 : 60000;
-  const periodLabel = selectedPeriod === 'MONTHLY' ? '/ month' : '/ 3 months (Save 20%)';
+  const price = selectedPeriod === "MONTHLY" ? 25000 : 60000;
+  const periodLabel = selectedPeriod === "MONTHLY" ? "/ month" : "/ 3 months (Save 20%)";
 
   const handleInitiateUpgrade = () => {
     setShowCheckout(true);
@@ -26,12 +25,11 @@ export default function EmployerSubscriptionClient({ employer }: { employer: any
   const handleCheckout = async () => {
     setSubmitting(true);
     try {
-      // Initiate PayChangu checkout for Employer Pro
-      const res = await fetch('/api/employer/subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/employer/subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: 'INITIATE_CHECKOUT',
+          action: "INITIATE_CHECKOUT",
           period: selectedPeriod,
           amount: price,
         }),
@@ -41,256 +39,234 @@ export default function EmployerSubscriptionClient({ employer }: { employer: any
       if (res.ok && data.paymentUrl) {
         window.location.href = data.paymentUrl;
       } else {
-        alert(data.error || 'Failed to initialize payment');
+        alert(data.error || "Failed to initialize payment");
       }
     } catch (err: any) {
-      alert(err.message || 'Payment processing error');
+      alert(err.message || "Payment processing error");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Header Banner */}
-      <div style={{
-        background: 'linear-gradient(135deg, #16324F 0%, #1E40AF 100%)',
-        borderRadius: '16px',
-        padding: '32px',
-        color: '#FFFFFF',
-        marginBottom: '32px',
-        boxShadow: '0 10px 25px -5px rgba(22, 50, 79, 0.2)',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(255,255,255,0.15)', padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, marginBottom: '12px', backdropFilter: 'blur(4px)' }}>
-            <Crown size={14} style={{ color: '#F59E0B' }} /> Aganyu Employer Workspace
+    <div className="space-y-6 pb-20 max-w-5xl mx-auto">
+      <PageHeader
+        title="Employer Plans & Billing"
+        subtitle="Compare tiers, unlock candidate talent pools, scorecard rubrics, and direct 1-tap WhatsApp outreach."
+      />
+
+      {/* Header Status Banner */}
+      <div className={`rounded-3xl border p-6 transition-all ${isPro
+        ? "border-amber-400/60 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20"
+        : "border-stone-200/80 bg-white dark:border-slate-800 dark:bg-slate-900"
+        }`}>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start sm:items-center gap-4">
+            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${isPro ? "bg-amber-400 text-slate-950 shadow-xs" : "bg-stone-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                }`}>
+              <Crown size={24} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                  {isPro ? "Employer Pro Active" : "Free Starter Plan"}
+                </h3>
+                <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold tracking-wider ${isPro ? "bg-amber-400 text-slate-950" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    }`}>
+                  {currentPlan}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                {isPro
+                  ? "Your team has full access to unlimited listings, talent pools, and candidate scorecards."
+                  : "Upgrade to Employer Pro for unlimited candidate views, 1-tap WhatsApp invites, and verified badges."}
+              </p>
+            </div>
           </div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>
-            Scale Your Hiring with Employer Pro
-          </h1>
-          <p style={{ fontSize: '15px', opacity: 0.9, maxWidth: '640px', margin: 0, lineHeight: 1.5 }}>
-            Compare plans, unlock unlimited talent pools, structured scorecard evaluations, direct 1-tap WhatsApp invitations, and verified employer badges.
-          </p>
+
+          {!isPro && (
+            <button
+              onClick={handleInitiateUpgrade}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-[#16324f] px-5 py-2.5 text-xs font-bold text-white transition hover:bg-[#16324f]/90 dark:bg-amber-400 dark:text-slate-950 dark:hover:bg-amber-300"
+            >
+              <Sparkles size={15} /> Upgrade to Pro
+            </button>
+          )}
         </div>
       </div>
 
       {/* Period Switcher */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '32px' }}>
-        <div style={{ backgroundColor: '#F3F4F6', padding: '4px', borderRadius: '10px', display: 'flex', gap: '4px' }}>
+      <div className="flex justify-center">
+        <div className="inline-flex items-center gap-1 rounded-2xl border border-stone-200/80 bg-stone-100/70 p-1 dark:border-slate-800 dark:bg-slate-900/80">
           <button
             type="button"
-            onClick={() => setSelectedPeriod('MONTHLY')}
-            style={{
-              padding: '8px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              backgroundColor: selectedPeriod === 'MONTHLY' ? '#FFFFFF' : 'transparent',
-              color: selectedPeriod === 'MONTHLY' ? '#111827' : '#6B7280',
-              boxShadow: selectedPeriod === 'MONTHLY' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-              transition: 'all 0.15s ease'
-            }}
+            onClick={() => setSelectedPeriod("MONTHLY")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              selectedPeriod === "MONTHLY"
+                ? "bg-white dark:bg-slate-800 text-[#16324f] dark:text-amber-400 shadow-xs"
+                : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
           >
-            Monthly Billing (MWK 25,000)
+            Monthly (MWK 25,000)
           </button>
           <button
             type="button"
-            onClick={() => setSelectedPeriod('QUARTERLY')}
-            style={{
-              padding: '8px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              backgroundColor: selectedPeriod === 'QUARTERLY' ? '#FFFFFF' : 'transparent',
-              color: selectedPeriod === 'QUARTERLY' ? '#111827' : '#6B7280',
-              boxShadow: selectedPeriod === 'QUARTERLY' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.15s ease'
-            }}
+            onClick={() => setSelectedPeriod("QUARTERLY")}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              selectedPeriod === "QUARTERLY"
+                ? "bg-white dark:bg-slate-800 text-[#16324f] dark:text-amber-400 shadow-xs"
+                : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+            }`}
           >
-            Quarterly Billing (Save 20%)
-            <span style={{ backgroundColor: '#D1FAE5', color: '#065F46', fontSize: '10px', padding: '2px 6px', borderRadius: '10px' }}>Best Value</span>
+            Quarterly (Save 20%)
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+              Best Value
+            </span>
           </button>
         </div>
       </div>
 
-      {/* Side-by-Side Comparison Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'stretch' }}>
+      {/* Plans Comparison Grid */}
+      <div className="grid gap-6 md:grid-cols-2 items-stretch">
         {/* FREE PLAN CARD */}
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E5E7EB',
-          borderRadius: '16px',
-          padding: '28px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-        }}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#111827', margin: 0 }}>Free Starter Plan</h3>
-              {currentPlan === 'FREE' && (
-                <span style={{ backgroundColor: '#F3F4F6', color: '#374151', fontSize: '12px', fontWeight: 600, padding: '4px 10px', borderRadius: '12px' }}>
-                  Current Plan
-                </span>
+        <div className="flex flex-col justify-between rounded-3xl border border-stone-200/90 bg-white p-6 dark:border-slate-800 dark:bg-slate-900/90 transition-all hover:border-stone-300 dark:hover:border-slate-700">
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Basic Tier</span>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">Free Starter</h3>
+              </div>
+              {currentPlan === "FREE" && (
+                <Badge label="Current Active Plan" variant="slate" />
               )}
             </div>
-            <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '20px' }}>Standard tier for single job postings and initial candidate testing.</p>
+            
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Standard tier for single job postings and initial candidate discovery.
+            </p>
 
-            <div style={{ fontSize: '32px', fontWeight: 800, color: '#111827', marginBottom: '24px' }}>
-              MWK 0 <span style={{ fontSize: '14px', fontWeight: 500, color: '#6B7280' }}>/ forever</span>
+            <div className="py-2 border-y border-stone-100 dark:border-slate-800/80">
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">MWK 0</span>
+                <span className="text-xs font-medium text-slate-400">/ forever</span>
+              </div>
             </div>
 
-            <h4 style={{ fontSize: '13px', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
-              Plan Caps & Restrictions:
-            </h4>
-
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#4B5563' }}>
-                <CheckCircle2 size={18} style={{ color: '#059669', flexShrink: 0 }} /> 1 Active Job Listing at a time
-              </li>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#D97706' }}>
-                <Lock size={18} style={{ color: '#D97706', flexShrink: 0 }} /> Max 1 Talent Pool folder (5 candidates max)
-              </li>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#D97706' }}>
-                <Lock size={18} style={{ color: '#D97706', flexShrink: 0 }} /> Max 30 Candidate contact views per month
-              </li>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#4B5563' }}>
-                <CheckCircle2 size={18} style={{ color: '#059669', flexShrink: 0 }} /> Basic Candidate Screening & Status Pipeline
-              </li>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#9CA3AF' }}>
-                <X size={18} style={{ color: '#9CA3AF', flexShrink: 0 }} /> No Direct 1-Tap WhatsApp Invites
-              </li>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#9CA3AF' }}>
-                <X size={18} style={{ color: '#9CA3AF', flexShrink: 0 }} /> No Verified Recruiter Badge
-              </li>
-            </ul>
+            <div className="space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Included Caps & Features</p>
+              <ul className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300">
+                <li className="flex items-center gap-2.5">
+                  <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span><strong>1 Active Job Listing</strong> at a time</span>
+                </li>
+                <li className="flex items-center gap-2.5 text-slate-500">
+                  <Lock size={15} className="text-amber-500/80 shrink-0" />
+                  <span>Max 1 Talent Pool folder (5 candidates)</span>
+                </li>
+                <li className="flex items-center gap-2.5 text-slate-500">
+                  <Lock size={15} className="text-amber-500/80 shrink-0" />
+                  <span>30 Candidate contact views / month</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Basic Applicant Pipeline Board</span>
+                </li>
+                <li className="flex items-center gap-2.5 text-slate-400">
+                  <X size={15} className="text-slate-300 dark:text-slate-700 shrink-0" />
+                  <span className="line-through decoration-slate-300 dark:decoration-slate-700">Direct 1-Tap WhatsApp Invites</span>
+                </li>
+                <li className="flex items-center gap-2.5 text-slate-400">
+                  <X size={15} className="text-slate-300 dark:text-slate-700 shrink-0" />
+                  <span className="line-through decoration-slate-300 dark:decoration-slate-700">Verified Recruiter Badge</span>
+                </li>
+              </ul>
+            </div>
           </div>
 
-          <div style={{ marginTop: '28px' }}>
+          <div className="pt-6">
             <button
               disabled
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid #D1D5DB',
-                backgroundColor: '#F9FAFB',
-                color: '#6B7280',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'not-allowed'
-              }}
+              className="w-full rounded-2xl border border-stone-200 bg-stone-50/80 py-3 text-center text-xs font-bold text-slate-400 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-500"
             >
-              {currentPlan === 'FREE' ? 'Active Free Plan' : 'Basic Tier'}
+              {currentPlan === "FREE" ? "Active Free Starter" : "Standard Tier"}
             </button>
           </div>
         </div>
 
         {/* PRO PLAN CARD */}
-        <div style={{
-          backgroundColor: '#FFFFFF',
-          border: '2px solid #2563EB',
-          borderRadius: '16px',
-          padding: '28px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          boxShadow: '0 10px 25px -5px rgba(37, 99, 235, 0.1)',
-          position: 'relative'
-        }}>
-          <div style={{
-            position: 'absolute', top: '-12px', right: '24px', backgroundColor: '#2563EB', color: '#FFFFFF', fontSize: '11px', fontWeight: 700, padding: '4px 12px', borderRadius: '12px', textTransform: 'uppercase', letterSpacing: '0.5px'
-          }}>
-            Recommended Enterprise
-          </div>
+        <div className="relative flex flex-col justify-between rounded-3xl border-2 border-[#16324f] bg-white p-6 dark:border-amber-400 dark:bg-slate-900 transition-all hover:shadow-lg dark:hover:shadow-amber-400/5">
+          <span className="absolute -top-3 right-6 rounded-full bg-[#16324f] px-3.5 py-1 text-[10px] font-extrabold text-white uppercase tracking-wider dark:bg-amber-400 dark:text-slate-950 shadow-xs">
+            Recommended
+          </span>
 
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#111827', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Sparkles size={20} style={{ color: '#2563EB' }} /> Employer Pro Plan
-              </h3>
-            </div>
-            <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '20px' }}>Full access to custom talent pools, evaluation scorecards, & high-velocity hiring.</p>
-
-            <div style={{ fontSize: '32px', fontWeight: 800, color: '#111827', marginBottom: '24px' }}>
-              MWK {price.toLocaleString()} <span style={{ fontSize: '14px', fontWeight: 500, color: '#6B7280' }}>{periodLabel}</span>
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#16324f] dark:text-amber-400 flex items-center gap-1">
+                  <Sparkles size={12} className="text-amber-500" /> Unlimited Recruiter Suite
+                </span>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">Employer Pro</h3>
+              </div>
             </div>
 
-            <h4 style={{ fontSize: '13px', fontWeight: 600, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
-              Unlimited Pro Features:
-            </h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Full access to candidate talent pools, structured scorecard rubrics, and instant 1-tap outreach.
+            </p>
 
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#111827', fontWeight: 600 }}>
-                <CheckCircle2 size={18} style={{ color: '#2563EB', flexShrink: 0 }} /> Unlimited Active Job Listings
-              </li>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#111827', fontWeight: 600 }}>
-                <CheckCircle2 size={18} style={{ color: '#2563EB', flexShrink: 0 }} /> Unlimited Custom Talent Pools & Storage
-              </li>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#111827', fontWeight: 600 }}>
-                <CheckCircle2 size={18} style={{ color: '#2563EB', flexShrink: 0 }} /> Unlimited Candidate Contact Views
-              </li>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#111827', fontWeight: 600 }}>
-                <CheckCircle2 size={18} style={{ color: '#2563EB', flexShrink: 0 }} /> Candidate Scorecard Evaluations (1-5★ Rubrics)
-              </li>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#111827', fontWeight: 600 }}>
-                <CheckCircle2 size={18} style={{ color: '#2563EB', flexShrink: 0 }} /> Direct 1-Tap WhatsApp Candidate Outreach
-              </li>
-              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#111827', fontWeight: 600 }}>
-                <CheckCircle2 size={18} style={{ color: '#2563EB', flexShrink: 0 }} /> Verified Recruiter Badge
-              </li>
-            </ul>
+            <div className="py-2 border-y border-stone-100 dark:border-slate-800/80">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                  MWK {price.toLocaleString()}
+                </span>
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{periodLabel}</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#16324f] dark:text-amber-400">Everything in Free, Plus Unlocks:</p>
+              <ul className="space-y-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                <li className="flex items-center gap-2.5">
+                  <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span><strong>Unlimited Active Job Listings</strong></span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Unlimited Custom Talent Pools & Folders</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Unlimited Candidate Contact Views</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Candidate Scorecards (1-5★ Evaluation Rubrics)</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Direct 1-Tap WhatsApp Candidate Outreach</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Verified Recruiter Badge</span>
+                </li>
+              </ul>
+            </div>
           </div>
 
-          <div style={{ marginTop: '28px' }}>
+          <div className="pt-6">
             {isPro ? (
               <button
                 disabled
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  backgroundColor: '#D1FAE5',
-                  color: '#065F46',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: 'default'
-                }}
+                className="w-full rounded-2xl bg-emerald-50 py-3 text-center text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
               >
-                ✓ Active Employer Pro Plan
+                ✓ Active Employer Pro Subscription
               </button>
             ) : (
               <button
                 onClick={handleInitiateUpgrade}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  backgroundColor: '#2563EB',
-                  color: '#FFFFFF',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
-                }}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-[#16324f] py-3 text-xs font-bold text-white transition hover:bg-[#16324f]/90 dark:bg-amber-400 dark:text-slate-950 dark:hover:bg-amber-300 shadow-xs"
               >
-                Upgrade to Employer Pro <ArrowRight size={16} />
+                Upgrade to Employer Pro <ArrowRight size={15} />
               </button>
             )}
           </div>
@@ -299,61 +275,51 @@ export default function EmployerSubscriptionClient({ employer }: { employer: any
 
       {/* Checkout Modal */}
       {showCheckout && (
-        <div style={{
-          position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50
-        }}>
-          <div style={{
-            backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#111827', margin: 0 }}>PayChangu Online Checkout</h3>
-              <button onClick={() => setShowCheckout(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280' }}>
-                <X size={20} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-stone-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 space-y-5">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-3 dark:border-slate-800">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <CreditCard size={18} className="text-amber-500" /> PayChangu Online Checkout
+              </h3>
+              <button onClick={() => setShowCheckout(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <X size={18} />
               </button>
             </div>
 
-            <div style={{ backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '14px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#4B5563', marginBottom: '6px' }}>
-                <span>Plan:</span>
-                <strong style={{ color: '#111827' }}>Employer Pro ({selectedPeriod})</strong>
+            <div className="rounded-2xl border border-stone-200 bg-stone-50/60 p-4 dark:border-slate-800 dark:bg-slate-800/40 space-y-2 text-xs">
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                <span>Plan Duration:</span>
+                <strong className="text-slate-900 dark:text-white">Employer Pro ({selectedPeriod})</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#4B5563', marginBottom: '6px' }}>
-                <span>Amount:</span>
-                <strong style={{ color: '#2563EB', fontSize: '15px' }}>MWK {price.toLocaleString()}</strong>
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                <span>Total Amount:</span>
+                <strong className="text-base font-bold text-[#16324f] dark:text-amber-400">MWK {price.toLocaleString()}</strong>
               </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#6B7280' }}>
-                  <span>Payment Method:</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: '#E5173F' }}>
-                    <span>📱</span> Airtel Money only
-                  </span>
-                </div>
+              <div className="flex justify-between text-slate-500 pt-1 border-t border-stone-200/60 dark:border-slate-700">
+                <span>Payment Gateway:</span>
+                <span className="font-semibold text-rose-600 dark:text-rose-400">Airtel Money / Mpamba / Card</span>
+              </div>
             </div>
 
-            <button
-              onClick={handleCheckout}
-              disabled={submitting}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: '#2563EB',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 700,
-                cursor: submitting ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-            >
-              <CreditCard size={18} />
-              {submitting ? 'Redirecting to Gateway...' : 'Proceed to PayChangu Checkout'}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCheckout(false)}
+                className="flex-1 rounded-2xl border border-stone-200 py-2.5 text-xs font-bold text-slate-600 hover:bg-stone-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCheckout}
+                disabled={submitting}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-[#16324f] py-2.5 text-xs font-bold text-white transition hover:bg-[#16324f]/90 dark:bg-amber-400 dark:text-slate-950 dark:hover:bg-amber-300"
+              >
+                {submitting ? "Redirecting..." : "Proceed to Checkout"}
+              </button>
+            </div>
           </div>
         </div>
       )}
     </div>
   );
 }
+

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { CheckCircle, XCircle, Search, Loader2, ExternalLink, Award } from "lucide-react";
-import { PageHeader } from "@/components/dashboard/ui";
+import { CheckCircle, XCircle, Loader2, ExternalLink, Award } from "lucide-react";
+import { PageHeader, SearchInput } from "@/components/dashboard/ui";
 import { toast } from "sonner";
 
 export default function CertificateVerificationClient({ 
@@ -55,16 +55,12 @@ export default function CertificateVerificationClient({
                 subtitle="Review and verify professional credentials to increase talent trust." 
             />
 
-            <div className="relative max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                    type="text"
-                    placeholder="Search by title or candidate..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full rounded-2xl border border-stone-200 bg-white px-12 py-3 text-sm outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900"
-                />
-            </div>
+            <SearchInput
+                placeholder="Search by title or candidate..."
+                value={search}
+                onChange={setSearch}
+                className="max-w-md"
+            />
 
             <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
                 <div className="grid grid-cols-1 gap-2 border-b border-stone-200/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:border-slate-800 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]">

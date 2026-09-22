@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { validateAuth } from "@/lib/auth-guard";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend } from "@/lib/resend";
+import { sendMetaWhatsAppMessage, logWhatsAppMessage } from "@/lib/whatsapp-messages";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_URL || "https://aganyu.com";
 const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || "Aganyu <hello@aganyu.com>";
@@ -21,6 +22,7 @@ function getEmailConfigError() {
 }
 
 type Audience = "ALL" | "SEEKERS" | "EMPLOYERS" | "PREMIUM_SEEKERS";
+type DeliveryChannel = "EMAIL" | "WHATSAPP" | "BOTH";
 
 function escapeHtml(value: string) {
     return value
@@ -49,93 +51,167 @@ function replaceTemplateVars(raw: string, recipient: { first_name: string; role:
         .replace(/{{company_name}}/gi, recipient.role === "EMPLOYER" ? "your company" : "Aganyu");
 }
 
-async function getRecipients(audience: Audience, limit = 20) {
+async function getRecipients(audience: Audience, limit = 5000) {
     const supabase = getSupabaseAdminClient();
-    if (!supabase) return [] as Array<{ email: string; first_name: string; role: string; profile_url: string }>;
+    if (!supabase) return [];
 
-    // Default: fetch users (id, email, role)
-    if (audience === "ALL" || audience === "SEEKERS" || audience === "EMPLOYERS") {
-        let query = supabase.from("users").select("id, email, role");
-        if (audience === "SEEKERS") query = query.eq("role", "JOB_SEEKER");
-        if (audience === "EMPLOYERS") query = query.eq("role", "EMPLOYER");
+    const now = new Date().toISOString();
 
-        const { data, error } = await query.order("created_at", { ascending: false }).limit(limit + 25);
-        if (error) throw error;
+    let query = supabase
+        .from("users")
+        .select(`
+            id,
+            email,
+            role,
+            job_seekers (
+                id,
+                full_name,
+                phone,
+                is_subscribed,
+                premium_subscriptions (
+                    id,
+                    status,
+                    ends_at
+                )
+            )
+        `);
 
-        return (data || [])
-            .filter((user: any) => user.email && user.email.includes("@"))
-            .map((user: any) => {
-                const fullEmail = String(user.email).trim();
-                const localPart = fullEmail.split("@")[0] || "there";
-                const firstName = localPart
-                    .replace(/[._-]+/g, " ")
-                    .replace(/\b\w/g, (char) => char.toUpperCase())
-                    .trim();
+    if (audience === "SEEKERS") query = query.eq("role", "JOB_SEEKER");
+    if (audience === "EMPLOYERS") query = query.eq("role", "EMPLOYER");
 
-                return {
-                    email: fullEmail,
-                    first_name: firstName,
-                    role: user.role,
-                    profile_url: buildProfileUrl(user.role),
-                };
-            });
+    const { data: users, error } = await query.order("created_at", { ascending: false }).limit(limit);
+    if (error) {
+        console.error("[getRecipients Error]:", error);
+        throw error;
     }
 
-    // PREMIUM_SEEKERS: use both current schema state and active premium subscription rows.
-    if (audience === "PREMIUM_SEEKERS") {
-        const now = new Date().toISOString();
+    const results = [];
 
-        const [{ data: subs, error: subsError }, { data: premiumSeekers, error: premiumSeekersError }] = await Promise.all([
-            supabase
-                .from("premium_subscriptions")
-                .select("seeker_id, ends_at")
-                .eq("status", "ACTIVE")
-                .gt("ends_at", now),
-            supabase
-                .from("job_seekers")
-                .select("id")
-                .eq("is_subscribed", true),
-        ]);
+    for (const user of users || []) {
+        const fullEmail = String(user.email || "").trim();
+        if (!fullEmail || !fullEmail.includes("@")) continue;
 
-        if (subsError) throw subsError;
-        if (premiumSeekersError) throw premiumSeekersError;
+        const seeker = Array.isArray(user.job_seekers) ? user.job_seekers[0] : user.job_seekers;
+        const subs: any = seeker?.premium_subscriptions || [];
+        const hasActiveSub = Array.isArray(subs)
+            ? subs.some((s: any) => s.status === "ACTIVE" && new Date(s.ends_at) > new Date(now))
+            : (subs?.status === "ACTIVE" && new Date(subs?.ends_at) > new Date(now));
 
-        const seekerIds = Array.from(new Set([
-            ...((subs || []).map((s: any) => s.seeker_id).filter(Boolean)),
-            ...((premiumSeekers || []).map((s: any) => s.id).filter(Boolean)),
-        ]));
+        const isPremium = hasActiveSub || !!seeker?.is_subscribed;
 
-        if (seekerIds.length === 0) return [];
+        if (audience === "PREMIUM_SEEKERS" && !isPremium) {
+            continue;
+        }
 
-        const { data: users, error: usersError } = await supabase
-            .from("users")
-            .select("id, email, role")
-            .in("id", seekerIds)
+        const localPart = fullEmail.split("@")[0] || "there";
+        const firstName = seeker?.full_name?.trim()?.split(" ")[0] || localPart
+            .replace(/[._-]+/g, " ")
+            .replace(/\b\w/g, (char) => char.toUpperCase())
+            .trim();
+
+        results.push({
+            user_id: user.id,
+            email: fullEmail,
+            first_name: firstName,
+            phone: seeker?.phone || null,
+            is_premium: isPremium,
+            role: user.role,
+            profile_url: buildProfileUrl(user.role),
+        });
+    }
+
+    return results;
+}
+
+/**
+ * Retrieves inbound & outbound WhatsApp conversations for the Admin Live WhatsApp Inbox
+ */
+async function getWhatsAppConversations() {
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) return [];
+
+    let messages: any[] = [];
+
+    try {
+        const { data: dbMessages } = await supabase
+            .from("whatsapp_messages")
+            .select("*")
             .order("created_at", { ascending: false })
-            .limit(limit + 25);
+            .limit(100);
 
-        if (usersError) throw usersError;
+        messages = dbMessages || [];
+    } catch {
+        // Fallback to whatsapp_delivery_logs
+        try {
+            const { data: logs } = await supabase
+                .from("whatsapp_delivery_logs")
+                .select("*")
+                .order("created_at", { ascending: false })
+                .limit(100);
 
-        return (users || [])
-            .filter((user: any) => user.email && user.email.includes("@"))
-            .map((user: any) => {
-                const fullEmail = String(user.email).trim();
-                const localPart = fullEmail.split("@")[0] || "there";
-                const firstName = localPart
-                    .replace(/[._-]+/g, " ")
-                    .replace(/\b\w/g, (char) => char.toUpperCase())
-                    .trim();
-
-                return {
-                    email: fullEmail,
-                    first_name: firstName,
-                    role: user.role,
-                    profile_url: buildProfileUrl(user.role),
-                };
-            });
+            messages = (logs || []).map((l: any) => ({
+                id: l.id,
+                phone: l.metadata?.phone || "Unknown",
+                direction: l.error?.startsWith("INBOUND:") ? "INBOUND" : "OUTBOUND",
+                message_text: l.error?.replace("INBOUND:", "").trim() || "Notification Sent",
+                status: l.status,
+                created_at: l.created_at
+            }));
+        } catch {
+            messages = [];
+        }
     }
 
-    return [];
+    // Group by phone number
+    const conversationMap = new Map<string, any>();
+
+    for (const msg of messages) {
+        const phoneKey = msg.phone || "Unknown";
+        if (!conversationMap.has(phoneKey)) {
+            conversationMap.set(phoneKey, {
+                phone: phoneKey,
+                user_id: msg.user_id || null,
+                last_message: msg.message_text,
+                last_direction: msg.direction,
+                updated_at: msg.created_at,
+                unread_count: msg.direction === "INBOUND" ? 1 : 0,
+                messages: []
+            });
+        }
+        conversationMap.get(phoneKey).messages.push(msg);
+    }
+
+    // Enhance with seeker profile info
+    const conversations = Array.from(conversationMap.values());
+    
+    // Fetch all seeker profiles to match by normalized phone digits
+    const { data: seekers } = await supabase
+        .from("job_seekers")
+        .select("id, user_id, full_name, phone, is_subscribed");
+
+    const seekerPhoneMap = new Map<string, any>();
+    (seekers || []).forEach((s: any) => {
+        if (s.phone) {
+            const rawDigits = String(s.phone).replace(/\D/g, "");
+            seekerPhoneMap.set(rawDigits, s);
+            // Also store with + if formatted
+            seekerPhoneMap.set(s.phone, s);
+        }
+    });
+
+    conversations.forEach((c) => {
+        const rawPhoneDigits = String(c.phone).replace(/\D/g, "");
+        const seeker = seekerPhoneMap.get(rawPhoneDigits) || seekerPhoneMap.get(c.phone);
+        if (seeker) {
+            c.first_name = seeker.full_name || "WhatsApp User";
+            c.is_premium = !!seeker.is_subscribed;
+        } else {
+            c.first_name = "WhatsApp User";
+            c.is_premium = false;
+        }
+    });
+
+    return conversations;
 }
 
 export async function GET(request: Request) {
@@ -145,16 +221,29 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const audience = (searchParams.get("audience") as Audience) || "SEEKERS";
-        const limit = Number(searchParams.get("limit") || "5");
-        const recipients = await getRecipients(audience, limit);
+        const previewLimit = Number(searchParams.get("limit") || "6");
+
+        // Fetch complete audience to calculate full database statistics
+        const allRecipients = await getRecipients(audience, 5000);
+        const conversations = await getWhatsAppConversations();
+
+        // Calculate breakdown statistics across the ENTIRE database audience
+        const totalAudience = allRecipients.length;
+        const totalWithWhatsApp = allRecipients.filter((r) => !!r.phone).length;
+        const premiumCount = allRecipients.filter((r) => r.is_premium).length;
 
         return NextResponse.json({
             audience,
-            count: recipients.length,
-            recipients: recipients.slice(0, limit).map((recipient) => ({
-                email: recipient.email,
-                first_name: recipient.first_name,
+            count: totalAudience,
+            whatsappCount: totalWithWhatsApp,
+            premiumCount,
+            recipients: allRecipients.slice(0, previewLimit).map((r) => ({
+                email: r.email,
+                first_name: r.first_name,
+                phone: r.phone,
+                is_premium: r.is_premium,
             })),
+            conversations
         });
     } catch (error: any) {
         console.error("[Admin Communications GET] Error:", error);
@@ -168,8 +257,38 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
+        const mode = (body.mode as "send" | "test" | "reply") || "send";
+        const channel = (body.channel as DeliveryChannel) || "EMAIL";
         const audience = (body.audience as Audience) || "SEEKERS";
-        const mode = body.mode === "test" ? "test" : "send";
+
+        // Handle 1-to-1 Admin Live Reply Mode
+        if (mode === "reply") {
+            const replyPhone = String(body.replyPhone || "").trim();
+            const replyText = String(body.replyText || "").trim();
+
+            if (!replyPhone || !replyText) {
+                return NextResponse.json({ error: "Destination phone and message text are required for replies." }, { status: 400 });
+            }
+
+            try {
+                await sendMetaWhatsAppMessage({
+                    to: replyPhone,
+                    text: replyText
+                });
+
+                await logWhatsAppMessage({
+                    phone: replyPhone,
+                    direction: "OUTBOUND",
+                    message_text: replyText,
+                    status: "SENT"
+                });
+
+                return NextResponse.json({ success: true, message: "WhatsApp reply sent successfully." });
+            } catch (err: any) {
+                return NextResponse.json({ error: err.message || "Failed to dispatch WhatsApp reply." }, { status: 500 });
+            }
+        }
+
         const subject = String(body.subject || "").trim();
         const rawBody = String(body.body || "").trim();
 
@@ -177,62 +296,108 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Subject and body are required." }, { status: 400 });
         }
 
-        const emailConfigError = getEmailConfigError();
-        if (emailConfigError) {
-            return NextResponse.json({ error: emailConfigError }, { status: 500 });
+        // Validate Email configuration if channel includes EMAIL
+        if (channel === "EMAIL" || channel === "BOTH") {
+            const emailError = getEmailConfigError();
+            if (emailError) {
+                return NextResponse.json({ error: emailError }, { status: 500 });
+            }
         }
 
         let recipients = await getRecipients(audience, 5000);
 
         if (mode === "test") {
             const testEmail = String(body.testEmail || "").trim();
-            if (!testEmail || !testEmail.includes("@")) {
-                return NextResponse.json({ error: "A valid test email is required." }, { status: 400 });
+            const testPhone = String(body.testPhone || "").trim();
+
+            if (channel === "EMAIL" && (!testEmail || !testEmail.includes("@"))) {
+                return NextResponse.json({ error: "A valid test email is required for Email test mode." }, { status: 400 });
             }
+            if (channel === "WHATSAPP" && !testPhone) {
+                return NextResponse.json({ error: "A valid test phone number is required for WhatsApp test mode." }, { status: 400 });
+            }
+
             recipients = [{
-                email: testEmail,
+                user_id: "test-admin",
+                email: testEmail || "admin@example.com",
                 first_name: "Admin",
+                phone: testPhone || null,
+                is_premium: true,
                 role: "JOB_SEEKER",
                 profile_url: `${APP_URL}/dashboard/seeker/profile`,
             }];
         }
 
-        let sent = 0;
-        let failed = 0;
-        let skipped = 0;
+        let sentEmail = 0;
+        let failedEmail = 0;
+        let sentWhatsApp = 0;
+        let failedWhatsApp = 0;
+        let skippedWhatsApp = 0;
 
         for (const recipient of recipients) {
             const renderedSubject = replaceTemplateVars(subject, recipient);
             const renderedBody = replaceTemplateVars(rawBody, recipient);
-            const html = toHtmlBody(renderedBody);
 
-            try {
-                const { error } = await resend.emails.send({
-                    from: EMAIL_FROM,
-                    to: [recipient.email],
-                    subject: renderedSubject,
-                    html,
-                });
+            // 1. Dispatch Email Channel
+            if (channel === "EMAIL" || channel === "BOTH") {
+                try {
+                    const html = toHtmlBody(renderedBody);
+                    const { error } = await resend.emails.send({
+                        from: EMAIL_FROM,
+                        to: [recipient.email],
+                        subject: renderedSubject,
+                        html,
+                    });
 
-                if (error) {
-                    failed += 1;
-                    console.error("[Admin Communications] Email failure:", recipient.email, error);
-                } else {
-                    sent += 1;
+                    if (error) {
+                        failedEmail += 1;
+                    } else {
+                        sentEmail += 1;
+                    }
+                } catch {
+                    failedEmail += 1;
                 }
-            } catch (emailError: any) {
-                failed += 1;
-                console.error("[Admin Communications] Email exception:", recipient.email, emailError);
+            }
+
+            // 2. Dispatch WhatsApp Channel (Premium Seekers or recipients with registered phone numbers)
+            if (channel === "WHATSAPP" || channel === "BOTH") {
+                if (!recipient.phone) {
+                    skippedWhatsApp += 1;
+                } else {
+                    try {
+                        const whatsappFormattedText = `*${renderedSubject}*\n\n${renderedBody}`;
+                        await sendMetaWhatsAppMessage({
+                            to: recipient.phone,
+                            text: whatsappFormattedText
+                        });
+
+                        await logWhatsAppMessage({
+                            user_id: recipient.user_id,
+                            phone: recipient.phone,
+                            direction: "OUTBOUND",
+                            message_text: whatsappFormattedText,
+                            status: "SENT"
+                        });
+
+                        sentWhatsApp += 1;
+                    } catch (waErr: any) {
+                        failedWhatsApp += 1;
+                        console.error("[Admin Communications] WhatsApp dispatch failed for:", recipient.phone, waErr.message);
+                    }
+                }
             }
         }
 
         return NextResponse.json({
             success: true,
             audience,
+            channel,
             mode,
-            sent,
-            failed,
-            skipped,
+            sentEmail,
+            failedEmail,
+            sentWhatsApp,
+            failedWhatsApp,
+            skippedWhatsApp,
             total: recipients.length,
         });
     } catch (error: any) {

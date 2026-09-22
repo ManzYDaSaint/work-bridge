@@ -46,49 +46,43 @@ export default function CandidateCard({ application, onViewProfile, onStatusUpda
     const seeker = app.user?.jobSeeker;
 
     return (
-        <div className="rounded-2xl border border-stone-200 bg-white/80 p-5 dark:border-slate-800 dark:bg-slate-900/70">
-            <div className="flex items-start justify-between gap-4">
+        <div className="group rounded-3xl border border-stone-200/80 bg-white p-5 shadow-xs transition-all duration-200 hover:border-stone-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 space-y-3.5">
+            <div className="flex items-start justify-between gap-3">
                 <button type="button" onClick={onViewProfile} className="flex min-w-0 flex-1 items-start gap-3 text-left">
                     <CompanyAvatar logoUrl={null} name={seeker?.full_name || "?"} size="sm" />
                     <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{seeker?.full_name || "Anonymous seeker"}</p>
-                        <p className="mt-1 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-                            <Mail size={12} />
+                        <p className="truncate text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#16324f] dark:group-hover:text-amber-400 transition-colors">
+                            {seeker?.full_name || "Anonymous Seeker"}
+                        </p>
+                        <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 truncate">
+                            <Mail size={11} className="shrink-0" />
                             <span className="truncate">{app.user?.email}</span>
                         </p>
-                        <p className="mt-1 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-                            <MapPin size={12} />
-                            {seeker?.location || "Location not set"}
-                        </p>
+                        {seeker?.location && (
+                            <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 truncate">
+                                <MapPin size={11} className="shrink-0" />
+                                <span className="truncate">{seeker.location}</span>
+                            </p>
+                        )}
                     </div>
                 </button>
                 <Badge label={app.status} variant={app.status === "SHORTLISTED" || app.status === "ACCEPTED" || app.status === "INTERVIEWING" ? "green" : app.status === "REJECTED" ? "red" : "yellow"} />
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 <Badge label={app.job?.title || "Role"} variant="outline" />
                 {app.similarity !== undefined ? (
-                    <Badge
-                        variant={
-                            app.similarity >= 0.7 ? "green" : 
-                            app.similarity >= 0.4 ? "blue" : "yellow"
-                        }
-                    >
-                        <Sparkles size={10} className="mr-1 inline" />
-                        {Math.round(app.similarity * 100)}% DNA Match
-                    </Badge>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-900/40">
+                        <Sparkles size={11} /> {Math.round(app.similarity * 100)}% Match
+                    </span>
                 ) : app.screeningScore !== undefined && (
-                    <Badge 
-                        label={`${app.screeningScore}% Match`} 
-                        variant={
-                            app.screeningScore >= 80 ? "green" : 
-                            app.screeningScore >= 50 ? "blue" : "yellow"
-                        } 
-                    />
+                    <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-bold text-sky-700 dark:bg-sky-950/50 dark:text-sky-400 border border-sky-200/50 dark:border-sky-900/40">
+                        {app.screeningScore}% Score
+                    </span>
                 )}
                 {app.meetsRequiredCriteria !== undefined && (
                     <Badge 
-                        label={app.meetsRequiredCriteria ? "Meets Requirements" : "Criteria Gap"} 
+                        label={app.meetsRequiredCriteria ? "Meets Criteria" : "Criteria Gap"} 
                         variant={app.meetsRequiredCriteria ? "green" : "yellow"} 
                     />
                 )}
@@ -97,23 +91,25 @@ export default function CandidateCard({ application, onViewProfile, onStatusUpda
                 ))}
             </div>
 
-            {seeker?.bio && <p className="mt-4 line-clamp-3 text-sm text-slate-600 dark:text-slate-400">{seeker.bio}</p>}
+            {seeker?.bio && <p className="line-clamp-2 text-xs text-slate-600 leading-relaxed dark:text-slate-300">{seeker.bio}</p>}
 
             {app.screeningSummary && (
-                <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Match Justification</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 italic">"{app.screeningSummary}"</p>
+                <div className="rounded-2xl border border-amber-200/60 bg-amber-50/50 p-2.5 text-[11px] leading-relaxed text-amber-900 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-200">
+                    <p className="font-bold mb-0.5 flex items-center gap-1">
+                        <Sparkles size={11} className="text-amber-600 dark:text-amber-400" /> Match Justification:
+                    </p>
+                    <p className="italic line-clamp-2">"{app.screeningSummary}"</p>
                 </div>
             )}
 
-            <div className="mt-5 flex items-center justify-between border-t border-stone-200/70 pt-4 dark:border-slate-800">
-                <button type="button" onClick={onViewProfile} className="text-sm font-semibold text-[#16324f] hover:underline dark:text-slate-200">
-                    Open profile
+            <div className="flex items-center justify-between border-t border-stone-100 pt-3 dark:border-slate-800">
+                <button type="button" onClick={onViewProfile} className="text-xs font-bold text-[#16324f] hover:underline dark:text-amber-400">
+                    Open Profile →
                 </button>
                 {updating ? (
-                    <Loader2 size={18} className="animate-spin text-[#16324f]" />
+                    <Loader2 size={16} className="animate-spin text-[#16324f] dark:text-amber-400" />
                 ) : (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                         <button
                             type="button"
                             onClick={() => {
@@ -121,28 +117,28 @@ export default function CandidateCard({ application, onViewProfile, onStatusUpda
                                 onStatusUpdate("INTERVIEWING", link || undefined);
                             }}
                             disabled={app.status === "INTERVIEWING"}
-                            className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-blue-600 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300"
+                            className="rounded-xl border border-stone-200 p-1.5 text-slate-500 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-600 disabled:opacity-40 dark:border-slate-800 dark:text-slate-400 dark:hover:border-sky-900 dark:hover:bg-sky-950/40 dark:hover:text-sky-400 transition"
                             title="Invite to Interview"
                         >
-                            <Calendar size={16} />
+                            <Calendar size={15} />
                         </button>
                         <button
                             type="button"
                             onClick={() => onStatusUpdate("SHORTLISTED")}
                             disabled={app.status === "SHORTLISTED"}
-                            className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-emerald-600 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300"
+                            className="rounded-xl border border-stone-200 p-1.5 text-slate-500 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-40 dark:border-slate-800 dark:text-slate-400 dark:hover:border-emerald-900 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-400 transition"
                             title="Shortlist"
                         >
-                            <CheckCircle size={16} />
+                            <CheckCircle size={15} />
                         </button>
                         <button
                             type="button"
                             onClick={() => onStatusUpdate("REJECTED")}
                             disabled={app.status === "REJECTED"}
-                            className="rounded-xl border border-stone-200 p-2 text-slate-500 hover:text-red-600 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300"
+                            className="rounded-xl border border-stone-200 p-1.5 text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40 dark:border-slate-800 dark:text-slate-400 dark:hover:border-rose-900 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 transition"
                             title="Reject"
                         >
-                            <XCircle size={16} />
+                            <XCircle size={15} />
                         </button>
                     </div>
                 )}

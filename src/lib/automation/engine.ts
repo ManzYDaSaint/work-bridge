@@ -8,6 +8,7 @@ import "./workers/opportunity-worker";
 import "./workers/ingestion-crawler-worker";
 import "./workers/ingestion-parser-worker";
 import "./workers/ingestion-publisher-worker";
+import "./plugins/whatsapp-manager";
 
 export async function processQueue(options?: { taskId?: string; limit?: number }) {
     const supabase = getSupabaseAdminClient();

@@ -28,7 +28,7 @@ export async function syncSeekerEmbedding(userId: string, profile: any) {
 
         // 2. If it matches, skip VPS generation
         if (currentData?.dna_hash === newHash) {
-            console.log(`[SyncEmbeddings] No changes detected. Skipping VPS call for seeker: ${userId}`);
+            // console.log(`[SyncEmbeddings] No changes detected. Skipping VPS call for seeker: ${userId}`);
             return;
         }
 
@@ -41,7 +41,7 @@ export async function syncSeekerEmbedding(userId: string, profile: any) {
             .eq("id", userId);
 
         if (error) throw error;
-        console.log(`[SyncEmbeddings] Successfully updated embedding for seeker: ${userId}`);
+        // console.log(`[SyncEmbeddings] Successfully updated embedding for seeker: ${userId}`);
     } catch (error) {
         console.error(`[SyncEmbeddings] Error syncing seeker ${userId}:`, error);
         // We don't throw here to avoid blocking the profile save process
@@ -67,7 +67,7 @@ export async function syncJobEmbedding(jobId: string, job: any) {
 
         // 2. If it matches, skip VPS generation
         if (currentData?.dna_hash === newHash) {
-            console.log(`[SyncEmbeddings] No changes detected. Skipping VPS call for job: ${jobId}`);
+            // console.log(`[SyncEmbeddings] No changes detected. Skipping VPS call for job: ${jobId}`);
             return;
         }
 
@@ -80,7 +80,7 @@ export async function syncJobEmbedding(jobId: string, job: any) {
             .eq("id", jobId);
 
         if (error) throw error;
-        console.log(`[SyncEmbeddings] Successfully updated embedding for job: ${jobId}`);
+        // console.log(`[SyncEmbeddings] Successfully updated embedding for job: ${jobId}`);
     } catch (error) {
         console.error(`[SyncEmbeddings] Error syncing job ${jobId}:`, error);
     }

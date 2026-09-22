@@ -61,7 +61,7 @@ export async function sendStandardJobMatchEmail(alert: StandardMatchAlert): Prom
       return { success: false, error: error.message };
     }
 
-    console.log(`[StandardEmail] Sent match email to ${alert.seekerEmail} for job ${alert.jobId} (id=${data?.id})`);
+    // console.log(`[StandardEmail] Sent match email to ${alert.seekerEmail} for job ${alert.jobId} (id=${data?.id})`);
     return { success: true };
   } catch (err: any) {
     console.error("[StandardEmail] Exception sending email:", err);

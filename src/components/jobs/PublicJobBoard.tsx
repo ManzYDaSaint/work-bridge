@@ -691,7 +691,11 @@ export default function PublicJobBoard({
 
             {!loading && totalPages > 1 && (
                 <div className="mt-6">
-                    <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+                    <Pagination
+                        currentPage={page}
+                        totalPages={totalPages}
+                        onPageChange={setPage}
+                    />
                 </div>
             )}
 

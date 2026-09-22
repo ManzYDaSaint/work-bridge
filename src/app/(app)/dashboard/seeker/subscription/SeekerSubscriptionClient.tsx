@@ -5,7 +5,7 @@ import { apiFetch } from "@/lib/api";
 import { PageHeader } from "@/components/dashboard/ui";
 import {
     Crown, Sparkles, CheckCircle2, MessageSquare, Zap, ShieldCheck,
-    CreditCard, ArrowRight, Loader2, Phone, Bell, AlertCircle, RefreshCw, X, Send
+    CreditCard, ArrowRight, Loader2, Phone, Bell, X, Send
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
@@ -260,27 +260,27 @@ export default function SeekerSubscriptionClient() {
             />
 
             {/* Current Status Header Banner */}
-            <div className={`rounded-3xl border p-6 shadow-sm transition-all ${isPremium
-                ? "border-amber-200 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent dark:border-amber-900/40 dark:bg-slate-900"
-                : "border-stone-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+            <div className={`rounded-3xl border p-6 transition-all ${isPremium
+                ? "border-amber-400/60 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20"
+                : "border-stone-200/80 bg-white dark:border-slate-800 dark:bg-slate-900"
                 }`}>
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${isPremium ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30" : "bg-stone-100 text-slate-400 dark:bg-slate-800"
+                    <div className="flex items-start sm:items-center gap-4">
+                        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${isPremium ? "bg-amber-400 text-slate-950 shadow-xs" : "bg-stone-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
                             }`}>
-                            <Crown size={28} />
+                            <Crown size={24} />
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                                     {isPremium ? "Aganyu Premium Active" : "Free Plan Account"}
                                 </h3>
-                                <span className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold ${isPremium ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" : "bg-slate-100 text-slate-600 dark:bg-slate-800"
+                                <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold tracking-wider ${isPremium ? "bg-amber-400 text-slate-950" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                                     }`}>
                                     {isPremium ? "PREMIUM" : "FREE"}
                                 </span>
                             </div>
-                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                                 {isPremium
                                     ? `Your premium subscription is valid until ${new Date(subscription?.ends_at).toLocaleDateString()}.`
                                     : "Upgrade to receive instant AI-matched WhatsApp job alerts before public listing."}
@@ -288,19 +288,19 @@ export default function SeekerSubscriptionClient() {
                         </div>
                     </div>
 
-                    <div>
+                    <div className="shrink-0">
                         {!isPremium ? (
                             <button
                                 onClick={() => setShowCheckoutModal(true)}
-                                className="inline-flex items-center gap-2 rounded-2xl bg-amber-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-amber-500/30 hover:bg-amber-600 transition-all"
+                                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-[#16324f] px-5 py-2.5 text-xs font-bold text-white transition hover:bg-[#16324f]/90 dark:bg-amber-400 dark:text-slate-950 dark:hover:bg-amber-300"
                             >
-                                <Sparkles size={16} /> Upgrade for MWK 1,000/mo
+                                <Sparkles size={15} /> Upgrade for MWK 1,000/mo
                             </button>
                         ) : (
                             <button
                                 onClick={handleCancelSub}
                                 disabled={submitting}
-                                className="rounded-xl border border-stone-200 px-4 py-2 text-xs font-semibold text-slate-500 hover:text-red-600 dark:border-slate-700"
+                                className="w-full sm:w-auto rounded-2xl border border-stone-200 px-4 py-2 text-xs font-bold text-slate-500 hover:text-rose-600 dark:border-slate-800 dark:text-slate-400 transition"
                             >
                                 Cancel Subscription
                             </button>
@@ -311,9 +311,9 @@ export default function SeekerSubscriptionClient() {
 
             {/* Premium Benefits Grid */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div className="rounded-2xl border border-stone-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold mb-3">
-                        <MessageSquare size={20} />
+                <div className="rounded-3xl border border-stone-200/80 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 font-bold mb-3">
+                        <MessageSquare size={18} />
                     </div>
                     <h4 className="font-bold text-slate-900 dark:text-white text-sm">Instant WhatsApp Alerts</h4>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -321,9 +321,9 @@ export default function SeekerSubscriptionClient() {
                     </p>
                 </div>
 
-                <div className="rounded-2xl border border-stone-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold mb-3">
-                        <Zap size={20} />
+                <div className="rounded-3xl border border-stone-200/80 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 font-bold mb-3">
+                        <Zap size={18} />
                     </div>
                     <h4 className="font-bold text-slate-900 dark:text-white text-sm">Malawian Hybrid AI Matcher</h4>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -331,9 +331,9 @@ export default function SeekerSubscriptionClient() {
                     </p>
                 </div>
 
-                <div className="rounded-2xl border border-stone-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold mb-3">
-                        <ShieldCheck size={20} />
+                <div className="rounded-3xl border border-stone-200/80 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400 font-bold mb-3">
+                        <ShieldCheck size={18} />
                     </div>
                     <h4 className="font-bold text-slate-900 dark:text-white text-sm">Early Application Advantage</h4>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">

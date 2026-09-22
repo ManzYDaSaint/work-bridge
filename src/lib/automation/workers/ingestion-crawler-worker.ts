@@ -28,7 +28,7 @@ export const JobIngestionCrawlerWorker = {
 
         const serviceEnabled = settingData ? (settingData.value === true || settingData.value === 'true') : true;
         if (!serviceEnabled) {
-            console.log("[CrawlerWorker] Ingestion service is globally DISABLED via system_settings. Skipping crawl.");
+            // console.log("[CrawlerWorker] Ingestion service is globally DISABLED via system_settings. Skipping crawl.");
             return;
         }
 
@@ -40,7 +40,7 @@ export const JobIngestionCrawlerWorker = {
 
         const { data: sources, error } = await query;
         if (error || !sources || sources.length === 0) {
-            console.log("[CrawlerWorker] No active ingestion sources due for crawl.");
+            // console.log("[CrawlerWorker] No active ingestion sources due for crawl.");
             return;
         }
 
@@ -88,7 +88,7 @@ export const JobIngestionCrawlerWorker = {
                                 .maybeSingle();
 
                             if (existing) {
-                                console.log(`[CrawlerWorker] Skipping duplicate source payload for ${ref.url}`);
+                                // console.log(`[CrawlerWorker] Skipping duplicate source payload for ${ref.url}`);
                                 return;
                             }
 
@@ -115,7 +115,7 @@ export const JobIngestionCrawlerWorker = {
                             const { isContentSanityCheckPassed } = await import("@/lib/ingestion/validation");
                             const sanity = isContentSanityCheckPassed(fetched.rawContent);
                             if (!sanity.passed) {
-                                console.log(`[CrawlerWorker] Skipped failed sanity check: ${ref.title}. Reason: ${sanity.reason}`);
+                                // console.log(`[CrawlerWorker] Skipped failed sanity check: ${ref.title}. Reason: ${sanity.reason}`);
                                 await supabase.from('ingested_dead_letter_queue').insert({
                                     source_id: source.id,
                                     payload: { url: ref.url, reason: sanity.reason },
@@ -127,7 +127,7 @@ export const JobIngestionCrawlerWorker = {
 
                             // OPTIMIZATION: Skip expired jobs — don't store them at all
                             if (fetched.checksum === 'EXPIRED_SKIP' || !fetched.rawContent) {
-                                console.log(`[CrawlerWorker] Skipped expired job: ${ref.title}`);
+                                // console.log(`[CrawlerWorker] Skipped expired job: ${ref.title}`);
                                 return;
                             }
 
@@ -147,7 +147,7 @@ export const JobIngestionCrawlerWorker = {
                                 .maybeSingle();
                             if (insertError) {
                                 if (insertError.code === '23505' || insertError.message?.includes('duplicate key')) {
-                                    console.log(`[CrawlerWorker] Duplicate raw payload detected for ${ref.url}, skipping insert.`);
+                                    // console.log(`[CrawlerWorker] Duplicate raw payload detected for ${ref.url}, skipping insert.`);
                                     return;
                                 }
                                 throw insertError;

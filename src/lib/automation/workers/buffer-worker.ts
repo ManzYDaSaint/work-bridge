@@ -94,9 +94,9 @@ const BufferSocialPoster = {
                     : `❌ Facebook failed: ${results.facebook.errorMessage}`
                 : "⏭ Facebook not configured";
 
-            console.log(
-                `[BufferWorker] Opportunity "${opp.title}" (${opportunityId})\n  ${linkedInStatus}\n  ${facebookStatus}`
-            );
+            // console.log(
+            //     `[BufferWorker] Opportunity "${opp.title}" (${opportunityId})\n  ${linkedInStatus}\n  ${facebookStatus}`
+            // );
 
             await emitSystemEvent({
                 category: "AUTOMATION",
@@ -153,9 +153,9 @@ const BufferSocialPoster = {
                     : `❌ Facebook failed: ${results.facebook.errorMessage}`
                 : "⏭ Facebook not configured";
 
-            console.log(
-                `[BufferWorker] Job "${job.title}" (${jobId})\n  ${linkedInStatus}\n  ${facebookStatus}`
-            );
+            // console.log(
+            //     `[BufferWorker] Job "${job.title}" (${jobId})\n  ${linkedInStatus}\n  ${facebookStatus}`
+            // );
 
             await emitSystemEvent({
                 category: "AUTOMATION",

@@ -23,7 +23,7 @@ export const UserService = {
             .eq("id", userId)
             .single();
 
-        console.log("UserService buildMeProfile userData:", JSON.stringify(userData, null, 2));
+        // console.log("UserService buildMeProfile userData:", JSON.stringify(userData, null, 2));
 
         if (userError || !userData) {
             return { profile: null, error: "not_found" };

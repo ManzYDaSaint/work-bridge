@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 export default async function AdminJobsPage({
     searchParams,
 }: {
-    searchParams: Promise<{ page?: string; search?: string; status?: string }>;
+    searchParams: Promise<{ page?: string; limit?: string; search?: string; status?: string }>;
 }) {
     const auth = await validateAuth(["ADMIN"], false);
     if (auth.error || !auth.user) {
@@ -17,7 +17,7 @@ export default async function AdminJobsPage({
     const page = parseInt(params.page || "1");
     const search = params.search || "";
     const status = params.status || "ALL";
-    const limit = 20;
+    const limit = parseInt(params.limit || "20");
 
     let jobs: any[] = [];
     let total = 0;

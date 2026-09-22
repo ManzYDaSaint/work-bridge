@@ -18,7 +18,7 @@ export default async function AdminAuditPage({
     const userId = params.userId || "";
     const action = params.action || "";
     const path = params.path || "";
-    const limit = 50;
+    const limit = 20;
 
     let items: any[] = [];
     let total = 0;

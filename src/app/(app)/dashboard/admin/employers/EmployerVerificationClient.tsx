@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { Building2, CheckCircle, XCircle, Search, Loader2, ExternalLink } from "lucide-react";
+import { Building2, CheckCircle, XCircle, Loader2, ExternalLink } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageHeader, Badge, Tabs } from "@/components/dashboard/ui";
+import { PageHeader, Badge, SearchInput } from "@/components/dashboard/ui";
 import { toast } from "sonner";
 
 export default function EmployerVerificationClient({ 
@@ -152,16 +152,11 @@ export default function EmployerVerificationClient({
                         </div>
                     </div>
 
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search company or industry..."
-                            value={searchTerm}
-                            onChange={(e) => updateFilters({ search: e.target.value })}
-                            className="w-full rounded-2xl border border-stone-200 bg-white px-12 py-3 text-sm outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900"
-                        />
-                    </div>
+                    <SearchInput
+                        placeholder="Search company or industry..."
+                        value={searchTerm}
+                        onChange={(val) => updateFilters({ search: val })}
+                    />
 
                     <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
                         <div className="grid grid-cols-1 gap-2 border-b border-stone-200/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:border-slate-800 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]">

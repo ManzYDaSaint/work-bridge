@@ -68,7 +68,7 @@ export async function sendWelcomeEmail(to: string, name?: string) {
     });
 
     if (data.error) throw data.error;
-    console.log(`[EMAIL_DEBUG] SUCCESS: Welcome email sent to ${to}`);
+    // console.log(`[EMAIL_DEBUG] SUCCESS: Welcome email sent to ${to}`);
     
     await emitSystemEvent({
       category: "NOTIFICATION",
@@ -107,7 +107,7 @@ export async function sendApplicationStatusEmail(to: string, payload: {
 
     const html = await renderEmail(<ApplicationStatusEmail {...payload} />);
     
-    console.log(`[EMAIL_DEBUG] Sending application status email (${payload.status}) to ${to}`);
+    // console.log(`[EMAIL_DEBUG] Sending application status email (${payload.status}) to ${to}`);
     const data = await resend.emails.send({
       from: EMAIL_FROM,
       to: [to],

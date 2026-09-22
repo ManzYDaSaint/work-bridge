@@ -122,7 +122,7 @@ export const NotificationService = {
         const preferenceKey = TYPE_TO_PREFERENCE_MAP[type];
 
         if (preferenceKey && preferences[preferenceKey] === false) {
-            console.log(`[NOTIFICATION_DEBUG] SKIPPED: User ${userId} has disabled ${preferenceKey} notifications.`);
+            // console.log(`[NOTIFICATION_DEBUG] SKIPPED: User ${userId} has disabled ${preferenceKey} notifications.`);
             return null;
         }
 

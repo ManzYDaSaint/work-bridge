@@ -29,7 +29,7 @@ async function main() {
   const JOB_LIMIT = Number(process.env.EVAL_JOB_LIMIT || 100);
   const CANDIDATE_LIMIT = Number(process.env.EVAL_CANDIDATE_LIMIT || 500);
 
-  console.log(`Fetching up to ${JOB_LIMIT} active jobs...`);
+  // console.log(`Fetching up to ${JOB_LIMIT} active jobs...`);
   const { data: jobs, error: jobsErr } = await admin
     .from("jobs")
     .select("id, title, embedding, must_have_skills, minimum_years_experience, qualification, required_certifications")
@@ -42,14 +42,14 @@ async function main() {
     process.exit(1);
   }
   if (!jobs || jobs.length === 0) {
-    console.log("No active jobs found.");
+    // console.log("No active jobs found.");
     process.exit(0);
   }
 
   const results: any[] = [];
 
   for (const job of jobs) {
-    console.log(`Evaluating job ${job.id} - ${job.title}`);
+    // console.log(`Evaluating job ${job.id} - ${job.title}`);
     let candidateIds: string[] = [];
 
     if (job.embedding) {
@@ -81,7 +81,7 @@ async function main() {
     }
 
     if (candidateIds.length === 0) {
-      console.log(`No candidates for job ${job.id}, skipping.`);
+      // console.log(`No candidates for job ${job.id}, skipping.`);
       continue;
     }
 
@@ -132,7 +132,7 @@ async function main() {
       avgScore,
       scoreBuckets,
     };
-    console.log(JSON.stringify(summary, null, 2));
+    // console.log(JSON.stringify(summary, null, 2));
     results.push(summary);
   }
 
@@ -144,7 +144,7 @@ async function main() {
 
   const outPath = path.resolve(process.cwd(), "match-eval.json");
   fs.writeFileSync(outPath, JSON.stringify(overall, null, 2));
-  console.log(`Wrote report to ${outPath}`);
+  // console.log(`Wrote report to ${outPath}`);
 }
 
 main().catch((err) => {

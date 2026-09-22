@@ -88,46 +88,44 @@ export default function SeekerOverview({
     const shortlistedApps = applications.filter((a) => a.status === "SHORTLISTED" || a.status === "INTERVIEWING" || a.status === "ACCEPTED");
 
     return (
-        <div className="space-y-5 pb-24">
-            {/* 1. Sleek Top Hero Header Card (Responsive) */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#16324f] via-[#1a3d61] to-[#0f243b] p-5 sm:p-6 text-white shadow-md">
-                <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-500/10 blur-2xl pointer-events-none" />
-                <div className="absolute right-20 -bottom-10 h-32 w-32 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
-                
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between relative z-10">
-                    <div className="flex items-start gap-3.5 min-w-0">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-300 font-black text-lg border border-amber-500/30 shadow-inner">
-                            {fullName.slice(0, 2).toUpperCase()}
-                        </div>
+        <div className="space-y-6 pb-24">
+            {/* 1. Editorial Header with Left Accent Line (No Rounded Card) */}
+            <div className="border-b border-stone-200/80 pb-5 dark:border-slate-800">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start gap-4 min-w-0">
+                        {/* Accent Bar */}
+                        <div className="w-1.5 h-12 rounded-full bg-[#16324f] dark:bg-amber-400 shrink-0 mt-0.5" />
+                        
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white truncate">
+                                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white truncate">
                                     Hello, {fullName}
                                 </h1>
                                 {isPremium && (
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-300 border border-amber-400/30">
-                                        <Crown size={11} className="text-amber-400" /> Premium
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                                        <Crown size={11} className="text-amber-500" /> Premium
                                     </span>
                                 )}
                             </div>
-                            <p className="mt-0.5 text-xs text-slate-300 truncate">
-                                {seeker?.headline || seeker?.location || "Welcome back to your job hub"}
+                            <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate">
+                                {seeker?.headline || seeker?.location || "Focus on next actions that move your career forward."}
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t border-slate-700/60 sm:border-t-0">
+                    {/* Right-aligned Header Actions */}
+                    <div className="flex items-center gap-2 shrink-0">
                         <Link
                             href="/dashboard/seeker/subscription"
-                            className={`flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all shadow-sm ${
+                            className={`flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
                                 isPremium 
-                                    ? "bg-amber-500/20 text-amber-300 border border-amber-400/40 hover:bg-amber-500/30" 
-                                    : "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 hover:brightness-110 active:scale-95"
+                                    ? "bg-amber-50 text-amber-800 border border-amber-200/80 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50" 
+                                    : "bg-[#16324f] text-white hover:opacity-90 dark:bg-slate-100 dark:text-slate-900 active:scale-95 shadow-sm"
                             }`}
                         >
                             {isPremium ? (
                                 <>
-                                    <ShieldCheck size={14} className="text-amber-400" /> Active Membership
+                                    <ShieldCheck size={14} className="text-amber-600 dark:text-amber-400" /> Active Membership
                                 </>
                             ) : (
                                 <>
@@ -138,56 +136,43 @@ export default function SeekerOverview({
 
                         <Link
                             href="/dashboard/seeker/profile"
-                            className="flex items-center justify-center rounded-xl bg-white/10 px-3.5 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-white/20 transition active:scale-95"
+                            className="flex items-center justify-center rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 transition active:scale-95"
                         >
                             Edit Profile
                         </Link>
                     </div>
                 </div>
 
-                {/* WhatsApp & Profile Health Micro-strip inside Hero */}
-                <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-4 border-t border-white/10 text-xs">
-                    <div className="flex items-center justify-between rounded-2xl bg-white/5 px-3.5 py-2 backdrop-blur border border-white/10">
-                        <div className="flex items-center gap-2">
-                            <span className={`h-2 w-2 rounded-full ${seeker?.phone ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" : "bg-amber-400"}`} />
-                            <span className="text-slate-200 text-[11px] font-medium">WhatsApp Alerts</span>
-                        </div>
-                        <span className="font-bold text-white text-[11px]">
-                            {seeker?.phone ? "Connected" : "Not Linked"}
-                        </span>
+                {/* Sub-strip with status pills */}
+                <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-400">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-stone-200/80 bg-stone-50/80 px-3 py-1 dark:border-slate-800 dark:bg-slate-900/80">
+                        <span className={`h-2 w-2 rounded-full ${seeker?.phone ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" : "bg-amber-500"}`} />
+                        <span className="font-medium text-[11px]">WhatsApp Alerts: <strong className="text-slate-900 dark:text-white">{seeker?.phone ? "Connected" : "Not Linked"}</strong></span>
                     </div>
 
-                    <div className="flex items-center justify-between rounded-2xl bg-white/5 px-3.5 py-2 backdrop-blur border border-white/10">
-                        <div className="flex items-center gap-2">
-                            <TrendingUp size={13} className="text-emerald-400" />
-                            <span className="text-slate-200 text-[11px] font-medium">Profile Strength</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-700">
-                                <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${strength.percentage}%` }} />
-                            </div>
-                            <span className="font-bold text-emerald-300 text-[11px]">{strength.percentage}%</span>
-                        </div>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-stone-200/80 bg-stone-50/80 px-3 py-1 dark:border-slate-800 dark:bg-slate-900/80">
+                        <TrendingUp size={13} className="text-emerald-600 dark:text-emerald-400" />
+                        <span className="font-medium text-[11px]">Profile Strength: <strong className="text-emerald-700 dark:text-emerald-400">{strength.percentage}%</strong></span>
                     </div>
                 </div>
             </div>
 
-            {/* 2. Compact High-Impact Stat Strip (Swipeable/Responsive Grid) */}
+            {/* 2. Compact High-Impact Stat Strip */}
             <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
                 <button
                     onClick={() => setActiveTab("APPLICATIONS")}
                     className={`flex flex-col items-start p-3 sm:p-4 rounded-2xl border text-left transition-all ${
                         activeTab === "APPLICATIONS" 
-                            ? "border-[#16324f] bg-slate-900 text-white shadow-sm dark:bg-slate-800" 
+                            ? "border-[#16324f] bg-[#16324f] text-white shadow-sm dark:border-slate-700 dark:bg-slate-800" 
                             : "border-stone-200/90 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900"
                     }`}
                 >
                     <div className="flex items-center justify-between w-full">
-                        <span className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400">Apps</span>
-                        <Briefcase size={15} className="text-[#16324f] dark:text-slate-300" />
+                        <span className={`text-[11px] sm:text-xs font-semibold ${activeTab === "APPLICATIONS" ? "text-slate-200" : "text-slate-500 dark:text-slate-400"}`}>Apps</span>
+                        <Briefcase size={15} className={activeTab === "APPLICATIONS" ? "text-white" : "text-[#16324f] dark:text-slate-300"} />
                     </div>
-                    <span className="text-lg sm:text-2xl font-black mt-1 text-slate-900 dark:text-white">{applications.length}</span>
-                    <span className="text-[10px] text-slate-400 mt-0.5 hidden sm:inline">Total Submitted</span>
+                    <span className={`text-lg sm:text-2xl font-black mt-1 ${activeTab === "APPLICATIONS" ? "text-white" : "text-slate-900 dark:text-white"}`}>{applications.length}</span>
+                    <span className={`text-[10px] mt-0.5 hidden sm:inline ${activeTab === "APPLICATIONS" ? "text-slate-300" : "text-slate-400"}`}>Total Submitted</span>
                 </button>
 
                 <button
@@ -223,7 +208,7 @@ export default function SeekerOverview({
                 </button>
             </div>
 
-            {/* 3. Segmented Navigation Control Bar (Eliminates Cloudiness & Clutter) */}
+            {/* 3. Segmented Navigation Control Bar */}
             <div className="flex items-center justify-between gap-1 overflow-x-auto rounded-2xl border border-stone-200/80 bg-stone-100/70 p-1 dark:border-slate-800 dark:bg-slate-900/80 scrollbar-none">
                 {[
                     { id: "FEED", label: "Matches & Feed", icon: Zap },
@@ -250,13 +235,11 @@ export default function SeekerOverview({
                 })}
             </div>
 
-            {/* 4. Tab Contents - Focused Views */}
+            {/* 4. Tab Contents */}
             {activeTab === "FEED" && (
                 <div className="space-y-5">
-                    {/* Onboarding checklist widget */}
                     <OnboardingChecklist user={user} />
 
-                    {/* Recommended matches spotlight card */}
                     <SectionCard 
                         title="Recommended Job Matches" 
                         action={{ label: "Explore all matches →", href: "/dashboard/seeker/recommendations" }}
@@ -266,23 +249,23 @@ export default function SeekerOverview({
                                 Personalized opportunities updated automatically based on your highest qualification (<span className="font-bold text-slate-800 dark:text-slate-200">{displayQualification}</span>) and registered skills.
                             </p>
                             
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 to-orange-50/50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-stone-200 bg-stone-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/60">
                                 <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-600 dark:bg-amber-500/30 dark:text-amber-400">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
                                         <Sparkles size={18} />
                                     </div>
                                     <div>
-                                        <p className="text-xs font-bold text-amber-950 dark:text-amber-200">
-                                            Smart Career Match Radar Active
+                                        <p className="text-xs font-bold text-slate-900 dark:text-white">
+                                            Job Match Radar
                                         </p>
-                                        <p className="text-[11px] text-amber-800/80 dark:text-amber-400">
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
                                             Match scores prioritize roles matching your qualifications and location.
                                         </p>
                                     </div>
                                 </div>
                                 <Link
                                     href="/dashboard/seeker/recommendations"
-                                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#16324f] px-4 py-2 text-xs font-bold text-white transition hover:opacity-90 active:scale-95 shrink-0"
+                                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#16324f] px-4 py-2 text-xs font-bold text-white transition hover:opacity-90 active:scale-95 shrink-0 dark:bg-slate-100 dark:text-slate-900"
                                 >
                                     Open Recommendations
                                     <ChevronRight size={14} />
@@ -291,7 +274,6 @@ export default function SeekerOverview({
                         </div>
                     </SectionCard>
 
-                    {/* Next Actions checklist if incomplete */}
                     {nextActions.length > 0 && (
                         <SectionCard title="Recommended Next Actions">
                             <div className="divide-y divide-stone-100 dark:divide-slate-800">
@@ -397,7 +379,6 @@ export default function SeekerOverview({
 
             {activeTab === "GROWTH" && (
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                    {/* Profile Readiness & Analytics */}
                     <SectionCard title="Profile Readiness">
                         <div className="space-y-5 p-5">
                             <div className="flex items-center justify-between">
@@ -431,7 +412,6 @@ export default function SeekerOverview({
 
                     <JobAlertsManager />
 
-                    {/* Refer a friend card */}
                     <SectionCard title="Invite & Earn Application Priority">
                         <div className="space-y-3 p-5">
                             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
@@ -454,7 +434,6 @@ export default function SeekerOverview({
                 </div>
             )}
 
-            {/* Job detail modal */}
             {selectedJob && (
                 <JobDetailModal
                     job={selectedJob}

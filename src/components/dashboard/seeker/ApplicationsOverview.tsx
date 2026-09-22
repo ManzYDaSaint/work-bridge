@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Briefcase } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Briefcase, Eye, Clock, Building2, ChevronRight, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { PageHeader, EmptyState, Badge } from "@/components/dashboard/ui";
+import { PageHeader, EmptyState, Badge, SearchInput, SegmentedFilterTabs } from "@/components/dashboard/ui";
 import { useRouter } from "next/navigation";
 import JobDetailModal, { ExtendedJob } from "@/components/jobs/JobDetailModal";
 import ApplicationTimeline from "@/components/dashboard/ApplicationTimeline";
@@ -55,97 +55,86 @@ export default function ApplicationsOverview({ applications }: { applications: A
         }
     };
 
-    const statusCounts = {
+    const statusCounts = useMemo(() => ({
         ALL: applications.length,
         PENDING: applications.filter((a) => a.status === "PENDING").length,
         SHORTLISTED: applications.filter((a) => a.status === "SHORTLISTED").length,
         INTERVIEWING: applications.filter((a) => a.status === "INTERVIEWING").length,
         ACCEPTED: applications.filter((a) => a.status === "ACCEPTED").length,
         WITHDRAWN: applications.filter((a) => a.status === "WITHDRAWN").length,
-    };
+    }), [applications]);
 
-    const filteredApplications = applications.filter((app) => {
-        const matchesTab = activeTab === "ALL" || app.status === activeTab;
-        const query = searchQuery.toLowerCase();
-        const title = app.job?.title?.toLowerCase() || "";
-        const company = (app.job?.display_company_name || app.job?.employer?.companyName || "").toLowerCase();
-        const matchesSearch = title.includes(query) || company.includes(query);
-        return matchesTab && matchesSearch;
-    });
+    const filteredApplications = useMemo(() => {
+        return applications.filter((app) => {
+            const matchesTab = activeTab === "ALL" || app.status === activeTab;
+            const query = searchQuery.toLowerCase();
+            const title = app.job?.title?.toLowerCase() || "";
+            const company = (app.job?.display_company_name || app.job?.employer?.companyName || "").toLowerCase();
+            const matchesSearch = title.includes(query) || company.includes(query);
+            return matchesTab && matchesSearch;
+        });
+    }, [applications, activeTab, searchQuery]);
 
-    const tabs = [
-        { id: "ALL", label: "All" },
-        { id: "PENDING", label: "Pending" },
-        { id: "SHORTLISTED", label: "Shortlisted" },
-        { id: "INTERVIEWING", label: "Interviewing" },
-        { id: "ACCEPTED", label: "Accepted" },
-        { id: "WITHDRAWN", label: "Withdrawn" },
-    ];
+    const tabs = useMemo(() => [
+        { id: "ALL", label: "All", count: statusCounts.ALL },
+        { id: "PENDING", label: "Pending", count: statusCounts.PENDING },
+        { id: "SHORTLISTED", label: "Shortlisted", count: statusCounts.SHORTLISTED },
+        { id: "INTERVIEWING", label: "Interviewing", count: statusCounts.INTERVIEWING },
+        { id: "ACCEPTED", label: "Accepted", count: statusCounts.ACCEPTED },
+        { id: "WITHDRAWN", label: "Withdrawn", count: statusCounts.WITHDRAWN },
+    ], [statusCounts]);
 
     const summaryCards = [
-        { label: "Pending", value: statusCounts.PENDING, tone: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300" },
-        { label: "Shortlisted", value: statusCounts.SHORTLISTED, tone: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300" },
-        { label: "Interviewing", value: statusCounts.INTERVIEWING, tone: "bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300" },
-        { label: "Accepted", value: statusCounts.ACCEPTED, tone: "bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-300" },
+        { id: "PENDING", label: "Pending", value: statusCounts.PENDING, tone: "border-amber-200 bg-amber-50/50 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300" },
+        { id: "SHORTLISTED", label: "Shortlisted", value: statusCounts.SHORTLISTED, tone: "border-emerald-200 bg-emerald-50/50 text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300" },
+        { id: "INTERVIEWING", label: "Interviewing", value: statusCounts.INTERVIEWING, tone: "border-sky-200 bg-sky-50/50 text-sky-900 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-300" },
+        { id: "ACCEPTED", label: "Accepted", value: statusCounts.ACCEPTED, tone: "border-purple-200 bg-purple-50/50 text-purple-900 dark:border-purple-900/40 dark:bg-purple-950/20 dark:text-purple-300" },
     ];
 
     return (
         <div className="space-y-6 pb-20">
-            <PageHeader title="Applications" subtitle={`You have ${applications.length} application${applications.length === 1 ? "" : "s"} in your pipeline.`} />
+            <PageHeader title="Applications" subtitle={`Tracking ${applications.length} active application${applications.length === 1 ? "" : "s"} in your pipeline.`} />
 
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {/* Interactive Quick Stat Cards */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {summaryCards.map((card) => (
-                    <div key={card.label} className={`rounded-2xl border border-stone-200 p-4 ${card.tone} dark:border-slate-800`}>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.14em]">{card.label}</p>
-                        <p className="mt-2 text-2xl font-black">{card.value}</p>
-                    </div>
+                    <button
+                        key={card.id}
+                        onClick={() => setActiveTab(card.id)}
+                        className={`flex flex-col justify-between rounded-3xl border p-4 text-left transition-all ${card.tone} ${
+                            activeTab === card.id ? "ring-2 ring-[#16324f] dark:ring-amber-400" : "hover:opacity-90"
+                        }`}
+                    >
+                        <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">{card.label}</p>
+                        <p className="mt-1 text-2xl font-black tracking-tight">{card.value}</p>
+                    </button>
                 ))}
             </div>
 
-            {/* Status Tabs and Search Input */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="no-scrollbar flex overflow-x-auto gap-1.5 rounded-2xl bg-stone-100 p-1.5 dark:bg-slate-900 border border-stone-200/80 dark:border-slate-800">
-                    {tabs.map((tab) => {
-                        const count = statusCounts[tab.id as keyof typeof statusCounts] || 0;
-                        const isActive = activeTab === tab.id;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all whitespace-nowrap ${
-                                    isActive
-                                        ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white"
-                                        : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                                }`}
-                            >
-                                <span>{tab.label}</span>
-                                <span className={`rounded-md px-1.5 py-0.5 text-[10px] ${isActive ? "bg-stone-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200" : "bg-stone-200/60 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}>
-                                    {count}
-                                </span>
-                            </button>
-                        );
-                    })}
-                </div>
+            {/* Controls Row: Status Tabs + Search */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <SegmentedFilterTabs
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onChange={(id) => setActiveTab(id)}
+                />
 
-                <div className="relative min-w-[240px]">
-                    <input
-                        type="text"
-                        placeholder="Search role or company..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full rounded-2xl border border-stone-200/80 bg-white px-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:border-amber-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-                    />
-                </div>
+                <SearchInput
+                    value={searchQuery}
+                    onChange={(val) => setSearchQuery(val)}
+                    placeholder="Search role or company..."
+                />
             </div>
 
+            {/* Application Cards Feed */}
             {filteredApplications.length === 0 ? (
-                <div className="rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
+                <div className="rounded-3xl border border-stone-200/80 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
                     {applications.length === 0 ? (
                         <EmptyState 
                             icon={Briefcase} 
                             title="No applications yet" 
                             description="Start applying to jobs in your recommended feed to track your status and progress here." 
-                            action={{ label: "View recommendations", href: "/dashboard/seeker/recommendations" }} 
+                            action={{ label: "View Recommendations", href: "/dashboard/seeker/recommendations" }} 
                             iconColor="text-[#16324f]" 
                         />
                     ) : (
@@ -153,63 +142,90 @@ export default function ApplicationsOverview({ applications }: { applications: A
                             icon={Briefcase} 
                             title="No applications match" 
                             description="Try selecting a different status tab or clearing your search filter." 
-                            action={{ label: "Browse all applications", onClick: () => { setActiveTab("ALL"); setSearchQuery(""); } }} 
+                            action={{ label: "Clear Filters", onClick: () => { setActiveTab("ALL"); setSearchQuery(""); } }} 
                             iconColor="text-[#16324f]" 
                         />
                     )}
                 </div>
             ) : (
-                <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
-                    <div className="hidden sm:grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] gap-2 border-b border-stone-200/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:border-slate-800">
-                        <span>Role &amp; Company</span>
-                        <span>Status &amp; Telemetry</span>
-                        <span className="sm:text-right">Action</span>
-                    </div>
-                    {filteredApplications.map((app) => (
-                        <div key={app.id} className="border-b border-stone-200/70 p-4 last:border-b-0 dark:border-slate-800">
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-4">
-                                <button type="button" onClick={() => app.job && setSelectedJob(app.job)} className="min-w-0 text-left">
-                                    <p className="truncate text-sm font-bold text-slate-900 dark:text-white sm:text-base">{app.job?.title || "Unknown role"}</p>
-                                    <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{app.job?.display_company_name || app.job?.employer?.companyName || "Company"}</p>
-                                </button>
-                                <div className="flex flex-col gap-1.5 items-start sm:items-center sm:flex-row sm:gap-2">
-                                    <Badge 
-                                        label={app.status} 
-                                        variant={
-                                            app.status === "ACCEPTED" || app.status === "SHORTLISTED" ? "green" : 
-                                            app.status === "INTERVIEWING" ? "blue" :
-                                            app.status === "REJECTED" ? "red" : 
-                                            app.status === "WITHDRAWN" ? "slate" :
-                                            "yellow"
-                                        } 
-                                    />
-                                    {app.viewedAt && (
-                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-700 bg-sky-50 dark:bg-sky-950/40 dark:text-sky-300 px-2 py-0.5 rounded-md border border-sky-200/60 dark:border-sky-900/40">
-                                            👀 Employer Viewed {formatTimeAgo(app.viewedAt)}
-                                        </span>
-                                    )}
+                <div className="grid gap-3 sm:grid-cols-2">
+                    {filteredApplications.map((app) => {
+                        const companyName = app.job?.display_company_name || app.job?.employer?.companyName || "Company";
+
+                        return (
+                            <div
+                                key={app.id}
+                                className="group flex flex-col justify-between rounded-3xl border border-stone-200/80 bg-white p-5 shadow-xs transition-all duration-200 hover:border-stone-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 space-y-4"
+                            >
+                                <div className="space-y-3">
+                                    {/* Status Badge & Telemetry Bar */}
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <Badge 
+                                            label={app.status} 
+                                            variant={
+                                                app.status === "ACCEPTED" || app.status === "SHORTLISTED" ? "green" : 
+                                                app.status === "INTERVIEWING" ? "blue" :
+                                                app.status === "REJECTED" ? "red" : 
+                                                app.status === "WITHDRAWN" ? "slate" :
+                                                "yellow"
+                                            } 
+                                        />
+
+                                        {app.viewedAt && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-0.5 text-[10px] font-bold text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200/50 dark:border-sky-900/40">
+                                                <Eye size={11} /> Employer Viewed {formatTimeAgo(app.viewedAt)}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Role Title & Company */}
+                                    <div>
+                                        <h3
+                                            onClick={() => app.job && setSelectedJob(app.job)}
+                                            className="cursor-pointer text-base font-bold text-slate-900 line-clamp-1 group-hover:text-[#16324f] dark:text-white dark:group-hover:text-amber-400 transition-colors"
+                                        >
+                                            {app.job?.title || "Unknown Role"}
+                                        </h3>
+                                        <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                                            <Building2 size={12} className="shrink-0" />
+                                            <span>{companyName}</span>
+                                        </p>
+                                    </div>
+
+                                    {/* Applied Time Meta */}
                                     {app.createdAt && (
-                                        <span className="text-xs font-medium text-slate-400">
-                                            Applied {formatTimeAgo(app.createdAt)}
-                                        </span>
+                                        <p className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500">
+                                            <Clock size={11} /> Applied {formatTimeAgo(app.createdAt)}
+                                        </p>
                                     )}
+
+                                    {/* Application Progress Timeline */}
+                                    <div className="pt-1">
+                                        <ApplicationTimeline applicationId={app.id} currentStatus={app.status} />
+                                    </div>
                                 </div>
-                                <div className="flex items-center justify-between gap-3 sm:justify-end">
-                                    <button onClick={() => app.job && setSelectedJob(app.job)} className="text-xs font-bold text-[#16324f] hover:underline dark:text-slate-200">
-                                        View details →
+
+                                {/* Action Bar */}
+                                <div className="flex items-center justify-between border-t border-stone-100 pt-3 dark:border-slate-800">
+                                    <button
+                                        onClick={() => app.job && setSelectedJob(app.job)}
+                                        className="inline-flex items-center gap-1 text-xs font-bold text-[#16324f] hover:underline dark:text-amber-400"
+                                    >
+                                        View Job Details <ChevronRight size={13} />
                                     </button>
+
                                     {app.status !== "WITHDRAWN" && app.status !== "REJECTED" && (
-                                        <button onClick={() => handleWithdraw(app.id)} className="flex h-8 items-center justify-center rounded-xl border border-stone-200 px-3 text-xs font-bold text-slate-500 hover:bg-stone-50 hover:text-rose-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900 transition">
-                                            Withdraw
+                                        <button
+                                            onClick={() => handleWithdraw(app.id)}
+                                            className="inline-flex items-center gap-1 rounded-xl border border-stone-200 px-3 py-1 text-xs font-semibold text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 dark:border-slate-800 dark:text-slate-400 dark:hover:border-rose-900 dark:hover:bg-rose-950/30 dark:hover:text-rose-400 transition"
+                                        >
+                                            <XCircle size={12} /> Withdraw
                                         </button>
                                     )}
                                 </div>
                             </div>
-
-                            {/* Application Timeline Step Visualizer */}
-                            <ApplicationTimeline applicationId={app.id} currentStatus={app.status} />
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
@@ -226,3 +242,4 @@ export default function ApplicationsOverview({ applications }: { applications: A
         </div>
     );
 }
+

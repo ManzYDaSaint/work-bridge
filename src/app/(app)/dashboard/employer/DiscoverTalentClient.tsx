@@ -323,16 +323,16 @@ export default function DiscoverTalentClient({
                                     key={seeker.id}
                                     onClick={() => openProfile(seeker.id)}
                                     role="button"
-                                    className="group flex cursor-pointer flex-col justify-between rounded-2xl border border-stone-200 bg-white p-5 transition-shadow hover:shadow-md hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
+                                    className="group flex cursor-pointer flex-col justify-between rounded-3xl border border-stone-200/80 bg-white p-5 shadow-xs transition-all duration-200 hover:border-stone-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 space-y-4"
                                 >
                                     <div>
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-100 dark:bg-slate-800">
+                                                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-stone-100 dark:bg-slate-800 border border-stone-200/80 dark:border-slate-700">
                                                     {seeker.avatar_url ? (
                                                         <img src={seeker.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
                                                     ) : (
-                                                        <span className="text-lg font-semibold text-[#16324f] dark:text-slate-300">
+                                                        <span className="text-base font-bold text-[#16324f] dark:text-amber-400">
                                                             {(seeker.full_name || "?")[0].toUpperCase()}
                                                         </span>
                                                     )}

@@ -149,27 +149,27 @@ export default function CandidatesClient({
         <div className="space-y-6 pb-20">
             <PageHeader title="Candidates" subtitle="Review the pipeline in a simpler, faster list." />
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div className="rounded-2xl border border-stone-200 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-                    <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Response rate</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{responseRate}%</p>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Measured from pipeline updates (shortlist/reject/etc).</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="flex flex-col justify-between rounded-3xl border border-stone-200/80 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Response Rate</p>
+                    <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{responseRate}%</p>
+                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Pipeline response velocity.</p>
                 </div>
-                <div className="rounded-2xl border border-stone-200 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-                    <p className="text-xs uppercase tracking-[0.14em] text-slate-400">SLA nudges</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{pendingOver72h}</p>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Pending applications older than 72 hours.</p>
+                <div className="flex flex-col justify-between rounded-3xl border border-stone-200/80 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pending &gt; 72h</p>
+                    <p className="mt-1 text-2xl font-black text-amber-600 dark:text-amber-400">{pendingOver72h}</p>
+                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Applications awaiting initial review.</p>
                 </div>
-                <div className="rounded-2xl border border-stone-200 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-                    <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Template</p>
+                <div className="flex flex-col justify-between rounded-3xl border border-stone-200/80 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Outreach Template</p>
                     <select
                         value={template}
                         onChange={(e) => setTemplate(e.target.value as any)}
-                        className="mt-2 w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                        className="mt-1 w-full rounded-2xl border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-semibold text-slate-800 outline-none focus:border-[#16324f] dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-amber-400"
                     >
-                        <option value="INTERVIEW">Interview invite</option>
-                        <option value="FOLLOW_UP">Follow up</option>
-                        <option value="CLOSE">Close out</option>
+                        <option value="INTERVIEW">Interview Invite</option>
+                        <option value="FOLLOW_UP">Follow Up</option>
+                        <option value="CLOSE">Close Out</option>
                     </select>
                 </div>
             </div>

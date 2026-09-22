@@ -183,7 +183,7 @@ export async function sendWhatsAppTemplate(to: string, templateId: string, paylo
     }
   };
 
-  console.log(`[WhatsApp Worker] Dispatching template '${templateId}' to ${formattedTo}...`);
+  // console.log(`[WhatsApp Worker] Dispatching template '${templateId}' to ${formattedTo}...`);
 
   const response = await fetch(url, {
     method: "POST",
@@ -202,6 +202,6 @@ export async function sendWhatsAppTemplate(to: string, templateId: string, paylo
     throw new Error(`WhatsApp API Error (${response.status}): ${errorMsg}`);
   }
 
-  console.log(`[WhatsApp Worker] Successfully dispatched message ID: ${responseData?.messages?.[0]?.id}`);
+  // console.log(`[WhatsApp Worker] Successfully dispatched message ID: ${responseData?.messages?.[0]?.id}`);
   return responseData;
 }

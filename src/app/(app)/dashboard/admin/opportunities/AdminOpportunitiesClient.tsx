@@ -4,11 +4,11 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
-import { PageHeader, Badge, StatCard, EmptyState } from "@/components/dashboard/ui";
+import { PageHeader, Badge, StatCard, EmptyState, SearchInput } from "@/components/dashboard/ui";
 import {
     Sparkles, Plus, Eye, Edit, Archive, Star, Send,
     GraduationCap, DollarSign, BookOpen, Briefcase, Award, Globe, Building2, Rocket,
-    BarChart3, MousePointerClick, Users, Search
+    BarChart3, MousePointerClick, Users
 } from "lucide-react";
 import Link from "next/link";
 import OpportunityIngestionQueue from "./OpportunityIngestionQueue";
@@ -256,16 +256,11 @@ export default function AdminOpportunitiesClient({
                         </div>
                     </div>
 
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search by title or organisation..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="w-full rounded-2xl border border-stone-200 bg-white px-12 py-3 text-sm outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900"
-                        />
-                    </div>
+                    <SearchInput
+                        placeholder="Search by title or organisation..."
+                        value={search}
+                        onChange={setSearch}
+                    />
 
             {/* Opportunities table */}
             <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">

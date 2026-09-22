@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { PageHeader, Badge } from "@/components/dashboard/ui";
-import { Briefcase, CheckCircle, XCircle, Trash2, Search, Eye, RefreshCw, Clock, AlertTriangle, FileText, Download, CalendarX } from "lucide-react";
+import { PageHeader, Pagination, SearchInput } from "@/components/dashboard/ui";
+import { Briefcase, CheckCircle, XCircle, Trash2, Eye, RefreshCw, Clock, AlertTriangle, FileText, Download, CalendarX } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import JobDetailModal from "@/components/jobs/JobDetailModal";
@@ -42,7 +42,7 @@ export default function AdminJobsClient({
     const page = parseInt(searchParams.get("page") || initialSearchParams.page || "1");
     const searchTerm = searchParams.get("search") || initialSearchParams.search || "";
     const statusFilter = searchParams.get("status") || initialSearchParams.status || "ALL";
-    const limit = 20;
+    const limit = parseInt(searchParams.get("limit") || "20");
 
     const handleRefresh = () => {
         setLoading(true);
@@ -235,16 +235,12 @@ export default function AdminJobsClient({
                     </button>
                 </div>
 
-                <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Search role or company name..."
-                        value={searchTerm}
-                        onChange={(e) => updateFilters({ search: e.target.value })}
-                        className="w-full rounded-2xl border border-stone-200 bg-white px-12 py-3 text-sm outline-none focus:border-stone-300 dark:border-slate-700 dark:bg-slate-900"
-                    />
-                </div>
+                <SearchInput
+                    value={searchTerm}
+                    onChange={(val) => updateFilters({ search: val })}
+                    placeholder="Search role or company name..."
+                    className="w-full"
+                />
             </div>
 
             {/* Jobs Table */}
@@ -350,28 +346,15 @@ export default function AdminJobsClient({
                 )}
             </div>
             
-            {initialTotal > limit && (
-                <div className="flex items-center justify-between mt-6 px-4">
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                        Showing {(page - 1) * limit + 1} to {Math.min(page * limit, initialTotal)} of {initialTotal}
-                    </p>
-                    <div className="flex gap-2">
-                        <button
-                            disabled={page === 1}
-                            onClick={() => updateFilters({ page: page - 1 })}
-                            className="rounded-xl border border-stone-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300"
-                        >
-                            Previous
-                        </button>
-                        <button
-                            disabled={page * limit >= initialTotal}
-                            onClick={() => updateFilters({ page: page + 1 })}
-                            className="rounded-xl border border-stone-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300"
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
+            {initialTotal > 0 && (
+                <Pagination
+                    currentPage={page}
+                    totalPages={Math.ceil(initialTotal / limit)}
+                    totalItems={initialTotal}
+                    itemsPerPage={limit}
+                    onPageChange={(newPage) => updateFilters({ page: newPage })}
+                    onLimitChange={(newLimit) => updateFilters({ limit: newLimit, page: 1 })}
+                />
             )}
 
             {selectedJob && (
