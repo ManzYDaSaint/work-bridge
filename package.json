@@ -12,6 +12,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.2.2",
     "@marsidev/react-turnstile": "^1.5.3",
     "@napi-rs/canvas": "^0.1.97",
@@ -23,6 +24,7 @@
     "framer-motion": "^12.34.3",
     "lucide-react": "^0.575.0",
     "next": "^16.1.6",
+    "node-cache": "^5.1.2",
     "pg": "^8.22.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",

@@ -655,3 +655,50 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.applications;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.opportunities;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.opportunity_matches;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.mission_control_events;
+
+-- =================================================================─────────────
+-- NEW: DYNAMIC QUALIFICATION CLASSIFICATION
+-- =================================================================─────────────
+
+CREATE TABLE IF NOT EXISTS public.qualification_domains (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL UNIQUE,
+    description TEXT,
+    keywords TEXT[] DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.qualification_mappings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    raw_qualification TEXT NOT NULL UNIQUE,
+    domain_id UUID REFERENCES public.qualification_domains(id) ON DELETE SET NULL,
+    is_confirmed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Seed initial domains
+INSERT INTO public.qualification_domains (name, keywords) VALUES
+('computing', ARRAY['computing', 'computer science', 'it', 'software', 'data science', 'cybersecurity', 'ict']),
+('nursing_health', ARRAY['nursing', 'midwifery', 'clinical medicine', 'public health', 'pharmacy', 'medical laboratory']),
+('education', ARRAY['education', 'teaching', 'pedagogy', 'curriculum', 'early childhood']),
+('hospitality', ARRAY['hospitality', 'food', 'beverage', 'catering', 'hotel', 'tourism']),
+('finance_accounting', ARRAY['accounting', 'finance', 'audit', 'taxation', 'banking', 'economics']),
+('engineering', ARRAY['engineering', 'civil', 'mechanical', 'electrical', 'electronics']),
+('agriculture', ARRAY['agriculture', 'agronomy', 'farming', 'forestry', 'environmental science']),
+('law', ARRAY['law', 'legal studies', 'jurisprudence', 'llb']),
+('social_science', ARRAY['social science', 'sociology', 'psychology', 'social work', 'development studies']),
+('humanities', ARRAY['humanities', 'arts', 'philosophy', 'history', 'languages', 'literature']),
+('media_journalism', ARRAY['mass communication', 'journalism', 'media', 'public relations', 'broadcasting']),
+('library_information', ARRAY['library science', 'information management', 'records management', 'archives']),
+('procurement_logistics', ARRAY['procurement', 'supply chain', 'logistics', 'purchasing']),
+('human_resources', ARRAY['human resource', 'human resources', 'hr management', 'personnel management']),
+('business_admin', ARRAY['business', 'management', 'administration', 'bba', 'mba']),
+('trades_construction', ARRAY['foreman', 'construction', 'building', 'masonry', 'carpentry', 'plumbing', 'welding'])
+ON CONFLICT (name) DO UPDATE SET
+  keywords = EXCLUDED.keywords;
+
+ALTER TABLE public.qualification_domains ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.qualification_mappings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins can manage domains" ON public.qualification_domains FOR ALL USING (public.is_admin());
+CREATE POLICY "Admins can manage mappings" ON public.qualification_mappings FOR ALL USING (public.is_admin());

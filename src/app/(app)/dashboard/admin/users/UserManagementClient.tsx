@@ -7,7 +7,7 @@ import { Users, Loader2, UserX, Crown, Sparkles, X, CheckCircle2, UserCheck, Bui
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { calculateProfileStrength } from "@/lib/profile-strength";
-import { calculateYearsExperience, resolveHighestEducationQualification } from "@/lib/matching-helpers";
+import { calculateYearsExperience, resolveHighestEducationQualification } from "@/lib/matching-helpers-shared";
 
 
 export default function UserManagementClient({ 
@@ -683,9 +683,6 @@ export default function UserManagementClient({
                                                                 {m.qual_gate_passed ? `✓ MET (${m.qual_gate_score || 80}/80 pts)` : "✗ FAILED (0/80 pts)"}
                                                             </span>
                                                         </div>
-                                                        {!m.qual_gate_passed && m.hard_match_reasons && m.hard_match_reasons.length > 0 && (
-                                                          <p className="text-[10px] text-red-600 dark:text-red-400">{m.hard_match_reasons[0]}</p>
-                                                        )}
                                                         <div className="grid grid-cols-2 gap-1 text-[10px]">
                                                             <div><span className="text-slate-400 dark:text-slate-500">Job Requires:</span> <strong className="text-slate-700 dark:text-slate-200">{m.job_qualification_required || "Any"}</strong></div>
                                                             <div><span className="text-slate-400 dark:text-slate-500">Seeker Has:</span> <strong className={m.qual_gate_passed ? "text-emerald-700 dark:text-emerald-300" : "text-red-600 dark:text-red-400"}>{m.seeker_qualification_actual || "Not specified"}</strong></div>

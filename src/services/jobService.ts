@@ -399,6 +399,31 @@ export const jobService = {
      */
     createJob: async (employerId: string, jobData: any) => {
         const supabase = await createSupabaseServerClient();
+
+        // New: Perform AI Classification for the qualification
+        if (jobData.qualification) {
+            try {
+                const { classifyQualification } = await import("@/lib/qualification-classifier");
+                const { data: domains } = await supabase.from('qualification_domains').select('id, name');
+                const domainNames = (domains || []).map(d => d.name);
+                
+                const domain = await classifyQualification(jobData.qualification, domainNames);
+                const matchedDomain = domains?.find(d => d.name.toLowerCase() === domain.toLowerCase());
+                
+                if (matchedDomain) {
+                    // Save the mapping
+                    await supabase
+                        .from('qualification_mappings')
+                        .upsert({ 
+                            raw_qualification: jobData.qualification,
+                            domain_id: matchedDomain.id
+                        }, { onConflict: 'raw_qualification' });
+                }
+            } catch (err) {
+                console.error("[JOB_SERVICE] Qualification classification failed:", err);
+            }
+        }
+
         const { data, error } = await supabase
             .from("jobs")
             .insert({ ...jobData, employer_id: employerId })
