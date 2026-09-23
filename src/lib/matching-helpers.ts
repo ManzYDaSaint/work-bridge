@@ -211,6 +211,7 @@ export function evaluateQualificationMatch(
   jobTitle?: string | null,
   seekerSkills?: string[] | string | null
 ): { passed: boolean; score: number; mismatchedDomain?: boolean } {
+  console.log(`[MatchingDebug] Evaluating match: JobQual='${jobQualification}', SeekerQual='${seekerQualification}'`);
   // Extract domains from qualification text AND job title / seeker skills
   const jobDomains = Array.from(new Set([
     ...getQualificationDomains(jobQualification),
