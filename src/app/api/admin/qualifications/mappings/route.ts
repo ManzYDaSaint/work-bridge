@@ -42,49 +42,71 @@ export async function GET() {
   if (admin.error) return admin.error;
   const supabase = admin.supabase;
 
-  const [mappingsResult, jobsResult] = await Promise.all([
-    supabase
-      .from("qualification_mappings")
-      .select("id, raw_qualification, domain_id, is_confirmed, created_at, qualification_domains(id, name)")
-      .order("is_confirmed", { ascending: true })
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("jobs")
-      .select("id, title, qualification, status, created_at")
-      .not("qualification", "is", null)
-      .order("created_at", { ascending: false })
-      .limit(1000),
-  ]);
+  // Fetch all mappings
+  const { data: mappingsData, error: mappingsError } = await supabase
+    .from("qualification_mappings")
+    .select("id, raw_qualification, domain_id, is_confirmed, created_at, qualification_domains(id, name)")
+    .order("is_confirmed", { ascending: true })
+    .order("created_at", { ascending: false });
 
-  if (mappingsResult.error) return NextResponse.json({ error: "Failed to fetch mappings" }, { status: 500 });
-  if (jobsResult.error) return NextResponse.json({ error: "Failed to fetch jobs for unmapped qualifications" }, { status: 500 });
+  if (mappingsError) return NextResponse.json({ error: "Failed to fetch mappings" }, { status: 500 });
 
-  const mappings = mappingsResult.data ?? [];
-  const mappedKeys = new Set(mappings.map((mapping) => normalizeKey(mapping.raw_qualification)));
+  const mappings = mappingsData ?? [];
+  // Build map of normalized raw qualification -> domain_id
+  const mappedDomainMap = new Map<string, string | null>();
+  for (const mapping of mappings) {
+    mappedDomainMap.set(normalizeKey(mapping.raw_qualification), mapping.domain_id ?? null);
+  }
+
+  // Fetch ACTIVE jobs in batches to bypass single-query limit
   const grouped = new Map<string, {
     raw_qualification: string;
     job_count: number;
     sample_jobs: Array<{ id: string; title: string; status: string | null; created_at: string | null }>;
   }>();
 
-  for (const job of jobsResult.data ?? []) {
-    const raw = normalizeQualification(String(job.qualification ?? ""));
-    if (!raw) continue;
+  let page = 0;
+  const pageSize = 1000;
+  let hasMore = true;
 
-    const key = normalizeKey(raw);
-    if (mappedKeys.has(key)) continue;
+  while (hasMore) {
+    const { data: jobs, error: jobsError } = await supabase
+      .from("jobs")
+      .select("id, title, qualification, status, created_at")
+      .eq("status", "ACTIVE")
+      .not("qualification", "is", null)
+      .order("created_at", { ascending: false })
+      .range(page * pageSize, (page + 1) * pageSize - 1);
 
-    const existing = grouped.get(key) ?? { raw_qualification: raw, job_count: 0, sample_jobs: [] };
-    existing.job_count += 1;
-    if (existing.sample_jobs.length < 3) {
-      existing.sample_jobs.push({
-        id: job.id,
-        title: job.title,
-        status: job.status ?? null,
-        created_at: job.created_at ?? null,
-      });
+    if (jobsError) return NextResponse.json({ error: "Failed to fetch jobs for unmapped qualifications" }, { status: 500 });
+
+    for (const job of jobs ?? []) {
+      const raw = normalizeQualification(String(job.qualification ?? ""));
+      if (!raw) continue;
+
+      const key = normalizeKey(raw);
+      // Qualification is unmapped if it is not in mapping table, OR if domain_id is null/unclassified
+      const domainId = mappedDomainMap.get(key);
+      if (mappedDomainMap.has(key) && domainId) continue;
+
+      const existing = grouped.get(key) ?? { raw_qualification: raw, job_count: 0, sample_jobs: [] };
+      existing.job_count += 1;
+      if (existing.sample_jobs.length < 3) {
+        existing.sample_jobs.push({
+          id: job.id,
+          title: job.title,
+          status: job.status ?? null,
+          created_at: job.created_at ?? null,
+        });
+      }
+      grouped.set(key, existing);
     }
-    grouped.set(key, existing);
+
+    if (!jobs || jobs.length < pageSize) {
+      hasMore = false;
+    } else {
+      page++;
+    }
   }
 
   return NextResponse.json({

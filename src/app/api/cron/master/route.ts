@@ -23,6 +23,7 @@ export async function GET(req: Request) {
         'process-delayed-matches',
         'process-whatsapp-matches',
         'process-automation',
+        'process-qualification-mappings',
         'queue-retention-reminders',
         'prune-notifications',
         'process-ingestion',

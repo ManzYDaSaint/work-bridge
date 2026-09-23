@@ -18,8 +18,8 @@ export async function getCachedQualificationMappings() {
 
   const { data, error } = await supabase
     .from("qualification_mappings")
-    .select("raw_qualification, qualification_domains(name)")
-    .eq("is_confirmed", true);
+    .select("raw_qualification, domain_id, qualification_domains(name)")
+    .not("domain_id", "is", null);
 
   if (error || !data) return [];
 

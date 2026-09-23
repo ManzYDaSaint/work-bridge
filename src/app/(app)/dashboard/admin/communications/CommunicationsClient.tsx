@@ -574,7 +574,7 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                     <div className="rounded-2xl border border-stone-200 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-base font-semibold text-slate-900 dark:text-white">Seeker WhatsApp Threads</h3>
-                            <button type="button" onClick={() => void fetchPreview(audience)} className="text-slate-400 hover:text-slate-600">
+                            <button type="button" onClick={() => void fetchPreview(audience)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                                 <RefreshCw size={14} />
                             </button>
                         </div>
