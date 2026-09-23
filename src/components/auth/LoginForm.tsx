@@ -8,7 +8,7 @@ import Image from "next/image";
 import { ArrowRight, Clock } from "lucide-react";
 import { showErrorToast } from "@/lib/toasts";
 import { toast } from "sonner";
-// import { TurnstileChallenge } from "@/components/turnstile-challenge";
+import { TurnstileChallenge } from "@/components/turnstile-challenge";
 import GoogleAuthButtons from "@/components/auth/GoogleAuthButtons";
 
 export default function LoginForm() {
@@ -17,7 +17,7 @@ export default function LoginForm() {
     const isNoProfile = searchParams.get("error") === "no_profile";
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    // const [turnstileToken, setTurnstileToken] = useState<string>("");
+    const [turnstileToken, setTurnstileToken] = useState<string>("");
     const [isLoading, setIsLoading] = useState(false);
     const [needsVerification, setNeedsVerification] = useState(false);
     const [isResending, setIsResending] = useState(false);
@@ -34,10 +34,10 @@ export default function LoginForm() {
     const handlePasswordLogin = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // if (!turnstileToken) {
-        //     toast.error("Please complete the security challenge.");
-        //     return;
-        // }
+        if (!turnstileToken) {
+            toast.error("Please complete the security challenge.");
+            return;
+        }
 
         setIsLoading(true);
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -164,7 +164,7 @@ export default function LoginForm() {
                         />
                     </div>
 
-                    {/* <TurnstileChallenge onVerify={setTurnstileToken} /> */}
+                    <TurnstileChallenge onVerify={setTurnstileToken} />
 
                     <button
                         type="submit"
