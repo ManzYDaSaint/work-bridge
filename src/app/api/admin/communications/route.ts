@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { validateAuth } from "@/lib/auth-guard";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend } from "@/lib/resend";
-import { sendMetaWhatsAppMessage, logWhatsAppMessage } from "@/lib/whatsapp-messages";
+import { sendMetaWhatsAppMessage, logWhatsAppMessage, cleanMetaParamText } from "@/lib/whatsapp-messages";
+
+// The approved Meta template used for all cold outbound broadcasts.
+// Template body: "Hello {{1}},\n\n*{{2}}*\n\n{{3}}\n\nBest regards,\nAganyu Team"
+// {{1}} = first_name, {{2}} = subject/heading, {{3}} = message body
+const BROADCAST_TEMPLATE_NAME = process.env.WHATSAPP_BROADCAST_TEMPLATE || "aganyu_broadcast_announcement";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_URL || "https://aganyu.com";
 const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || "Aganyu <hello@aganyu.com>";
@@ -365,18 +370,41 @@ export async function POST(request: Request) {
                     skippedWhatsApp += 1;
                 } else {
                     try {
-                        const whatsappFormattedText = `*${renderedSubject}*\n\n${renderedBody}`;
-                        await sendMetaWhatsAppMessage({
+                        // Build template parameters for aganyu_broadcast_announcement:
+                        // {{1}} = first_name, {{2}} = subject (heading), {{3}} = body text
+                        const templateComponents = [
+                            {
+                                type: "body",
+                                parameters: [
+                                    { type: "text", text: cleanMetaParamText(recipient.first_name, 60) || "there" },
+                                    { type: "text", text: cleanMetaParamText(renderedSubject, 200) },
+                                    { type: "text", text: cleanMetaParamText(renderedBody, 1000) }
+                                ]
+                            }
+                        ];
+
+                        const metaResponse = await sendMetaWhatsAppMessage({
                             to: recipient.phone,
-                            text: whatsappFormattedText
+                            templateId: BROADCAST_TEMPLATE_NAME,
+                            templateParams: { languageCode: "en" },
+                            components: templateComponents
                         });
+
+                        // Store the wa_message_id so delivery webhooks can update the DB record
+                        const waMessageId = metaResponse?.messages?.[0]?.id || null;
+                        const messagePreview = `[Template: ${BROADCAST_TEMPLATE_NAME}] ${renderedSubject} — ${renderedBody.slice(0, 100)}`;
 
                         await logWhatsAppMessage({
                             user_id: recipient.user_id,
                             phone: recipient.phone,
                             direction: "OUTBOUND",
-                            message_text: whatsappFormattedText,
-                            status: "SENT"
+                            message_text: messagePreview,
+                            status: "SENT",
+                            metadata: {
+                                wa_message_id: waMessageId,
+                                template: BROADCAST_TEMPLATE_NAME,
+                                subject: renderedSubject
+                            }
                         });
 
                         sentWhatsApp += 1;

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiFetchJson } from "@/lib/api";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
-import { Send, Sparkles, Mail, Eye, Save, CheckCircle2, MessageSquare, Phone, Crown, RefreshCw, UserCheck, MessageCircle } from "lucide-react";
+import { Send, Sparkles, Mail, Eye, Save, CheckCircle2, MessageSquare, Phone, Crown, RefreshCw, MessageCircle, CheckCheck, XCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 type Audience = "ALL" | "SEEKERS" | "EMPLOYERS" | "PREMIUM_SEEKERS";
@@ -33,6 +33,29 @@ Update your profile here: {{profile_url}}
 
 Best regards,
 The Aganyu Team`;
+
+// Delivery status badge for outbound messages in the Live Inbox chat thread.
+// Status is sourced from whatsapp_messages.status, updated in real-time by the webhook handler.
+function DeliveryStatusBadge({ status }: { status?: string }) {
+    if (!status) return null;
+    const s = status.toUpperCase();
+    if (s === "DELIVERED") return (
+        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-200">
+            <CheckCheck size={11} /> Delivered
+        </span>
+    );
+    if (s === "FAILED") return (
+        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-red-300">
+            <XCircle size={11} /> Failed
+        </span>
+    );
+    // SENT = accepted by Meta (template queued for delivery)
+    return (
+        <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-100/70">
+            <Clock size={10} /> Sent
+        </span>
+    );
+}
 
 export default function CommunicationsClient({ initialCounts }: { initialCounts: Record<string, number> }) {
     const [activeTab, setActiveTab] = useState<"BROADCAST" | "INBOX">("BROADCAST");
@@ -367,6 +390,19 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                             </div>
                         </div>
 
+                        {/* WhatsApp Template Notice — shown when channel includes WhatsApp */}
+                        {(channel === "WHATSAPP" || channel === "BOTH") && (
+                            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200">
+                                <p className="font-semibold mb-1">📋 WhatsApp Broadcast uses an approved Meta Template</p>
+                                <p>All cold outbound WhatsApp messages use the <span className="font-mono font-bold">aganyu_broadcast_announcement</span> template (Meta 24-hr policy compliance).</p>
+                                <ul className="mt-1.5 list-disc pl-4 space-y-0.5">
+                                    <li><span className="font-semibold">{"{{1}}"}</span> ← Recipient first name</li>
+                                    <li><span className="font-semibold">{"{{2}}"}</span> ← Subject / Heading (bold)</li>
+                                    <li><span className="font-semibold">{"{{3}}"}</span> ← Message body text</li>
+                                </ul>
+                            </div>
+                        )}
+
                         {/* Audience Selector */}
                         <div className="rounded-2xl border border-stone-200 bg-white/80 p-5 dark:border-slate-800 dark:bg-slate-900/70">
                             <div className="mb-4 flex items-center justify-between gap-3">
@@ -655,6 +691,11 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                                                     >
                                                         {new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </p>
+                                                    {!isInbound && (
+                                                        <div className="mt-0.5">
+                                                            <DeliveryStatusBadge status={msg.status} />
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         );

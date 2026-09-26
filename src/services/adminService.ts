@@ -322,7 +322,7 @@ export const adminService = {
             .order("created_at", { ascending: false });
 
         if (params.search) {
-            query = query.or(`email.ilike.%${params.search}%,job_seekers.full_name.ilike.%${params.search}%,employers.company_name.ilike.%${params.search}%`);
+            query = query.or(`email.ilike.%${params.search}%`);
         }
         if (params.role && params.role !== "ALL") {
             if (params.role === "PREMIUM") {
@@ -365,7 +365,7 @@ export const adminService = {
             .order("created_at", { ascending: false });
 
         if (params.search) {
-            query = query.or(`title.ilike.%${params.search}%,employer.company_name.ilike.%${params.search}%`);
+            query = query.or(`title.ilike.%${params.search}%,employers.company_name.ilike.%${params.search}%`);
         }
         if (params.status && params.status !== "ALL") {
             query = query.eq("status", params.status);

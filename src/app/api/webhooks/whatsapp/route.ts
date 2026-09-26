@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -37,51 +38,109 @@ export async function POST(request: Request) {
 
         const body = JSON.parse(rawBody);
         const supabase = await createSupabaseServerClient();
+        const adminSupabase = getSupabaseAdminClient();
 
-        // 1. Process incoming user messages in real-time for Live Admin Inbox
         if (body.object === "whatsapp_business_account") {
             for (const entry of body.entry || []) {
                 for (const change of entry?.changes || []) {
-                    if (change.field === "messages" && change.value?.messages) {
-                        const messages = change.value.messages;
-                        const contacts = change.value.contacts || [];
-                        
-                        for (const msg of messages) {
-                            const senderPhone = msg.from; // e.g. "265999123456"
-                            const textBody = msg.text?.body || (msg.type ? `[Media/Interactive: ${msg.type}]` : "");
-                            const contactName = contacts.find((c: any) => c.wa_id === senderPhone)?.profile?.name || "Seeker";
+                    // Meta always uses field: "messages" for both inbound messages AND delivery statuses.
+                    // The discriminator is whether change.value.messages or change.value.statuses is populated.
+                    if (change.field === "messages") {
 
-                            if (senderPhone && textBody) {
-                                // Lookup seeker by phone number
-                                const { data: seeker } = await supabase
-                                    .from("job_seekers")
-                                    .select("id, user_id, full_name, phone")
-                                    .or(`phone.eq.${senderPhone},phone.eq.+${senderPhone}`)
-                                    .maybeSingle();
+                        // 1. Handle incoming user messages → Live Admin Inbox
+                        if (change.value?.messages) {
+                            const messages = change.value.messages;
+                            const contacts = change.value.contacts || [];
+
+                            for (const msg of messages) {
+                                const senderPhone = msg.from;
+                                const textBody = msg.text?.body || (msg.type ? `[Media/Interactive: ${msg.type}]` : "");
+                                const contactName = contacts.find((c: any) => c.wa_id === senderPhone)?.profile?.name || "Seeker";
+
+                                if (senderPhone && textBody) {
+                                    const { data: seeker } = await supabase
+                                        .from("job_seekers")
+                                        .select("id, user_id, full_name, phone")
+                                        .or(`phone.eq.${senderPhone},phone.eq.+${senderPhone}`)
+                                        .maybeSingle();
+
+                                    try {
+                                        await supabase.from("whatsapp_messages").insert({
+                                            user_id: seeker?.user_id || null,
+                                            phone: senderPhone,
+                                            direction: "INBOUND",
+                                            message_text: textBody,
+                                            status: "RECEIVED",
+                                            metadata: {
+                                                contact_name: contactName,
+                                                wa_message_id: msg.id,
+                                                timestamp: msg.timestamp,
+                                                seeker_id: seeker?.id || null
+                                            },
+                                            created_at: new Date().toISOString()
+                                        });
+                                    } catch {
+                                        // Fallback to whatsapp_delivery_logs
+                                        await supabase.from("whatsapp_delivery_logs").insert({
+                                            user_id: seeker?.user_id || null,
+                                            status: "RECEIVED",
+                                            error: `INBOUND: ${textBody}`,
+                                            metadata: { phone: senderPhone, text: textBody, contactName }
+                                        });
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2. Handle delivery/read/failure status updates → update DB record status
+                        // Meta sends these under change.value.statuses (same field: "messages")
+                        if (change.value?.statuses && adminSupabase) {
+                            for (const st of change.value.statuses) {
+                                const waMessageId: string = st.id;
+                                const statusType: string = (st.status || "").toLowerCase(); // "sent", "delivered", "read", "failed"
+
+                                if (!waMessageId) continue;
+
+                                let dbStatus: "SENT" | "DELIVERED" | "FAILED";
+                                if (statusType === "delivered" || statusType === "read") {
+                                    dbStatus = "DELIVERED";
+                                } else if (statusType === "failed") {
+                                    dbStatus = "FAILED";
+                                } else {
+                                    dbStatus = "SENT";
+                                }
+
+                                const errorInfo = st.errors?.[0]
+                                    ? { code: st.errors[0].code, title: st.errors[0].title, details: st.errors[0].error_data?.details }
+                                    : null;
 
                                 try {
-                                    await supabase.from("whatsapp_messages").insert({
-                                        user_id: seeker?.user_id || null,
-                                        phone: senderPhone,
-                                        direction: "INBOUND",
-                                        message_text: textBody,
-                                        status: "RECEIVED",
-                                        metadata: {
-                                            contact_name: contactName,
-                                            wa_message_id: msg.id,
-                                            timestamp: msg.timestamp,
-                                            seeker_id: seeker?.id || null
-                                        },
-                                        created_at: new Date().toISOString()
-                                    });
-                                } catch {
-                                    // Fallback to whatsapp_delivery_logs
-                                    await supabase.from("whatsapp_delivery_logs").insert({
-                                        user_id: seeker?.user_id || null,
-                                        status: "RECEIVED",
-                                        error: `INBOUND: ${textBody}`,
-                                        metadata: { phone: senderPhone, text: textBody, contactName }
-                                    });
+                                    // Look up by metadata->wa_message_id (stored when we sent the broadcast)
+                                    const { data: existing } = await adminSupabase
+                                        .from("whatsapp_messages")
+                                        .select("id, metadata")
+                                        .filter("metadata->>wa_message_id", "eq", waMessageId)
+                                        .maybeSingle();
+
+                                    if (existing?.id) {
+                                        const updatedMeta = {
+                                            ...(existing.metadata || {}),
+                                            delivery_status: statusType,
+                                            ...(errorInfo ? { delivery_error: errorInfo } : {})
+                                        };
+                                        await adminSupabase
+                                            .from("whatsapp_messages")
+                                            .update({
+                                                status: dbStatus,
+                                                metadata: updatedMeta,
+                                                updated_at: new Date().toISOString()
+                                            })
+                                            .eq("id", existing.id);
+
+                                        console.log(`[WhatsApp Webhook] Updated message ${waMessageId} → ${dbStatus}`);
+                                    }
+                                } catch (updateErr: any) {
+                                    console.error("[WhatsApp Webhook] Status update error:", updateErr?.message);
                                 }
                             }
                         }
@@ -90,7 +149,7 @@ export async function POST(request: Request) {
             }
         }
 
-        // 2. Queue event in automation_tasks for extra background processing
+        // 3. Queue event in automation_tasks for extra background processing (opt-in/opt-out handling etc.)
         try {
             await supabase.from("automation_tasks").insert({
                 plugin_id: "whatsapp-manager",
