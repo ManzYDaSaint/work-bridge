@@ -52,10 +52,22 @@ export function normalizeWhatsAppPhone(phone?: string | null): string | null {
 
 /**
  * Cleans text intended for Meta WhatsApp template parameters.
- * Meta Error 132018 forbids newline (\n, \r), tab characters, or >4 consecutive spaces in parameter values.
+ * Meta Error 132018 forbids tab characters, >4 consecutive spaces, or >2 consecutive newlines in parameter values.
+ * By default, preserveLineBreaks = true keeps paragraphs/newlines intact for body content.
  */
-export function cleanMetaParamText(text?: string | null, maxLength = 1000): string {
+export function cleanMetaParamText(text?: string | null, maxLength = 1024, preserveLineBreaks = true): string {
     if (!text) return "";
+    
+    if (preserveLineBreaks) {
+        return text
+            .replace(/\r\n|\r/g, "\n")
+            .replace(/\t/g, " ")
+            .replace(/[ ]{3,}/g, "  ")       // Meta allows at most 4 consecutive spaces; normalize to 2
+            .replace(/\n{3,}/g, "\n\n")      // Cap at 2 consecutive newlines to prevent formatting rejection
+            .trim()
+            .slice(0, maxLength);
+    }
+
     return text
         .replace(/(\r\n|\n|\r)+/g, (match, offset, str) => {
             const prevChar = str[offset - 1];

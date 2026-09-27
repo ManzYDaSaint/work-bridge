@@ -5,9 +5,9 @@ import { resend } from "@/lib/resend";
 import { sendMetaWhatsAppMessage, logWhatsAppMessage, cleanMetaParamText } from "@/lib/whatsapp-messages";
 
 // The approved Meta template used for all cold outbound broadcasts.
-// Template body: "Hello {{1}},\n\n*{{2}}*\n\n{{3}}\n\nBest regards,\nAganyu Team"
-// {{1}} = first_name, {{2}} = subject/heading, {{3}} = message body
+// Template body: "Hello *{{1}}*,\n\n{{2}}\n\nBest regards,\nAganyu Support"
 const BROADCAST_TEMPLATE_NAME = process.env.WHATSAPP_BROADCAST_TEMPLATE || "aganyu_broadcast_announcement";
+const BROADCAST_TEMPLATE_LANGUAGE = process.env.WHATSAPP_BROADCAST_LANGUAGE || "en";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_URL || "https://aganyu.com";
 const EMAIL_FROM = process.env.RESEND_FROM_EMAIL || "Aganyu <hello@aganyu.com>";
@@ -371,14 +371,18 @@ export async function POST(request: Request) {
                 } else {
                     try {
                         // Build template parameters for aganyu_broadcast_announcement:
-                        // {{1}} = first_name, {{2}} = subject (heading), {{3}} = body text
+                        // Template format: Hello *{{1}}*,\n\n{{2}}\n\nBest regards,\nAganyu Support
+                        // {{1}} = first_name, {{2}} = message content (subject heading + body)
+                        const fullMessageContent = renderedSubject
+                            ? `*${renderedSubject}*\n\n${renderedBody}`
+                            : renderedBody;
+
                         const templateComponents = [
                             {
                                 type: "body",
                                 parameters: [
                                     { type: "text", text: cleanMetaParamText(recipient.first_name, 60) || "there" },
-                                    { type: "text", text: cleanMetaParamText(renderedSubject, 200) },
-                                    { type: "text", text: cleanMetaParamText(renderedBody, 1000) }
+                                    { type: "text", text: cleanMetaParamText(fullMessageContent, 1024) }
                                 ]
                             }
                         ];
@@ -386,7 +390,7 @@ export async function POST(request: Request) {
                         const metaResponse = await sendMetaWhatsAppMessage({
                             to: recipient.phone,
                             templateId: BROADCAST_TEMPLATE_NAME,
-                            templateParams: { languageCode: "en" },
+                            templateParams: { languageCode: BROADCAST_TEMPLATE_LANGUAGE },
                             components: templateComponents
                         });
 
