@@ -400,7 +400,9 @@ async function processBroadcastQueue(broadcastId: string, recipients: any[], pay
                     });
 
                     const waMessageId = metaResponse?.messages?.[0]?.id || null;
-                    const messagePreview = `[Template: ${BROADCAST_TEMPLATE_NAME}] ${renderedHeading ? `${renderedHeading} — ` : ""}${renderedBody.slice(0, 100)}`;
+                    const messagePreview = renderedHeading
+                        ? `*${renderedHeading}*\n\n${renderedBody}`
+                        : renderedBody;
 
                     await logWhatsAppMessage({
                         user_id: recipient.user_id !== "test-admin" ? recipient.user_id : null,
