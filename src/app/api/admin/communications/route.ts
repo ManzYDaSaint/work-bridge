@@ -294,18 +294,24 @@ export async function POST(request: Request) {
             }
         }
 
-        const subject = String(body.subject || "").trim();
-        const rawBody = String(body.body || "").trim();
+        const emailSubject = String(body.emailSubject || body.subject || "").trim();
+        const emailBody = String(body.emailBody || body.body || "").trim();
+        const whatsappHeading = String(body.whatsappHeading || body.subject || "").trim();
+        const whatsappBody = String(body.whatsappBody || body.body || "").trim();
 
-        if (!subject || !rawBody) {
-            return NextResponse.json({ error: "Subject and body are required." }, { status: 400 });
-        }
-
-        // Validate Email configuration if channel includes EMAIL
         if (channel === "EMAIL" || channel === "BOTH") {
+            if (!emailSubject || !emailBody) {
+                return NextResponse.json({ error: "Email subject and message body are required." }, { status: 400 });
+            }
             const emailError = getEmailConfigError();
             if (emailError) {
                 return NextResponse.json({ error: emailError }, { status: 500 });
+            }
+        }
+
+        if (channel === "WHATSAPP" || channel === "BOTH") {
+            if (!whatsappBody) {
+                return NextResponse.json({ error: "WhatsApp message body is required." }, { status: 400 });
             }
         }
 
@@ -315,10 +321,10 @@ export async function POST(request: Request) {
             const testEmail = String(body.testEmail || "").trim();
             const testPhone = String(body.testPhone || "").trim();
 
-            if (channel === "EMAIL" && (!testEmail || !testEmail.includes("@"))) {
+            if ((channel === "EMAIL" || channel === "BOTH") && (!testEmail || !testEmail.includes("@"))) {
                 return NextResponse.json({ error: "A valid test email is required for Email test mode." }, { status: 400 });
             }
-            if (channel === "WHATSAPP" && !testPhone) {
+            if ((channel === "WHATSAPP" || channel === "BOTH") && !testPhone) {
                 return NextResponse.json({ error: "A valid test phone number is required for WhatsApp test mode." }, { status: 400 });
             }
 
@@ -340,17 +346,16 @@ export async function POST(request: Request) {
         let skippedWhatsApp = 0;
 
         for (const recipient of recipients) {
-            const renderedSubject = replaceTemplateVars(subject, recipient);
-            const renderedBody = replaceTemplateVars(rawBody, recipient);
-
-            // 1. Dispatch Email Channel
+            // 1. Dispatch Email Channel with dedicated Email content
             if (channel === "EMAIL" || channel === "BOTH") {
+                const renderedEmailSubject = replaceTemplateVars(emailSubject, recipient);
+                const renderedEmailBody = replaceTemplateVars(emailBody, recipient);
                 try {
-                    const html = toHtmlBody(renderedBody);
+                    const html = toHtmlBody(renderedEmailBody);
                     const { error } = await resend.emails.send({
                         from: EMAIL_FROM,
                         to: [recipient.email],
-                        subject: renderedSubject,
+                        subject: renderedEmailSubject,
                         html,
                     });
 
@@ -364,18 +369,22 @@ export async function POST(request: Request) {
                 }
             }
 
-            // 2. Dispatch WhatsApp Channel (Premium Seekers or recipients with registered phone numbers)
+            // 2. Dispatch WhatsApp Channel with dedicated WhatsApp content and required button parameter
             if (channel === "WHATSAPP" || channel === "BOTH") {
                 if (!recipient.phone) {
                     skippedWhatsApp += 1;
                 } else {
                     try {
-                        // Build template parameters for aganyu_broadcast_announcement:
+                        const renderedHeading = replaceTemplateVars(whatsappHeading, recipient);
+                        const renderedBody = replaceTemplateVars(whatsappBody, recipient);
+
                         // Template format: Hello *{{1}}*,\n\n{{2}}\n\nBest regards,\nAganyu Support
                         // {{1}} = first_name, {{2}} = message content (subject heading + body)
-                        const fullMessageContent = renderedSubject
-                            ? `*${renderedSubject}*\n\n${renderedBody}`
+                        const fullMessageContent = renderedHeading
+                            ? `*${renderedHeading}*\n\n${renderedBody}`
                             : renderedBody;
+
+                        const buttonSuffix = recipient.role === "EMPLOYER" ? "dashboard/employer" : "dashboard/seeker";
 
                         const templateComponents = [
                             {
@@ -383,6 +392,14 @@ export async function POST(request: Request) {
                                 parameters: [
                                     { type: "text", text: cleanMetaParamText(recipient.first_name, 60) || "there" },
                                     { type: "text", text: cleanMetaParamText(fullMessageContent, 1024) }
+                                ]
+                            },
+                            {
+                                type: "button",
+                                sub_type: "url",
+                                index: "0",
+                                parameters: [
+                                    { type: "text", text: buttonSuffix }
                                 ]
                             }
                         ];
@@ -396,7 +413,7 @@ export async function POST(request: Request) {
 
                         // Store the wa_message_id so delivery webhooks can update the DB record
                         const waMessageId = metaResponse?.messages?.[0]?.id || null;
-                        const messagePreview = `[Template: ${BROADCAST_TEMPLATE_NAME}] ${renderedSubject} — ${renderedBody.slice(0, 100)}`;
+                        const messagePreview = `[Template: ${BROADCAST_TEMPLATE_NAME}] ${renderedHeading ? `${renderedHeading} — ` : ""}${renderedBody.slice(0, 100)}`;
 
                         await logWhatsAppMessage({
                             user_id: recipient.user_id,
@@ -407,7 +424,7 @@ export async function POST(request: Request) {
                             metadata: {
                                 wa_message_id: waMessageId,
                                 template: BROADCAST_TEMPLATE_NAME,
-                                subject: renderedSubject
+                                subject: renderedHeading
                             }
                         });
 

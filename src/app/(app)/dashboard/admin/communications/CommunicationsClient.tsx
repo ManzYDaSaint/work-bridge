@@ -22,8 +22,8 @@ const channelOptions: Array<{ value: Channel; label: string; description: string
     { value: "BOTH", label: "Both Email & WhatsApp", description: "Maximize reach across both Email and WhatsApp channels.", icon: Sparkles },
 ];
 
-const defaultSubject = "Update your education details for better job matches";
-const defaultBody = `Hello {{first_name}},
+const defaultEmailSubject = "Update your education details for better job matches";
+const defaultEmailBody = `Hello {{first_name}},
 
 Your profile is almost ready for better job matches. Please update your Education section with your exact degree or programme, for example “BSc in Information Technology” or “Diploma in Accounting”.
 
@@ -33,6 +33,11 @@ Update your profile here: {{profile_url}}
 
 Best regards,
 The Aganyu Team`;
+
+const defaultWhatsappHeading = "Update Education Details";
+const defaultWhatsappBody = `Your profile is almost ready for better job matches. Please update your Education section with your exact degree or qualification.
+
+Tap the button below to review and update your profile!`;
 
 // Delivery status badge for outbound messages in the Live Inbox chat thread.
 // Status is sourced from whatsapp_messages.status, updated in real-time by the webhook handler.
@@ -61,8 +66,14 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
     const [activeTab, setActiveTab] = useState<"BROADCAST" | "INBOX">("BROADCAST");
     const [audience, setAudience] = useState<Audience>("PREMIUM_SEEKERS");
     const [channel, setChannel] = useState<Channel>("BOTH");
-    const [subject, setSubject] = useState(defaultSubject);
-    const [body, setBody] = useState(defaultBody);
+    
+    // Separate drafts for Email and WhatsApp
+    const [emailSubject, setEmailSubject] = useState(defaultEmailSubject);
+    const [emailBody, setEmailBody] = useState(defaultEmailBody);
+    const [whatsappHeading, setWhatsappHeading] = useState(defaultWhatsappHeading);
+    const [whatsappBody, setWhatsappBody] = useState(defaultWhatsappBody);
+    const [activeDraftTab, setActiveDraftTab] = useState<"EMAIL" | "WHATSAPP">("EMAIL");
+
     const [testEmail, setTestEmail] = useState("");
     const [testPhone, setTestPhone] = useState("");
     const [sending, setSending] = useState(false);
@@ -84,10 +95,14 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
     const [replyText, setReplyText] = useState("");
     const [sendingReply, setSendingReply] = useState(false);
 
-    const draftKey = "aganyu-admin-communications-draft";
+    const draftKey = "aganyu-admin-communications-draft-v3";
 
-    const insertMergeTag = (tag: string) => {
-        setBody((prev) => `${prev} ${tag}`);
+    const insertEmailTag = (tag: string) => {
+        setEmailBody((prev) => `${prev} ${tag}`);
+    };
+
+    const insertWhatsappTag = (tag: string) => {
+        setWhatsappBody((prev) => `${prev} ${tag}`);
     };
 
     useEffect(() => {
@@ -95,8 +110,10 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
             const saved = window.localStorage.getItem(draftKey);
             if (saved) {
                 const parsed = JSON.parse(saved);
-                if (parsed.subject) setSubject(parsed.subject);
-                if (parsed.body) setBody(parsed.body);
+                if (parsed.emailSubject) setEmailSubject(parsed.emailSubject);
+                if (parsed.emailBody) setEmailBody(parsed.emailBody);
+                if (parsed.whatsappHeading) setWhatsappHeading(parsed.whatsappHeading);
+                if (parsed.whatsappBody) setWhatsappBody(parsed.whatsappBody);
                 if (parsed.audience) setAudience(parsed.audience);
                 if (parsed.channel) setChannel(parsed.channel);
                 if (parsed.testEmail) setTestEmail(parsed.testEmail);
@@ -108,13 +125,13 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
     }, []);
 
     useEffect(() => {
-        const draft = { audience, channel, subject, body, testEmail, testPhone };
+        const draft = { audience, channel, emailSubject, emailBody, whatsappHeading, whatsappBody, testEmail, testPhone };
         try {
             window.localStorage.setItem(draftKey, JSON.stringify(draft));
         } catch {
             // Ignore storage errors.
         }
-    }, [audience, channel, subject, body, testEmail, testPhone]);
+    }, [audience, channel, emailSubject, emailBody, whatsappHeading, whatsappBody, testEmail, testPhone]);
 
     const fetchPreview = async (nextAudience: Audience = audience) => {
         try {
@@ -162,9 +179,18 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
     );
 
     const handleSend = async (mode: "send" | "test") => {
-        if (!subject.trim() || !body.trim()) {
-            toast.error("Subject and message body are required.");
-            return;
+        if (channel === "EMAIL" || channel === "BOTH") {
+            if (!emailSubject.trim() || !emailBody.trim()) {
+                toast.error("Email Subject and Message Body are required.");
+                return;
+            }
+        }
+
+        if (channel === "WHATSAPP" || channel === "BOTH") {
+            if (!whatsappBody.trim()) {
+                toast.error("WhatsApp Message Body is required.");
+                return;
+            }
         }
 
         if (mode === "send") {
@@ -207,8 +233,10 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
             const payload = {
                 audience,
                 channel,
-                subject,
-                body,
+                emailSubject,
+                emailBody,
+                whatsappHeading,
+                whatsappBody,
                 mode,
                 testEmail: mode === "test" ? testEmail || undefined : undefined,
                 testPhone: mode === "test" ? testPhone || undefined : undefined,
@@ -304,8 +332,10 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
     const resetDraft = () => {
         setAudience("PREMIUM_SEEKERS");
         setChannel("BOTH");
-        setSubject(defaultSubject);
-        setBody(defaultBody);
+        setEmailSubject(defaultEmailSubject);
+        setEmailBody(defaultEmailBody);
+        setWhatsappHeading(defaultWhatsappHeading);
+        setWhatsappBody(defaultWhatsappBody);
         setTestEmail("");
         setTestPhone("");
         try {
@@ -313,6 +343,7 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
         } catch {
             // Ignore storage errors
         }
+        toast.info("Drafts reset to template defaults.");
     };
 
     return (
@@ -435,17 +466,19 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                             </div>
                         </div>
 
-                        {/* WhatsApp Meta Policy Banner */}
-                        {(channel === "WHATSAPP" || channel === "BOTH") && (
+                        {/* Meta Template Banner (shown when WhatsApp channel is active) */}
+                        {(channel === "WHATSAPP" || (channel === "BOTH" && (activeDraftTab === "WHATSAPP" || previewTab === "WHATSAPP_PREVIEW"))) && (
                             <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2.5 text-xs text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-semibold">📋 Meta Template:</span>
+                                    <span className="font-semibold">📋 WhatsApp Meta Template:</span>
                                     <code className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[11px] font-bold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">aganyu_broadcast_announcement</code>
                                 </div>
                                 <div className="flex items-center gap-3 text-[11px] text-emerald-700 dark:text-emerald-300">
-                                    <span><strong>{"{{1}}"}</strong> First name</span>
+                                    <span><strong>{"{{1}}"}</strong> First name (auto)</span>
                                     <span>•</span>
-                                    <span><strong>{"{{2}}"}</strong> Message Content (Heading + Body)</span>
+                                    <span><strong>{"{{2}}"}</strong> Heading + Message Body</span>
+                                    <span>•</span>
+                                    <span><strong>Button</strong> Dashboard Link</span>
                                 </div>
                             </div>
                         )}
@@ -456,13 +489,19 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                         {/* Left: Message Composer & Live Device Preview */}
                         <div className="space-y-4">
                             <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
-                                <div className="mb-4 flex items-center justify-between gap-3 border-b border-stone-100 pb-3 dark:border-slate-800">
+                                <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-3 dark:border-slate-800">
                                     <div>
                                         <h3 className="text-base font-semibold text-slate-900 dark:text-white">Draft Campaign Message</h3>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">Compose and personalize your content</p>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                                            {channel === "BOTH"
+                                                ? "Customize dedicated content for each channel"
+                                                : channel === "EMAIL"
+                                                ? "Compose email campaign with rich HTML support"
+                                                : "Compose approved WhatsApp template broadcast"}
+                                        </p>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        {(channel === "WHATSAPP" || channel === "BOTH") && (
+                                        {(channel === "WHATSAPP" || (channel === "BOTH" && activeDraftTab === "WHATSAPP")) && (
                                             <div className="flex rounded-lg border border-stone-200 bg-stone-50 p-0.5 dark:border-slate-700 dark:bg-slate-800">
                                                 <button
                                                     type="button"
@@ -499,98 +538,214 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                                     </div>
                                 </div>
 
-                                {previewTab === "EDITOR" ? (
+                                {/* Channel Draft Switcher when channel === 'BOTH' */}
+                                {channel === "BOTH" && (
+                                    <div className="mb-4 flex items-center gap-2 rounded-xl bg-stone-100 p-1 dark:bg-slate-800/80">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setActiveDraftTab("EMAIL");
+                                                setPreviewTab("EDITOR");
+                                            }}
+                                            className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all ${
+                                                activeDraftTab === "EMAIL"
+                                                    ? "bg-[#16324f] text-white shadow-sm dark:bg-slate-100 dark:text-slate-900"
+                                                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+                                            }`}
+                                        >
+                                            <Mail size={13} /> 📧 Email Draft
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveDraftTab("WHATSAPP")}
+                                            className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all ${
+                                                activeDraftTab === "WHATSAPP"
+                                                    ? "bg-emerald-600 text-white shadow-sm"
+                                                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+                                            }`}
+                                        >
+                                            <MessageSquare size={13} /> 💬 WhatsApp Broadcast Draft
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* --- 1. EMAIL DRAFT EDITOR --- */}
+                                {(channel === "EMAIL" || (channel === "BOTH" && activeDraftTab === "EMAIL")) && (
                                     <div className="space-y-4">
+                                        <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-200">
+                                            <p className="font-semibold">📧 Email Channel Settings</p>
+                                            <p className="mt-0.5 text-[11px] text-blue-700 dark:text-blue-300">
+                                                Emails support full formatting, multi-paragraph text, and personalized links.
+                                            </p>
+                                        </div>
+
                                         <div>
                                             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                                                Subject / Heading
+                                                Email Subject Line
                                             </label>
                                             <input
-                                                value={subject}
-                                                onChange={(e) => setSubject(e.target.value)}
+                                                value={emailSubject}
+                                                onChange={(e) => setEmailSubject(e.target.value)}
                                                 className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                                placeholder="Update your education details for better job matches"
+                                                placeholder="e.g. Update your education details for better job matches"
                                             />
                                         </div>
 
                                         <div>
                                             <div className="mb-1.5 flex items-center justify-between">
                                                 <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                                                    Message Body
+                                                    Email Message Body
                                                 </label>
-                                                {(channel === "WHATSAPP" || channel === "BOTH") && (
-                                                    <span className={`text-[11px] font-mono ${
-                                                        (subject.length + body.length + 6) > 1024
-                                                            ? "text-red-500 font-bold"
-                                                            : (subject.length + body.length + 6) > 900
-                                                            ? "text-amber-500 font-medium"
-                                                            : "text-slate-400"
-                                                    }`}>
-                                                        WhatsApp Limit: {subject.length + body.length + 6} / 1024
-                                                    </span>
-                                                )}
+                                                <span className="text-[11px] text-slate-400">HTML paragraph formatting supported</span>
                                             </div>
                                             <textarea
                                                 rows={9}
-                                                value={body}
-                                                onChange={(e) => setBody(e.target.value)}
+                                                value={emailBody}
+                                                onChange={(e) => setEmailBody(e.target.value)}
                                                 className="w-full resize-y rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm font-sans text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                                             />
                                         </div>
 
-                                        {/* Quick-Insert Merge Tag Chips */}
+                                        {/* Email Merge Tags */}
                                         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-stone-200 bg-stone-50/70 p-3 dark:border-slate-800 dark:bg-slate-800/40">
                                             <div className="flex flex-wrap items-center gap-2">
-                                                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Insert tag:</span>
+                                                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Email merge tags:</span>
                                                 <button
                                                     type="button"
-                                                    onClick={() => insertMergeTag("{{first_name}}")}
+                                                    onClick={() => insertEmailTag("{{first_name}}")}
                                                     className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 shadow-2xs"
                                                 >
                                                     + {"{{first_name}}"}
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    onClick={() => insertMergeTag("{{profile_url}}")}
+                                                    onClick={() => insertEmailTag("{{profile_url}}")}
                                                     className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 shadow-2xs"
                                                 >
                                                     + {"{{profile_url}}"}
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => insertEmailTag("{{company_name}}")}
+                                                    className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 shadow-2xs"
+                                                >
+                                                    + {"{{company_name}}"}
+                                                </button>
                                             </div>
+                                        </div>
+                                    </div>
+                                )}
 
-                                            {(channel === "WHATSAPP" || channel === "BOTH") && (subject.length + body.length + 6) > 1024 && (
-                                                <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">
-                                                    ⚠️ Exceeds 1024 limit (will trim)
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    /* WhatsApp Live Phone Bubble Preview */
-                                    <div className="flex flex-col items-center justify-center rounded-xl bg-stone-100 p-6 dark:bg-slate-950">
-                                        <div className="w-full max-w-[380px] rounded-2xl bg-[#e5ddd5] p-3 shadow-md dark:bg-slate-900 border border-[#d1d7db] dark:border-slate-800">
-                                            <div className="mb-2 flex items-center justify-between border-b border-black/5 pb-1 text-[11px] text-slate-500">
-                                                <span>WhatsApp Preview</span>
-                                                <span className="font-semibold text-emerald-700 dark:text-emerald-400">Aganyu Verified</span>
-                                            </div>
-                                            <div className="rounded-xl bg-white p-3.5 text-xs text-slate-800 shadow-xs dark:bg-emerald-950/60 dark:text-slate-100 border border-black/5 dark:border-emerald-800/40">
-                                                <p className="font-sans">
-                                                    Hello <strong className="text-emerald-700 dark:text-emerald-400">*{previewRecipients[0]?.first_name || "Emmanuel"}*</strong>,
-                                                </p>
-                                                <div className="my-2.5 space-y-1.5 whitespace-pre-wrap font-sans text-[11.5px] leading-relaxed text-slate-700 dark:text-slate-200">
-                                                    {subject && <p className="font-bold text-slate-900 dark:text-white">*{subject}*</p>}
-                                                    <p>{body.replace(/{{first_name}}/gi, previewRecipients[0]?.first_name || "Emmanuel").replace(/{{profile_url}}/gi, "https://aganyu.com/dashboard/seeker/profile")}</p>
+                                {/* --- 2. WHATSAPP DRAFT EDITOR --- */}
+                                {(channel === "WHATSAPP" || (channel === "BOTH" && activeDraftTab === "WHATSAPP")) && (
+                                    <>
+                                        {previewTab === "EDITOR" ? (
+                                            <div className="space-y-4">
+                                                <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 text-xs text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-200">
+                                                    <p className="font-semibold">💬 WhatsApp Meta Template Broadcast</p>
+                                                    <p className="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-300">
+                                                        Sent through approved template <code className="font-mono font-bold">aganyu_broadcast_announcement</code>. The recipient name is auto-injected into <strong>{"{{1}}"}</strong>, your message into <strong>{"{{2}}"}</strong>, and the button automatically routes to their dashboard.
+                                                    </p>
                                                 </div>
-                                                <p className="border-t border-stone-100 pt-2 text-[10px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                                                    Best regards,<br />
-                                                    <span className="font-semibold">Aganyu Support</span>
-                                                </p>
-                                                <div className="mt-1 flex justify-end text-[9px] text-slate-400">
-                                                    {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+
+                                                <div>
+                                                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                                        WhatsApp Heading / Title <span className="font-normal text-slate-400">(renders in bold)</span>
+                                                    </label>
+                                                    <input
+                                                        value={whatsappHeading}
+                                                        onChange={(e) => setWhatsappHeading(e.target.value)}
+                                                        className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                        placeholder="e.g. Update Education Details"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <div className="mb-1.5 flex items-center justify-between">
+                                                        <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                                            WhatsApp Message Body
+                                                        </label>
+                                                        <span className={`text-[11px] font-mono ${
+                                                            (whatsappHeading.length + whatsappBody.length + 6) > 1024
+                                                                ? "text-red-500 font-bold"
+                                                                : (whatsappHeading.length + whatsappBody.length + 6) > 900
+                                                                ? "text-amber-500 font-medium"
+                                                                : "text-slate-400"
+                                                        }`}>
+                                                            WhatsApp Limit: {whatsappHeading.length + whatsappBody.length + 6} / 1024
+                                                        </span>
+                                                    </div>
+                                                    <textarea
+                                                        rows={7}
+                                                        value={whatsappBody}
+                                                        onChange={(e) => setWhatsappBody(e.target.value)}
+                                                        className="w-full resize-y rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm font-sans text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                                    />
+                                                </div>
+
+                                                {/* WhatsApp Merge Tags */}
+                                                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-stone-200 bg-stone-50/70 p-3 dark:border-slate-800 dark:bg-slate-800/40">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">WhatsApp tags:</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => insertWhatsappTag("{{first_name}}")}
+                                                            className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 shadow-2xs"
+                                                        >
+                                                            + {"{{first_name}}"}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => insertWhatsappTag("{{profile_url}}")}
+                                                            className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 shadow-2xs"
+                                                        >
+                                                            + {"{{profile_url}}"}
+                                                        </button>
+                                                    </div>
+
+                                                    {(whatsappHeading.length + whatsappBody.length + 6) > 1024 && (
+                                                        <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">
+                                                            ⚠️ Exceeds 1024 limit (will trim)
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
+                                        ) : (
+                                            /* WhatsApp Live Phone Bubble Preview */
+                                            <div className="flex flex-col items-center justify-center rounded-xl bg-stone-100 p-6 dark:bg-slate-950">
+                                                <div className="w-full max-w-[380px] rounded-2xl bg-[#e5ddd5] p-3 shadow-md dark:bg-slate-900 border border-[#d1d7db] dark:border-slate-800">
+                                                    <div className="mb-2 flex items-center justify-between border-b border-black/5 pb-1 text-[11px] text-slate-500">
+                                                        <span>WhatsApp Live Preview</span>
+                                                        <span className="font-semibold text-emerald-700 dark:text-emerald-400">Aganyu Verified</span>
+                                                    </div>
+                                                    <div className="rounded-xl bg-white p-3.5 text-xs text-slate-800 shadow-xs dark:bg-emerald-950/60 dark:text-slate-100 border border-black/5 dark:border-emerald-800/40">
+                                                        <p className="font-sans">
+                                                            Hello <strong className="text-emerald-700 dark:text-emerald-400">*{previewRecipients[0]?.first_name || "Seeker"}*</strong>,
+                                                        </p>
+                                                        <div className="my-2.5 space-y-1.5 whitespace-pre-wrap font-sans text-[11.5px] leading-relaxed text-slate-700 dark:text-slate-200">
+                                                            {whatsappHeading && <p className="font-bold text-slate-900 dark:text-white">*{whatsappHeading}*</p>}
+                                                            <p>{whatsappBody.replace(/{{first_name}}/gi, previewRecipients[0]?.first_name || "Seeker").replace(/{{profile_url}}/gi, "https://aganyu.com/dashboard/seeker")}</p>
+                                                        </div>
+                                                        <p className="border-t border-stone-100 pt-2 text-[10px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                                                            Best regards,<br />
+                                                            <span className="font-semibold">Aganyu Support</span>
+                                                        </p>
+                                                        
+                                                        {/* Template URL Button Mockup */}
+                                                        <div className="mt-3 border-t border-stone-100 pt-2.5 dark:border-slate-800">
+                                                            <div className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-50 py-2 text-center text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                                                🔗 Go to Dashboard
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mt-1 flex justify-end text-[9px] text-slate-400">
+                                                            {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>
