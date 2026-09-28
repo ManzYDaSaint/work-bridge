@@ -378,8 +378,8 @@ async function processBroadcastQueue(broadcastId: string, recipients: any[], pay
                         {
                             type: "body",
                             parameters: [
-                                { type: "text", text: cleanMetaParamText(recipient.first_name, 60) || "there" },
-                                { type: "text", text: cleanMetaParamText(fullMessageContent, 1024) }
+                                { type: "text", text: cleanMetaParamText(recipient.first_name, 60, false) || "there" },
+                                { type: "text", text: cleanMetaParamText(fullMessageContent, 1024, false) }
                             ]
                         },
                         {

@@ -170,6 +170,10 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
     const [campaignRecipients, setCampaignRecipients] = useState<Array<any>>([]);
     const [loadingRecipients, setLoadingRecipients] = useState(false);
 
+    useEffect(() => {
+        void fetchPreview(audience);
+    }, [audience]);
+
     // Supabase Realtime Listener for Instant Live Inbox & Campaign status updates
     useEffect(() => {
         const supabase = createBrowserSupabaseClient();
