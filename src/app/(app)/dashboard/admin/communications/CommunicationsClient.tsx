@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { apiFetchJson } from "@/lib/api";
+import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
 import { Send, Sparkles, Mail, Eye, Save, CheckCircle2, MessageSquare, Phone, Crown, RefreshCw, MessageCircle, CheckCheck, XCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -63,7 +64,7 @@ function DeliveryStatusBadge({ status }: { status?: string }) {
 }
 
 export default function CommunicationsClient({ initialCounts }: { initialCounts: Record<string, number> }) {
-    const [activeTab, setActiveTab] = useState<"BROADCAST" | "INBOX">("BROADCAST");
+    const [activeTab, setActiveTab] = useState<"BROADCAST" | "HISTORY" | "INBOX">("BROADCAST");
     const [audience, setAudience] = useState<Audience>("PREMIUM_SEEKERS");
     const [channel, setChannel] = useState<Channel>("BOTH");
     
@@ -84,6 +85,7 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
     const [premiumCount, setPremiumCount] = useState(0);
     const [previewRecipients, setPreviewRecipients] = useState<Array<{ email: string; first_name: string; phone?: string; is_premium?: boolean }>>([]);
     const [result, setResult] = useState<{ sentEmail: number; failedEmail: number; sentWhatsApp: number; failedWhatsApp: number; skippedWhatsApp: number; total: number } | null>(null);
+    const [campaignHistory, setCampaignHistory] = useState<Array<any>>([]);
 
     // UI Tabs & Modals
     const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -141,12 +143,16 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                 premiumCount: number;
                 recipients: Array<{ email: string; first_name: string; phone?: string; is_premium?: boolean }>;
                 conversations?: Array<any>;
+                history?: Array<any>;
             }>(`/api/admin/communications?audience=${nextAudience}&limit=6`);
 
             setPreviewCount(data.count ?? 0);
             setWhatsappCount(data.whatsappCount ?? 0);
             setPremiumCount(data.premiumCount ?? 0);
             setPreviewRecipients(data.recipients ?? []);
+            if (data.history) {
+                setCampaignHistory(data.history);
+            }
             if (data.conversations) {
                 setConversations(data.conversations);
                 if (data.conversations.length > 0 && !selectedPhone) {
@@ -159,9 +165,52 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
         }
     };
 
+    // Campaign detail modal & recipient drill-down
+    const [selectedCampaign, setSelectedCampaign] = useState<any | null>(null);
+    const [campaignRecipients, setCampaignRecipients] = useState<Array<any>>([]);
+    const [loadingRecipients, setLoadingRecipients] = useState(false);
+
+    // Supabase Realtime Listener for Instant Live Inbox & Campaign status updates
     useEffect(() => {
-        void fetchPreview(audience);
+        const supabase = createBrowserSupabaseClient();
+        if (!supabase) return;
+
+        const channel = supabase
+            .channel("realtime-communications")
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "whatsapp_messages" },
+                () => {
+                    void fetchPreview(audience);
+                }
+            )
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "campaign_broadcasts" },
+                () => {
+                    void fetchPreview(audience);
+                }
+            )
+            .subscribe();
+
+        return () => {
+            void supabase.removeChannel(channel);
+        };
     }, [audience]);
+
+    const fetchCampaignRecipients = async (broadcastId: string) => {
+        setLoadingRecipients(true);
+        try {
+            const data = await apiFetchJson<{ recipients: Array<any> }>(
+                `/api/admin/communications?broadcastId=${broadcastId}`
+            );
+            setCampaignRecipients(data.recipients || []);
+        } catch {
+            setCampaignRecipients([]);
+        } finally {
+            setLoadingRecipients(false);
+        }
+    };
 
     const selectedAudienceMeta = useMemo(
         () => audienceOptions.find((option) => option.value === audience) ?? audienceOptions[0],
@@ -323,7 +372,19 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
 
             setReplyText("");
         } catch (err: any) {
-            toast.error(err.message || "Failed to send WhatsApp reply.");
+            const errorMsg = err.message || "";
+            if (errorMsg.includes("131047") || errorMsg.toLowerCase().includes("24 hour") || errorMsg.toLowerCase().includes("window")) {
+                toast.error(
+                    "Meta Policy: 24-hour reply window expired for this contact. Initiating broadcast template send...",
+                    { duration: 6000 }
+                );
+                // Pre-fill test phone and switch to Broadcast tab for template dispatch
+                setTestPhone(activeConversation.phone);
+                setChannel("WHATSAPP");
+                setActiveTab("BROADCAST");
+            } else {
+                toast.error(errorMsg || "Failed to send WhatsApp reply.");
+            }
         } finally {
             setSendingReply(false);
         }
@@ -365,6 +426,23 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                     }`}
                 >
                     <Send size={15} /> Broadcast Campaigns
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => setActiveTab("HISTORY")}
+                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+                        activeTab === "HISTORY"
+                            ? "bg-[#16324f] text-white shadow-sm dark:bg-slate-100 dark:text-slate-900"
+                            : "bg-white/80 text-slate-600 hover:bg-stone-100 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:bg-slate-800"
+                    }`}
+                >
+                    <Clock size={15} className="text-amber-500" /> Campaign History
+                    {campaignHistory.length > 0 && (
+                        <span className="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-bold text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+                            {campaignHistory.length}
+                        </span>
+                    )}
                 </button>
 
                 <button
@@ -899,6 +977,166 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                         </div>
                     )}
                 </div>
+            ) : activeTab === "HISTORY" ? (
+                /* Campaign History View */
+                <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+                    <div className="mb-4 flex items-center justify-between">
+                        <div>
+                            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Campaign Dispatch History</h3>
+                            <p className="text-xs text-slate-500">Track real-time delivery performance and logs for all dispatched campaigns.</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => void fetchPreview(audience)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-stone-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                        >
+                            <RefreshCw size={13} /> Refresh
+                        </button>
+                    </div>
+
+                    {campaignHistory.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+                                <thead className="border-b border-stone-200 bg-stone-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+                                    <tr>
+                                        <th className="px-4 py-3">Date</th>
+                                        <th className="px-4 py-3">Audience & Channel</th>
+                                        <th className="px-4 py-3">Status</th>
+                                        <th className="px-4 py-3">Total</th>
+                                        <th className="px-4 py-3">Sent</th>
+                                        <th className="px-4 py-3">Failed</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-stone-100 dark:divide-slate-800">
+                                    {campaignHistory.map((camp) => (
+                                        <tr key={camp.id} className="hover:bg-stone-50/50 dark:hover:bg-slate-800/40">
+                                            <td className="whitespace-nowrap px-4 py-3 font-mono text-[11px]">
+                                                {new Date(camp.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="font-semibold text-slate-900 dark:text-slate-100">{camp.audience}</div>
+                                                <div className="text-[10px] text-slate-400">{camp.channel}</div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                                                    camp.status === 'COMPLETED'
+                                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                                        : camp.status === 'PROCESSING'
+                                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                                                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                                }`}>
+                                                    {camp.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 font-semibold">{camp.total_recipients || 0}</td>
+                                            <td className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">{camp.sent_count || 0}</td>
+                                            <td className="px-4 py-3 font-semibold text-red-600 dark:text-red-400">{camp.failed_count || 0}</td>
+                                            <td className="px-4 py-3 text-right">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedCampaign(camp);
+                                                        void fetchCampaignRecipients(camp.id);
+                                                    }}
+                                                    className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                                                >
+                                                    <Eye size={12} /> Details
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="py-12 text-center text-xs text-slate-400">
+                            No campaigns dispatched yet. Dispatched campaigns will record delivery logs here.
+                        </div>
+                    )}
+
+                    {/* Campaign Recipient Logs Drill-Down Modal */}
+                    {selectedCampaign && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+                            <div className="w-full max-w-2xl rounded-2xl border border-stone-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+                                <div className="mb-4 flex items-center justify-between border-b border-stone-100 pb-3 dark:border-slate-800">
+                                    <div>
+                                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                                            Campaign Drill-Down ({selectedCampaign.audience})
+                                        </h3>
+                                        <p className="text-xs text-slate-500">
+                                            Dispatched on {new Date(selectedCampaign.created_at).toLocaleString()} via {selectedCampaign.channel}
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedCampaign(null);
+                                            setCampaignRecipients([]);
+                                        }}
+                                        className="rounded-lg p-1 text-slate-400 hover:bg-stone-100 hover:text-slate-600 dark:hover:bg-slate-800"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                {loadingRecipients ? (
+                                    <div className="py-12 text-center text-xs text-slate-400 animate-pulse">
+                                        Loading recipient logs...
+                                    </div>
+                                ) : campaignRecipients.length > 0 ? (
+                                    <div className="max-h-[380px] space-y-2 overflow-y-auto pr-1">
+                                        {campaignRecipients.map((rec, idx) => (
+                                            <div
+                                                key={rec.id || idx}
+                                                className="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-800/60"
+                                            >
+                                                <div>
+                                                    <p className="font-semibold text-slate-800 dark:text-slate-100">{rec.email || "No Email"}</p>
+                                                    <p className="font-mono text-[11px] text-slate-500">{rec.phone || "No Phone"}</p>
+                                                    {rec.error_message && (
+                                                        <p className="mt-0.5 text-[11px] font-medium text-red-600 dark:text-red-400">
+                                                            ⚠️ Error: {rec.error_message} {rec.error_code ? `(${rec.error_code})` : ""}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                                                        rec.status === 'DELIVERED' || rec.status === 'READ'
+                                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                                            : rec.status === 'SENT'
+                                                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                                                            : rec.status === 'FAILED'
+                                                            ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
+                                                            : 'bg-stone-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                                    }`}>
+                                                        {rec.status}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="py-12 text-center text-xs text-slate-400">
+                                        No individual recipient logs found for this campaign.
+                                    </div>
+                                )}
+
+                                <div className="mt-4 flex justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedCampaign(null);
+                                            setCampaignRecipients([]);
+                                        }}
+                                        className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             ) : (
                 /* Live 2-Way WhatsApp Inbox View */
                 <div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
@@ -906,9 +1144,37 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                     <div className="rounded-2xl border border-stone-200 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-base font-semibold text-slate-900 dark:text-white">Seeker WhatsApp Threads</h3>
-                            <button type="button" onClick={() => void fetchPreview(audience)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                                <RefreshCw size={14} />
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const phoneInput = window.prompt("Enter recipient WhatsApp phone number (e.g. +265888123456 or 0888123456):");
+                                        if (phoneInput && phoneInput.trim()) {
+                                            const cleanPhone = phoneInput.trim();
+                                            const existing = conversations.find(c => c.phone === cleanPhone);
+                                            if (existing) {
+                                                setSelectedPhone(cleanPhone);
+                                            } else {
+                                                const newConv = {
+                                                    phone: cleanPhone,
+                                                    first_name: "Direct Contact",
+                                                    is_premium: false,
+                                                    last_message: "Started direct thread",
+                                                    messages: []
+                                                };
+                                                setConversations(prev => [newConv, ...prev]);
+                                                setSelectedPhone(cleanPhone);
+                                            }
+                                        }
+                                    }}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                >
+                                    + New Chat
+                                </button>
+                                <button type="button" onClick={() => void fetchPreview(audience)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                    <RefreshCw size={14} />
+                                </button>
+                            </div>
                         </div>
 
                         <div className="space-y-2">

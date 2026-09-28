@@ -129,6 +129,41 @@ Deno.serve(async (req: Request) => {
                 }
               }
             }
+
+            // 1b. Handle Outbound Message Status Updates (DELIVERED, READ, FAILED) from Meta
+            if (change.field === "messages" && change.value?.statuses) {
+              const statuses = change.value.statuses || [];
+              for (const st of statuses) {
+                const waMessageId = st.id;
+                const statusName = String(st.status || "").toUpperCase(); // DELIVERED, READ, FAILED, SENT
+                const errorCode = st.errors?.[0]?.code ? String(st.errors[0].code) : null;
+                const errorMessage = st.errors?.[0]?.title || st.errors?.[0]?.message || null;
+
+                if (waMessageId && statusName) {
+                  try {
+                    await supabase
+                      .from("broadcast_recipients")
+                      .update({
+                        status: statusName,
+                        error_code: errorCode,
+                        error_message: errorMessage,
+                        updated_at: new Date().toISOString()
+                      })
+                      .eq("wa_message_id", waMessageId);
+
+                    await supabase
+                      .from("whatsapp_messages")
+                      .update({
+                        status: statusName,
+                        updated_at: new Date().toISOString()
+                      })
+                      .eq("metadata->>wa_message_id", waMessageId);
+                  } catch {
+                    // Ignore status update errors silently
+                  }
+                }
+              }
+            }
           }
         }
       }

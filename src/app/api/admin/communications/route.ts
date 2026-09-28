@@ -4,8 +4,6 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resend } from "@/lib/resend";
 import { sendMetaWhatsAppMessage, logWhatsAppMessage, cleanMetaParamText } from "@/lib/whatsapp-messages";
 
-// The approved Meta template used for all cold outbound broadcasts.
-// Template body: "Hello *{{1}}*,\n\n{{2}}\n\nBest regards,\nAganyu Support"
 const BROADCAST_TEMPLATE_NAME = process.env.WHATSAPP_BROADCAST_TEMPLATE || "aganyu_broadcast_announcement";
 const BROADCAST_TEMPLATE_LANGUAGE = process.env.WHATSAPP_BROADCAST_LANGUAGE || "en";
 
@@ -128,9 +126,6 @@ async function getRecipients(audience: Audience, limit = 5000) {
     return results;
 }
 
-/**
- * Retrieves inbound & outbound WhatsApp conversations for the Admin Live WhatsApp Inbox
- */
 async function getWhatsAppConversations() {
     const supabase = getSupabaseAdminClient();
     if (!supabase) return [];
@@ -146,7 +141,6 @@ async function getWhatsAppConversations() {
 
         messages = dbMessages || [];
     } catch {
-        // Fallback to whatsapp_delivery_logs
         try {
             const { data: logs } = await supabase
                 .from("whatsapp_delivery_logs")
@@ -167,7 +161,6 @@ async function getWhatsAppConversations() {
         }
     }
 
-    // Group by phone number
     const conversationMap = new Map<string, any>();
 
     for (const msg of messages) {
@@ -186,10 +179,8 @@ async function getWhatsAppConversations() {
         conversationMap.get(phoneKey).messages.push(msg);
     }
 
-    // Enhance with seeker profile info
     const conversations = Array.from(conversationMap.values());
     
-    // Fetch all seeker profiles to match by normalized phone digits
     const { data: seekers } = await supabase
         .from("job_seekers")
         .select("id, user_id, full_name, phone, is_subscribed");
@@ -199,7 +190,6 @@ async function getWhatsAppConversations() {
         if (s.phone) {
             const rawDigits = String(s.phone).replace(/\D/g, "");
             seekerPhoneMap.set(rawDigits, s);
-            // Also store with + if formatted
             seekerPhoneMap.set(s.phone, s);
         }
     });
@@ -225,17 +215,51 @@ export async function GET(request: Request) {
 
     try {
         const { searchParams } = new URL(request.url);
+        const broadcastId = searchParams.get("broadcastId");
+        const supabase = getSupabaseAdminClient();
+
+        // If broadcastId is provided, return detailed recipient logs for that specific campaign
+        if (broadcastId && supabase) {
+            try {
+                const { data: recipients } = await supabase
+                    .from("broadcast_recipients")
+                    .select("*")
+                    .eq("broadcast_id", broadcastId)
+                    .order("created_at", { ascending: true });
+
+                return NextResponse.json({
+                    broadcastId,
+                    recipients: recipients || []
+                });
+            } catch (err: any) {
+                return NextResponse.json({ error: err.message || "Failed to fetch broadcast recipients" }, { status: 500 });
+            }
+        }
+
         const audience = (searchParams.get("audience") as Audience) || "SEEKERS";
         const previewLimit = Number(searchParams.get("limit") || "6");
 
-        // Fetch complete audience to calculate full database statistics
         const allRecipients = await getRecipients(audience, 5000);
         const conversations = await getWhatsAppConversations();
 
-        // Calculate breakdown statistics across the ENTIRE database audience
         const totalAudience = allRecipients.length;
         const totalWithWhatsApp = allRecipients.filter((r) => !!r.phone).length;
         const premiumCount = allRecipients.filter((r) => r.is_premium).length;
+
+        // Fetch recent campaign history if table exists
+        let history: any[] = [];
+        if (supabase) {
+            try {
+                const { data: broadcasts } = await supabase
+                    .from("campaign_broadcasts")
+                    .select("*")
+                    .order("created_at", { ascending: false })
+                    .limit(20);
+                history = broadcasts || [];
+            } catch {
+                history = [];
+            }
+        }
 
         return NextResponse.json({
             audience,
@@ -248,12 +272,194 @@ export async function GET(request: Request) {
                 phone: r.phone,
                 is_premium: r.is_premium,
             })),
-            conversations
+            conversations,
+            history
         });
     } catch (error: any) {
         console.error("[Admin Communications GET] Error:", error);
         return NextResponse.json({ error: error.message || "Unable to fetch recipients" }, { status: 500 });
     }
+}
+
+async function processBroadcastQueue(broadcastId: string, recipients: any[], payload: any) {
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) return;
+
+    let sentEmail = 0;
+    let failedEmail = 0;
+    let sentWhatsApp = 0;
+    let failedWhatsApp = 0;
+    let skippedWhatsApp = 0;
+
+    const { channel, emailSubject, emailBody, whatsappHeading, whatsappBody } = payload;
+
+    for (const recipient of recipients) {
+        // 1. Dispatch Email Channel
+        if (channel === "EMAIL" || channel === "BOTH") {
+            const renderedEmailSubject = replaceTemplateVars(emailSubject, recipient);
+            const renderedEmailBody = replaceTemplateVars(emailBody, recipient);
+            try {
+                const html = toHtmlBody(renderedEmailBody);
+                const { error } = await resend.emails.send({
+                    from: EMAIL_FROM,
+                    to: [recipient.email],
+                    subject: renderedEmailSubject,
+                    html,
+                });
+
+                if (error) {
+                    failedEmail += 1;
+                    try {
+                        await supabase.from("broadcast_recipients").insert({
+                            broadcast_id: broadcastId,
+                            user_id: recipient.user_id !== "test-admin" ? recipient.user_id : null,
+                            email: recipient.email,
+                            phone: recipient.phone,
+                            channel: "EMAIL",
+                            status: "FAILED",
+                            error_message: error.message || "Resend error"
+                        });
+                    } catch {}
+                } else {
+                    sentEmail += 1;
+                    try {
+                        await supabase.from("broadcast_recipients").insert({
+                            broadcast_id: broadcastId,
+                            user_id: recipient.user_id !== "test-admin" ? recipient.user_id : null,
+                            email: recipient.email,
+                            phone: recipient.phone,
+                            channel: "EMAIL",
+                            status: "SENT"
+                        });
+                    } catch {}
+                }
+            } catch (err: any) {
+                failedEmail += 1;
+                try {
+                    await supabase.from("broadcast_recipients").insert({
+                        broadcast_id: broadcastId,
+                        user_id: recipient.user_id !== "test-admin" ? recipient.user_id : null,
+                        email: recipient.email,
+                        phone: recipient.phone,
+                        channel: "EMAIL",
+                        status: "FAILED",
+                        error_message: err.message || "Exception during send"
+                    });
+                } catch {}
+            }
+        }
+
+        // 2. Dispatch WhatsApp Channel
+        if (channel === "WHATSAPP" || channel === "BOTH") {
+            if (!recipient.phone) {
+                skippedWhatsApp += 1;
+                try {
+                    await supabase.from("broadcast_recipients").insert({
+                        broadcast_id: broadcastId,
+                        user_id: recipient.user_id !== "test-admin" ? recipient.user_id : null,
+                        email: recipient.email,
+                        phone: null,
+                        channel: "WHATSAPP",
+                        status: "SKIPPED",
+                        error_message: "No registered phone number"
+                    });
+                } catch {}
+            } else {
+                try {
+                    const renderedHeading = replaceTemplateVars(whatsappHeading, recipient);
+                    const renderedBody = replaceTemplateVars(whatsappBody, recipient);
+                    const fullMessageContent = renderedHeading
+                        ? `*${renderedHeading}*\n\n${renderedBody}`
+                        : renderedBody;
+
+                    const buttonSuffix = recipient.role === "EMPLOYER" ? "dashboard/employer" : "dashboard/seeker";
+
+                    const templateComponents = [
+                        {
+                            type: "body",
+                            parameters: [
+                                { type: "text", text: cleanMetaParamText(recipient.first_name, 60) || "there" },
+                                { type: "text", text: cleanMetaParamText(fullMessageContent, 1024) }
+                            ]
+                        },
+                        {
+                            type: "button",
+                            sub_type: "url",
+                            index: "0",
+                            parameters: [
+                                { type: "text", text: buttonSuffix }
+                            ]
+                        }
+                    ];
+
+                    const metaResponse = await sendMetaWhatsAppMessage({
+                        to: recipient.phone,
+                        templateId: BROADCAST_TEMPLATE_NAME,
+                        templateParams: { languageCode: BROADCAST_TEMPLATE_LANGUAGE },
+                        components: templateComponents
+                    });
+
+                    const waMessageId = metaResponse?.messages?.[0]?.id || null;
+                    const messagePreview = `[Template: ${BROADCAST_TEMPLATE_NAME}] ${renderedHeading ? `${renderedHeading} — ` : ""}${renderedBody.slice(0, 100)}`;
+
+                    await logWhatsAppMessage({
+                        user_id: recipient.user_id !== "test-admin" ? recipient.user_id : null,
+                        phone: recipient.phone,
+                        direction: "OUTBOUND",
+                        message_text: messagePreview,
+                        status: "SENT",
+                        metadata: {
+                            wa_message_id: waMessageId,
+                            template: BROADCAST_TEMPLATE_NAME,
+                            subject: renderedHeading
+                        }
+                    });
+
+                    try {
+                        await supabase.from("broadcast_recipients").insert({
+                            broadcast_id: broadcastId,
+                            user_id: recipient.user_id !== "test-admin" ? recipient.user_id : null,
+                            email: recipient.email,
+                            phone: recipient.phone,
+                            channel: "WHATSAPP",
+                            status: "SENT",
+                            wa_message_id: waMessageId
+                        });
+                    } catch {}
+
+                    sentWhatsApp += 1;
+                } catch (waErr: any) {
+                    failedWhatsApp += 1;
+                    console.error("[Admin Communications] WhatsApp dispatch failed for:", recipient.phone, waErr.message);
+
+                    try {
+                        await supabase.from("broadcast_recipients").insert({
+                            broadcast_id: broadcastId,
+                            user_id: recipient.user_id !== "test-admin" ? recipient.user_id : null,
+                            email: recipient.email,
+                            phone: recipient.phone,
+                            channel: "WHATSAPP",
+                            status: "FAILED",
+                            error_code: String(waErr.code || ""),
+                            error_message: waErr.message || "Meta API error"
+                        });
+                    } catch {}
+                }
+            }
+        }
+    }
+
+    // Update broadcast summary
+    const finalStatus = (failedEmail > 0 || failedWhatsApp > 0) ? "PARTIAL_FAILURE" : "COMPLETED";
+    try {
+        await supabase.from("campaign_broadcasts").update({
+            status: finalStatus,
+            sent_count: sentEmail + sentWhatsApp,
+            failed_count: failedEmail + failedWhatsApp,
+            skipped_count: skippedWhatsApp,
+            completed_at: new Date().toISOString()
+        }).eq("id", broadcastId);
+    } catch {}
 }
 
 export async function POST(request: Request) {
@@ -339,114 +545,46 @@ export async function POST(request: Request) {
             }];
         }
 
-        let sentEmail = 0;
-        let failedEmail = 0;
-        let sentWhatsApp = 0;
-        let failedWhatsApp = 0;
-        let skippedWhatsApp = 0;
+        // Create campaign broadcast DB record
+        const supabase = getSupabaseAdminClient();
+        let broadcastId = null;
+        if (supabase && mode === "send") {
+            try {
+                const { data: bRecord } = await supabase.from("campaign_broadcasts").insert({
+                    created_by: auth.user?.id || null,
+                    audience,
+                    channel,
+                    template_name: BROADCAST_TEMPLATE_NAME,
+                    email_subject: emailSubject,
+                    email_body: emailBody,
+                    whatsapp_heading: whatsappHeading,
+                    whatsapp_body: whatsappBody,
+                    status: "PROCESSING",
+                    total_recipients: recipients.length
+                }).select("id").single();
 
-        for (const recipient of recipients) {
-            // 1. Dispatch Email Channel with dedicated Email content
-            if (channel === "EMAIL" || channel === "BOTH") {
-                const renderedEmailSubject = replaceTemplateVars(emailSubject, recipient);
-                const renderedEmailBody = replaceTemplateVars(emailBody, recipient);
-                try {
-                    const html = toHtmlBody(renderedEmailBody);
-                    const { error } = await resend.emails.send({
-                        from: EMAIL_FROM,
-                        to: [recipient.email],
-                        subject: renderedEmailSubject,
-                        html,
-                    });
-
-                    if (error) {
-                        failedEmail += 1;
-                    } else {
-                        sentEmail += 1;
-                    }
-                } catch {
-                    failedEmail += 1;
-                }
-            }
-
-            // 2. Dispatch WhatsApp Channel with dedicated WhatsApp content and required button parameter
-            if (channel === "WHATSAPP" || channel === "BOTH") {
-                if (!recipient.phone) {
-                    skippedWhatsApp += 1;
-                } else {
-                    try {
-                        const renderedHeading = replaceTemplateVars(whatsappHeading, recipient);
-                        const renderedBody = replaceTemplateVars(whatsappBody, recipient);
-
-                        // Template format: Hello *{{1}}*,\n\n{{2}}\n\nBest regards,\nAganyu Support
-                        // {{1}} = first_name, {{2}} = message content (subject heading + body)
-                        const fullMessageContent = renderedHeading
-                            ? `*${renderedHeading}*\n\n${renderedBody}`
-                            : renderedBody;
-
-                        const buttonSuffix = recipient.role === "EMPLOYER" ? "dashboard/employer" : "dashboard/seeker";
-
-                        const templateComponents = [
-                            {
-                                type: "body",
-                                parameters: [
-                                    { type: "text", text: cleanMetaParamText(recipient.first_name, 60) || "there" },
-                                    { type: "text", text: cleanMetaParamText(fullMessageContent, 1024) }
-                                ]
-                            },
-                            {
-                                type: "button",
-                                sub_type: "url",
-                                index: "0",
-                                parameters: [
-                                    { type: "text", text: buttonSuffix }
-                                ]
-                            }
-                        ];
-
-                        const metaResponse = await sendMetaWhatsAppMessage({
-                            to: recipient.phone,
-                            templateId: BROADCAST_TEMPLATE_NAME,
-                            templateParams: { languageCode: BROADCAST_TEMPLATE_LANGUAGE },
-                            components: templateComponents
-                        });
-
-                        // Store the wa_message_id so delivery webhooks can update the DB record
-                        const waMessageId = metaResponse?.messages?.[0]?.id || null;
-                        const messagePreview = `[Template: ${BROADCAST_TEMPLATE_NAME}] ${renderedHeading ? `${renderedHeading} — ` : ""}${renderedBody.slice(0, 100)}`;
-
-                        await logWhatsAppMessage({
-                            user_id: recipient.user_id,
-                            phone: recipient.phone,
-                            direction: "OUTBOUND",
-                            message_text: messagePreview,
-                            status: "SENT",
-                            metadata: {
-                                wa_message_id: waMessageId,
-                                template: BROADCAST_TEMPLATE_NAME,
-                                subject: renderedHeading
-                            }
-                        });
-
-                        sentWhatsApp += 1;
-                    } catch (waErr: any) {
-                        failedWhatsApp += 1;
-                        console.error("[Admin Communications] WhatsApp dispatch failed for:", recipient.phone, waErr.message);
-                    }
-                }
+                broadcastId = bRecord?.id || null;
+            } catch {
+                // Ignore queue creation failure, fallback to direct execution
             }
         }
 
+        // Trigger background processing asynchronously without awaiting for response to complete (prevents API timeout)
+        void processBroadcastQueue(broadcastId || "test-run", recipients, {
+            channel,
+            emailSubject,
+            emailBody,
+            whatsappHeading,
+            whatsappBody
+        });
+
         return NextResponse.json({
             success: true,
+            broadcastId,
             audience,
             channel,
             mode,
-            sentEmail,
-            failedEmail,
-            sentWhatsApp,
-            failedWhatsApp,
-            skippedWhatsApp,
+            message: mode === "test" ? "Test campaign queued." : `Campaign queued for processing to ${recipients.length} recipients.`,
             total: recipients.length,
         });
     } catch (error: any) {
