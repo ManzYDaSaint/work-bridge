@@ -88,6 +88,39 @@ export function resolveHighestEducationQualification(
   return detailedEducation || educationQualifications[0] || null;
 }
 
+export function extractSeekerEducationQualification(
+  qualification?: string | null,
+  education?: Array<Record<string, any>> | string[] | null
+): string {
+  const parts: string[] = [];
+  if (qualification && qualification.trim()) {
+    parts.push(qualification.trim());
+  }
+  if (Array.isArray(education)) {
+    for (const edu of education) {
+      if (typeof edu === "object" && edu !== null) {
+        const val =
+          edu.fieldOfStudy ||
+          edu.field_of_study ||
+          edu.degree ||
+          edu.qualification ||
+          edu.certificate ||
+          edu.programme ||
+          edu.program ||
+          edu.title ||
+          edu.institution ||
+          edu.school;
+        if (typeof val === "string" && val.trim()) {
+          parts.push(val.trim());
+        }
+      } else if (typeof edu === "string" && edu.trim()) {
+        parts.push(edu.trim());
+      }
+    }
+  }
+  return parts.join(" ").trim();
+}
+
 export function normalizeStringArray(raw?: string[] | string | null): string[] {
   if (!raw) return [];
   // Assuming skill-normalizer is client/server safe, if not, need to check its dependencies

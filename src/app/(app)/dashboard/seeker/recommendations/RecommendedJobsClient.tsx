@@ -168,47 +168,6 @@ export default function RecommendedJobsClient({
                     </div>
                 </div>
 
-                {/* Inline Tier Metrics (Editorial Pills) */}
-                <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-                    <button
-                        type="button"
-                        onClick={() => setMatchFilter("ALL")}
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
-                            matchFilter === "ALL" 
-                                ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-sm" 
-                                : "bg-stone-100 text-slate-700 hover:bg-stone-200 dark:bg-slate-800 dark:text-slate-300"
-                        }`}
-                    >
-                        <span>Total Matches</span>
-                        <span className="rounded-full bg-white/20 dark:bg-slate-900/20 px-1.5 py-0.5 text-[10px]">{jobs.length}</span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setMatchFilter("HIGH")}
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
-                            matchFilter === "HIGH" 
-                                ? "bg-emerald-600 text-white shadow-sm" 
-                                : "bg-emerald-50 text-emerald-800 border border-emerald-200/80 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/40 dark:text-emerald-300"
-                        }`}
-                    >
-                        <span>🔥 Strong Fits (80%+)</span>
-                        <span className="rounded-full bg-emerald-700/20 px-1.5 py-0.5 text-[10px]">{highCount}</span>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setMatchFilter("MEDIUM")}
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
-                            matchFilter === "MEDIUM" 
-                                ? "bg-amber-600 text-white shadow-sm" 
-                                : "bg-amber-50 text-amber-800 border border-amber-200/80 hover:bg-amber-100 dark:bg-amber-950/30 dark:border-amber-900/40 dark:text-amber-300"
-                        }`}
-                    >
-                        <span>⚡ Good Fits (50-79%)</span>
-                        <span className="rounded-full bg-amber-700/20 px-1.5 py-0.5 text-[10px]">{medCount}</span>
-                    </button>
-                </div>
             </div>
 
             {/* 2. Swipeable Filter Strip */}

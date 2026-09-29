@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Briefcase, Building2, CalendarDays, CheckCircle2, DollarSign, ExternalLink, MapPin, ShieldCheck, Users } from "lucide-react";
+import { ArrowLeft, Briefcase, Building2, CalendarDays, CheckCircle2, DollarSign, ExternalLink, MapPin, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { formatJobType, formatWorkMode } from "@/lib/utils";
 import ShareJobButton from "@/components/jobs/ShareJobButton";
@@ -324,21 +324,42 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
 
                     {similarJobs.length > 0 && (
                         <section className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                            <h2 className="text-lg font-semibold text-slate-950 dark:text-white">Similar jobs</h2>
+                            <div className="flex items-center gap-2">
+                                <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                <h2 className="text-lg font-semibold text-slate-950 dark:text-white">Similar jobs in this field</h2>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Other active roles matching this career domain</p>
                             <div className="mt-4 space-y-3">
                                 {similarJobs.map((similarJob: any) => {
                                     const similarCompany = similarJob.display_company_name || similarJob.employer?.company_name || "Company";
                                     const similarHref = `/jobs/${similarJob.public_slug || similarJob.id}`;
+                                    const sharedSkills: string[] = similarJob._shared_skills || [];
 
                                     return (
                                         <Link
                                             key={similarJob.id}
                                             href={similarHref}
-                                            className="block rounded-xl border border-stone-200 bg-stone-50 p-3 transition hover:border-slate-300 hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600 dark:hover:bg-slate-700"
+                                            className="group block rounded-xl border border-stone-200 bg-stone-50/80 p-3.5 transition-all hover:border-emerald-300 hover:bg-emerald-50/30 dark:border-slate-800 dark:bg-slate-800/50 dark:hover:border-emerald-800 dark:hover:bg-slate-800"
                                         >
-                                            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-400">{similarCompany}</p>
-                                            <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{similarJob.title}</p>
-                                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">{similarJob.location} · {similarJob.type ? formatJobType(similarJob.type) : "Role"}</p>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-400">{similarCompany}</p>
+                                                {similarJob.work_mode && (
+                                                    <span className="rounded bg-slate-200/60 px-1.5 py-0.5 text-[9px] font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                                                        {formatWorkMode(similarJob.work_mode)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="mt-1 text-sm font-semibold text-slate-900 group-hover:text-emerald-700 dark:text-white dark:group-hover:text-emerald-400">{similarJob.title}</p>
+                                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{similarJob.location} · {similarJob.type ? formatJobType(similarJob.type) : "Role"}</p>
+                                            {sharedSkills.length > 0 && (
+                                                <div className="mt-2 flex flex-wrap gap-1">
+                                                    {sharedSkills.slice(0, 3).map((skill: string) => (
+                                                        <span key={skill} className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-medium text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+                                                            ✓ {skill}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </Link>
                                     );
                                 })}

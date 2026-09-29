@@ -3,6 +3,7 @@ import { getSupabaseAdminClient } from "./supabase-admin";
 import { emitSystemEvent } from "./mission-control";
 import { generateEmbedding, constructOpportunityDNA } from "./embedding-service";
 import { normalizeSkills } from "./skill-normalizer";
+import { evaluateQualificationMatch } from "./matching-helpers";
 
 /**
  * Generates an embedding for an opportunity and stores it in the DB.
@@ -128,6 +129,7 @@ export async function triggerOpportunityMatchNotifications(opportunityId: string
                 skills,
                 certifications,
                 qualification,
+                education,
                 location,
                 experience,
                 user:users(email)
@@ -253,12 +255,17 @@ function scoreOpportunityMatch(
     const breakdown: Record<string, any> = {};
     let weightedScore = 0;
 
-    // ── Education match ───────────────────────────────────────────────────────
+    // ── Education & Domain match ──────────────────────────────────────────────
     let educationScore = 0;
-    if (opportunity.education_requirements) {
-        const req = opportunity.education_requirements.toLowerCase();
-        const seekerQual = (seeker.qualification || "").toLowerCase();
-        educationScore = seekerQual.includes(req) || req === "any" ? 100 : 40; // partial credit if not exact
+    if (opportunity.education_requirements && opportunity.education_requirements.trim().toLowerCase() !== "any") {
+        const qualEval = evaluateQualificationMatch(
+            opportunity.education_requirements,
+            seeker.qualification,
+            opportunity.title,
+            seeker.skills,
+            seeker.education
+        );
+        educationScore = qualEval.mismatchedDomain ? 0 : qualEval.score;
     } else {
         educationScore = 100; // no requirement = full points
     }

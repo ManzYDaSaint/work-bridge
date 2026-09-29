@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { PageHeader, Badge, Pagination, SearchInput } from "@/components/dashboard/ui";
-import { Users, Loader2, UserX, Crown, Sparkles, X, CheckCircle2, UserCheck, Building2, Shield, Download, Target, AlertTriangle, Eye, Send, FileText, RefreshCw, Cpu } from "lucide-react";
+import { Users, Loader2, UserX, Crown, Sparkles, X, CheckCircle2, UserCheck, Building2, Shield, Download, Target, AlertTriangle, Eye, Send, FileText, RefreshCw, Cpu, Bot } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { calculateProfileStrength } from "@/lib/profile-strength";
-import { calculateYearsExperience, resolveHighestEducationQualification } from "@/lib/matching-helpers-shared";
+import { calculateYearsExperience, resolveHighestEducationQualification, extractSeekerEducationQualification } from "@/lib/matching-helpers-shared";
 
 
 export default function UserManagementClient({ 
@@ -30,6 +30,35 @@ export default function UserManagementClient({
     const [durationMonths, setDurationMonths] = useState<number>(1);
     const [updatingSub, setUpdatingSub] = useState<boolean>(false);
     const [sendingNotification, setSendingNotification] = useState<boolean>(false);
+    const [classifyingSeeker, setClassifyingSeeker] = useState<boolean>(false);
+    const [classifiedDomains, setClassifiedDomains] = useState<Record<string, string>>({});
+
+    const handleForceClassifySeeker = async (rawQual: string) => {
+        if (!rawQual || !rawQual.trim()) {
+            toast.error("No education qualification details found for this candidate.");
+            return;
+        }
+        setClassifyingSeeker(true);
+        try {
+            const res = await apiFetch("/api/admin/qualifications/classify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ rawQualification: rawQual }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                toast.success(`Successfully classified into domain: "${data.domainName}" via Gemini LLM!`);
+                setClassifiedDomains((prev) => ({ ...prev, [rawQual]: data.domainName }));
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                toast.error(errData.error || "Failed to classify qualification with Gemini.");
+            }
+        } catch {
+            toast.error("Network error while classifying qualification.");
+        } finally {
+            setClassifyingSeeker(false);
+        }
+    };
 
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -367,6 +396,26 @@ export default function UserManagementClient({
                                                     <Target size={11} className="shrink-0" /> Ready for AI Match
                                                 </p>
                                             )}
+                                            {(() => {
+                                                const rawQual = extractSeekerEducationQualification(
+                                                    user.seekerProfile?.qualification || user.qualification,
+                                                    user.seekerProfile?.education
+                                                );
+                                                const assignedDomain = classifiedDomains[rawQual];
+                                                return (
+                                                    <div className="mt-1 flex items-center gap-1">
+                                                        {assignedDomain ? (
+                                                            <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                                                🎓 {assignedDomain}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                                                                ⚠️ Domain Unassigned
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     ) : (
                                         <span className="text-xs text-slate-400 italic">N/A ({user.role})</span>
@@ -603,19 +652,47 @@ export default function UserManagementClient({
                                         </div>
                                     </div>
 
-                                    {/* Education Qualification */}
-                                    <div className="rounded-xl border border-stone-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-                                        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1">
-                                            🎓 Education Qualification
-                                        </p>
-                                        <p className="mt-1 text-xs font-bold text-slate-800 dark:text-slate-200">
-                                            {resolveHighestEducationQualification(null, inspectingUser.seekerProfile?.education) ||
-                                             (Array.isArray(inspectingUser.seekerProfile?.education) && (inspectingUser.seekerProfile.education[0]?.certificate || inspectingUser.seekerProfile.education[0]?.degree || inspectingUser.seekerProfile.education[0]?.qualification)) ||
-                                             inspectingUser.seekerProfile?.qualification ||
-                                             inspectingUser.qualification ||
-                                             "Not specified"}
-                                        </p>
-                                    </div>
+                                    {/* Education Qualification & Domain */}
+                                    {(() => {
+                                        const rawEduQual = extractSeekerEducationQualification(
+                                            inspectingUser.seekerProfile?.qualification || inspectingUser.qualification,
+                                            inspectingUser.seekerProfile?.education
+                                        );
+                                        const displayQual = resolveHighestEducationQualification(null, inspectingUser.seekerProfile?.education) ||
+                                            (Array.isArray(inspectingUser.seekerProfile?.education) && (inspectingUser.seekerProfile.education[0]?.certificate || inspectingUser.seekerProfile.education[0]?.degree || inspectingUser.seekerProfile.education[0]?.qualification)) ||
+                                            inspectingUser.seekerProfile?.qualification ||
+                                            inspectingUser.qualification ||
+                                            "Not specified";
+                                        const assignedDomain = classifiedDomains[rawEduQual];
+
+                                        return (
+                                            <div className="rounded-xl border border-stone-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                                                        🎓 Education Qualification & Domain
+                                                    </p>
+                                                    <button
+                                                        onClick={() => handleForceClassifySeeker(rawEduQual || displayQual)}
+                                                        disabled={classifyingSeeker || (displayQual === "Not specified" && !rawEduQual)}
+                                                        className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1 text-[11px] font-bold text-purple-700 hover:bg-purple-100 dark:border-purple-900 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-purple-900/50 disabled:opacity-50 transition-colors"
+                                                        title="Force classify education qualification into a canonical domain using Gemini AI"
+                                                    >
+                                                        {classifyingSeeker ? <Loader2 size={12} className="animate-spin" /> : <Bot size={12} />}
+                                                        <span>{assignedDomain ? "Re-classify with AI" : "Classify with AI (Gemini)"}</span>
+                                                    </button>
+                                                </div>
+                                                <p className="mt-1 text-xs font-bold text-slate-800 dark:text-slate-200">
+                                                    {displayQual}
+                                                </p>
+                                                {assignedDomain && (
+                                                    <div className="mt-2 flex items-center gap-2">
+                                                        <span className="text-[10px] font-medium text-slate-400">Assigned Domain:</span>
+                                                        <Badge label={assignedDomain} variant="green" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
 
                                 {/* Active Recommended Jobs Section */}

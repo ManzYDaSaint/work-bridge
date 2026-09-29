@@ -3,7 +3,8 @@ import {
   calculateYearsExperience, 
   requiredSkillsMatch, 
   requiredCertificationsMatch,
-  getQualificationRank
+  getQualificationRank,
+  extractSeekerEducationQualification
 } from "./matching-helpers-shared";
 
 // Re-export shared functions and types
@@ -133,9 +134,13 @@ export function evaluateQualificationMatch(
   jobQualification?: string | null,
   seekerQualification?: string | null,
   jobTitle?: string | null,
-  seekerSkills?: string[] | string | null
+  seekerSkills?: string[] | string | null,
+  seekerEducation?: Array<Record<string, any>> | string[] | null
 ): { passed: boolean; score: number; mismatchedDomain?: boolean } {
-  // Extract domains from qualification text AND job title / seeker skills
+  // Extract full seeker education qualification text
+  const fullSeekerEducationQual = extractSeekerEducationQualification(seekerQualification, seekerEducation);
+
+  // Extract domains from qualification text AND job title / seeker skills & education
   const jobDomains = Array.from(new Set([
     ...getQualificationDomains(jobQualification),
     ...getQualificationDomains(jobTitle)
@@ -143,7 +148,7 @@ export function evaluateQualificationMatch(
 
   const seekerSkillStr = Array.isArray(seekerSkills) ? seekerSkills.join(" ") : (seekerSkills || "");
   const seekerDomains = Array.from(new Set([
-    ...getQualificationDomains(seekerQualification),
+    ...getQualificationDomains(fullSeekerEducationQual),
     ...getQualificationDomains(seekerSkillStr)
   ]));
 
@@ -159,21 +164,21 @@ export function evaluateQualificationMatch(
   if (!jobQualification || !jobQualification.trim()) {
     return { passed: true, score: 100 };
   }
-  if (!seekerQualification || !seekerQualification.trim()) {
+  if (!fullSeekerEducationQual || !fullSeekerEducationQual.trim()) {
     return { passed: false, score: 0 };
   }
 
   const jobQualLower = jobQualification.toLowerCase().trim();
-  const seekerQualLower = seekerQualification.toLowerCase().trim();
+  const seekerQualLower = fullSeekerEducationQual.toLowerCase().trim();
 
   // 1. Exact string match check
-  if (seekerQualLower === jobQualLower) {
+  if (seekerQualLower === jobQualLower || seekerQualLower.includes(jobQualLower)) {
     return { passed: true, score: 100 };
   }
 
   // 2. Malawian Hierarchy Rank Evaluation
   const jobRank = getQualificationRank(jobQualification);
-  const seekerRank = getQualificationRank(seekerQualification);
+  const seekerRank = getQualificationRank(fullSeekerEducationQual);
 
   if (jobRank > 0 && seekerRank > 0) {
     if (seekerRank >= jobRank) {
@@ -192,9 +197,10 @@ export function qualificationMatches(
   jobQualification?: string | null,
   seekerQualification?: string | null,
   jobTitle?: string | null,
-  seekerSkills?: string[] | string | null
+  seekerSkills?: string[] | string | null,
+  seekerEducation?: Array<Record<string, any>> | string[] | null
 ): boolean {
-  return evaluateQualificationMatch(jobQualification, seekerQualification, jobTitle, seekerSkills).passed;
+  return evaluateQualificationMatch(jobQualification, seekerQualification, jobTitle, seekerSkills, seekerEducation).passed;
 }
 
 /**
@@ -207,7 +213,13 @@ export function scoreJobSeekerMatch(
   seeker: any,
   weights: any = { qualification: 80, experience: 10, skills: 10, certifications: 0 }
 ): any {
-  const qualEval = evaluateQualificationMatch(job.qualification, seeker.qualification, (job as any).title, seeker.skills);
+  const qualEval = evaluateQualificationMatch(
+    job.qualification,
+    seeker.qualification,
+    (job as any).title,
+    seeker.skills,
+    seeker.education
+  );
   const qualificationPassed = qualEval.passed;
   const qualificationScore = qualEval.score;
 

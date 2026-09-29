@@ -6,6 +6,7 @@ import {
   StructuredMatchResult,
   resolveHighestEducationQualification,
   getQualificationRank,
+  getQualificationDomains,
 } from "@/lib/matching-helpers";
 import { Job } from "@/types";
 import { generateEmbedding } from "@/lib/embedding-service";
@@ -317,6 +318,7 @@ export class RecommendationService {
   /**
    * Fallback: find jobs with similar qualification and skill requirements when embedding-based
    * similarity is not available or returns no matches.
+   * Domain-aware: only returns jobs that share the same qualification domain as the anchor job.
    */
   private static async getQualificationBasedSimilarJobs(jobId: string, limit: number) {
     const supabase = await this.getSupabase();
@@ -331,13 +333,19 @@ export class RecommendationService {
       return [];
     }
 
+    // Determine the anchor job's discipline domains from its qualification + title
+    const anchorDomains = [
+      ...getQualificationDomains(anchorJob.qualification),
+      ...getQualificationDomains(anchorJob.title),
+    ];
+
     const { data: jobs, error: jobsError } = await supabase
       .from('jobs')
       .select('id, title, type, work_mode, qualification, minimum_years_experience, skills, must_have_skills, nice_to_have_skills, location, status, public_slug, display_company_name, employer_id, created_at')
       .eq('status', 'ACTIVE')
       .neq('id', jobId)
       .order('created_at', { ascending: false })
-      .limit(100);
+      .limit(200);
 
     if (jobsError || !jobs || jobs.length === 0) {
       return [];
@@ -356,6 +364,19 @@ export class RecommendationService {
 
     const scoredJobs = jobs
       .map((candidate: any) => {
+        const candidateDomains = [
+          ...getQualificationDomains(candidate.qualification),
+          ...getQualificationDomains(candidate.title),
+        ];
+
+        // Domain mismatch penalty: if both jobs have identifiable domains and they don't overlap, skip
+        const hasDomainOverlap =
+          anchorDomains.length === 0 ||
+          candidateDomains.length === 0 ||
+          candidateDomains.some((d) => anchorDomains.includes(d));
+
+        if (!hasDomainOverlap) return null;
+
         const candidateSkills = normalizeSkills([
           ...(candidate.must_have_skills || []),
           ...(candidate.skills || []),
@@ -407,6 +428,8 @@ export class RecommendationService {
         const typeBonus = anchorJob.type && candidate.type && anchorJob.type === candidate.type ? 0.15 : 0;
         const workModeBonus = anchorJob.work_mode && candidate.work_mode && anchorJob.work_mode === candidate.work_mode ? 0.1 : 0;
         const locationBonus = anchorJob.location && candidate.location && anchorJob.location.toLowerCase() === candidate.location.toLowerCase() ? 0.1 : 0;
+        // Extra bonus for same-domain (at least one domain overlap)
+        const domainBonus = hasDomainOverlap && anchorDomains.length > 0 ? 0.2 : 0;
 
         const score = (
           qualificationScore * 50 +
@@ -414,16 +437,20 @@ export class RecommendationService {
           experienceScore * 15 +
           typeBonus * 100 +
           workModeBonus * 100 +
-          locationBonus * 100
+          locationBonus * 100 +
+          domainBonus * 100
         );
 
         return {
           ...candidate,
           _similarity_score: score,
           _overlap_count: overlap.length,
+          _shared_skills: overlap,
+          _domains: candidateDomains,
         };
       })
-      .filter((candidate: any) => {
+      .filter((candidate: any): candidate is NonNullable<typeof candidate> => {
+        if (!candidate) return false;
         const hasRelevantSignal = candidate._similarity_score >= 25 || candidate._overlap_count > 0;
         return hasRelevantSignal;
       })
@@ -435,38 +462,82 @@ export class RecommendationService {
   }
 
   /**
-   * Find jobs similar to a given job.
+   * Find jobs similar to a given job — domain-aware.
+   * Uses pgvector similarity as primary signal, then post-filters by qualification domain.
+   * Falls back to qualification+skill scoring if no embedding is available.
    */
   static async getSimilarJobs(jobId: string, options: RecommendationOptions = {}) {
     const { limit = 5 } = options;
 
     const supabase = await this.getSupabase();
-    const { data: job, error: jobError } = await supabase
+
+    // Fetch anchor job's embedding + fields needed for domain resolution
+    const { data: anchorJob, error: anchorError } = await supabase
       .from('jobs')
-      .select('embedding')
+      .select('id, title, qualification, embedding, must_have_skills, skills, nice_to_have_skills')
       .eq('id', jobId)
       .single();
 
-    if (jobError || !job?.embedding) {
+    if (anchorError || !anchorJob) {
+      return this.getQualificationBasedSimilarJobs(jobId, limit);
+    }
+
+    // Derive the anchor job's domain(s)
+    const anchorDomains = [
+      ...getQualificationDomains(anchorJob.qualification),
+      ...getQualificationDomains(anchorJob.title),
+    ];
+
+    if (!anchorJob.embedding) {
       return this.getQualificationBasedSimilarJobs(jobId, limit);
     }
 
     try {
+      // Fetch more than needed so we can post-filter by domain
       const { data: similarJobs, error: simError } = await supabase.rpc('find_similar_jobs', {
-        query_embedding: job.embedding,
+        query_embedding: anchorJob.embedding,
         exclude_job_id: jobId,
-        match_count: limit,
+        match_count: Math.max(limit * 5, 25),
       });
 
-      if (simError) {
+      if (simError || !Array.isArray(similarJobs) || similarJobs.length === 0) {
         return this.getQualificationBasedSimilarJobs(jobId, limit);
       }
 
-      if (!Array.isArray(similarJobs) || similarJobs.length === 0) {
-        return this.getQualificationBasedSimilarJobs(jobId, limit);
-      }
+      // Post-filter by domain — only keep jobs in the same discipline
+      const domainFiltered = similarJobs.filter((job: any) => {
+        if (anchorDomains.length === 0) return true; // anchor has no domain signal, allow all
+        const jobDomains = [
+          ...getQualificationDomains(job.qualification),
+          ...getQualificationDomains(job.title),
+        ];
+        if (jobDomains.length === 0) return true; // candidate has no domain signal, allow through
+        return jobDomains.some((d) => anchorDomains.includes(d));
+      });
 
-      return similarJobs;
+      // Annotate with shared skills for richer card display
+      const anchorSkills = new Set(
+        normalizeSkills([
+          ...(anchorJob.must_have_skills || []),
+          ...(anchorJob.skills || []),
+          ...(anchorJob.nice_to_have_skills || []),
+        ])
+      );
+
+      const annotated = domainFiltered.slice(0, limit).map((job: any) => {
+        const jobSkills = normalizeSkills([
+          ...(job.must_have_skills || []),
+          ...(job.skills || []),
+          ...(job.nice_to_have_skills || []),
+        ]);
+        const sharedSkills = jobSkills.filter((s) => anchorSkills.has(s));
+        return { ...job, _shared_skills: sharedSkills };
+      });
+
+      if (annotated.length > 0) return annotated;
+
+      // If domain filtering wiped out all results, fall back to qualification-based
+      return this.getQualificationBasedSimilarJobs(jobId, limit);
     } catch {
       return this.getQualificationBasedSimilarJobs(jobId, limit);
     }

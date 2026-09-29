@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { classifyQualification } from "@/lib/qualification-classifier";
 import { invalidateQualificationMappingsCache } from "@/lib/mapping-cache";
+import { extractSeekerEducationQualification } from "@/lib/matching-helpers-shared";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -67,8 +68,8 @@ export async function GET(req: Request) {
     mappedDomainMap.set(normalizeKey(mapping.raw_qualification), mapping.domain_id ?? null);
   }
 
-  // 3. Scan active jobs for unmapped or unclassified qualifications
-  const { data: jobs, error: jobsError } = await supabase
+  // 3. Scan active jobs AND job seekers for unmapped qualifications
+  const { data: jobs } = await supabase
     .from("jobs")
     .select("id, title, qualification")
     .eq("status", "ACTIVE")
@@ -76,11 +77,15 @@ export async function GET(req: Request) {
     .order("created_at", { ascending: false })
     .limit(500);
 
-  if (jobsError) {
-    return NextResponse.json({ error: "Failed to fetch active jobs" }, { status: 500 });
-  }
+  const { data: seekers } = await supabase
+    .from("job_seekers")
+    .select("id, qualification, education")
+    .order("created_at", { ascending: false })
+    .limit(500);
 
   const unmappedSet = new Set<string>();
+
+  // Collect from jobs
   for (const job of jobs ?? []) {
     const raw = normalizeQualification(String(job.qualification ?? ""));
     if (!raw) continue;
@@ -92,9 +97,37 @@ export async function GET(req: Request) {
     }
   }
 
+  // Collect from seekers' education qualifications
+  for (const seeker of seekers ?? []) {
+    const seekerEduQual = extractSeekerEducationQualification(seeker.qualification, seeker.education);
+    if (!seekerEduQual) continue;
+
+    // Split seeker qualification & education into individual qualification statements if needed
+    const candidateStrings = [
+      seeker.qualification,
+      ...(Array.isArray(seeker.education)
+        ? seeker.education.map((e: any) =>
+            typeof e === "object" && e !== null
+              ? e.fieldOfStudy || e.degree || e.qualification || e.programme
+              : String(e || "")
+          )
+        : []),
+    ].filter((s): s is string => Boolean(s && typeof s === "string" && s.trim()));
+
+    for (const rawCandidate of candidateStrings) {
+      const raw = normalizeQualification(rawCandidate);
+      if (!raw) continue;
+      const key = normalizeKey(raw);
+      const domainId = mappedDomainMap.get(key);
+      if (!mappedDomainMap.has(key) || !domainId) {
+        unmappedSet.add(raw);
+      }
+    }
+  }
+
   const rawList = Array.from(unmappedSet);
   if (rawList.length === 0) {
-    return NextResponse.json({ success: true, processed: 0, message: "No unmapped qualifications found on active jobs." });
+    return NextResponse.json({ success: true, processed: 0, message: "No unmapped qualifications found on active jobs or job seekers." });
   }
 
   // Process batch of up to 25 items per run to respect execution limits

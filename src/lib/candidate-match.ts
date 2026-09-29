@@ -9,14 +9,17 @@ export interface CandidateMatchResult {
 }
 
 import { normalizeSkills } from "./skill-normalizer";
+import { evaluateQualificationMatch } from "./matching-helpers";
 
 export function evaluateCandidateMatch(
     seeker: {
         skills: string[];
         experience: any[];
         qualification: string | null;
+        education?: any[] | null;
     },
     job: {
+        title?: string | null;
         must_have_skills?: string[];
         nice_to_have_skills?: string[];
         minimum_years_experience?: number;
@@ -73,20 +76,26 @@ export function evaluateCandidateMatch(
             : `Requires ${reqExp} years, candidate has ${yearsExperience}.`,
     });
 
-    // Qualification Check
-    let qualPassed = true;
-    if (job.qualification && job.qualification.trim()) {
-        const jobQual = job.qualification.toLowerCase().trim();
-        const seekerQual = (seeker.qualification || "").toLowerCase().trim();
-        if (!seekerQual.includes(jobQual)) {
-            qualPassed = false;
-            meetsRequiredCriteria = false;
-        }
+    // Qualification & Domain Check
+    const qualEval = evaluateQualificationMatch(
+        job.qualification,
+        seeker.qualification,
+        job.title,
+        seeker.skills,
+        seeker.education
+    );
+    const qualPassed = qualEval.passed;
+    if (!qualPassed) {
+        meetsRequiredCriteria = false;
     }
     breakdown.push({
         type: "QUALIFICATION",
         passed: qualPassed,
-        message: qualPassed ? "Meets qualification requirement." : `Missing required qualification: ${job.qualification}`,
+        message: qualPassed
+            ? "Meets qualification & domain requirement."
+            : qualEval.mismatchedDomain
+            ? "Field of study domain mismatch for this role."
+            : `Missing required qualification: ${job.qualification}`,
     });
 
     // Screening Questions
