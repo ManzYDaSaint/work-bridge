@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         // 1. Fetch user base details
         const { data: user, error: userError } = await supabase
             .from("users")
-            .select("*, job_seekers(*), employers(*)")
+            .select("*, job_seekers(*, qualification_domains(id, name)), employers(*)")
             .eq("id", userId)
             .single();
 
@@ -114,10 +114,14 @@ export async function GET(request: Request) {
 
         notifications = whatsappLogs || [];
 
+        // Normalize Supabase relations — they may be returned as arrays for one-to-many FK directions
+        const normalizedSeeker = Array.isArray(user.job_seekers) ? (user.job_seekers[0] ?? null) : (user.job_seekers ?? null);
+        const normalizedEmployer = Array.isArray(user.employers) ? (user.employers[0] ?? null) : (user.employers ?? null);
+
         return NextResponse.json({
             user,
-            seekerProfile: user.job_seekers || null,
-            employerProfile: user.employers || null,
+            seekerProfile: normalizedSeeker,
+            employerProfile: normalizedEmployer,
             matches,
             applications,
             postedJobs,

@@ -49,6 +49,9 @@ export default function UserManagementClient({
                 const data = await res.json();
                 toast.success(`Successfully classified into domain: "${data.domainName}" via Gemini LLM!`);
                 setClassifiedDomains((prev) => ({ ...prev, [rawQual]: data.domainName }));
+                if (inspectingUser) {
+                    handleInspectUser(inspectingUser);
+                }
             } else {
                 const errData = await res.json().catch(() => ({}));
                 toast.error(errData.error || "Failed to classify qualification with Gemini.");
@@ -663,7 +666,9 @@ export default function UserManagementClient({
                                             inspectingUser.seekerProfile?.qualification ||
                                             inspectingUser.qualification ||
                                             "Not specified";
-                                        const assignedDomain = classifiedDomains[rawEduQual];
+                                        const dbDomain = inspectData?.seekerProfile?.qualification_domains?.name ||
+                                             inspectingUser.seekerProfile?.qualification_domains?.name;
+                                         const assignedDomain = classifiedDomains[rawEduQual] || dbDomain;
 
                                         return (
                                             <div className="rounded-xl border border-stone-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">

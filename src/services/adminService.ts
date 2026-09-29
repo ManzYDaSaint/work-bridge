@@ -318,7 +318,7 @@ export const adminService = {
 
         let query = supabase
             .from("users")
-            .select("*, job_seekers(id, full_name, bio, location, skills, experience, education, qualification, avatar_url, phone, premium_subscriptions(id, status, ends_at, payment_provider)), employers(company_name, location)", { count: "exact" })
+            .select("*, job_seekers(id, full_name, bio, location, skills, experience, education, qualification, avatar_url, phone, domain_id, qualification_domains(id, name), premium_subscriptions(id, status, ends_at, payment_provider)), employers(company_name, location)", { count: "exact" })
             .order("created_at", { ascending: false });
 
         if (params.search) {
