@@ -26,6 +26,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const mappingId = String(body?.mappingId ?? "").trim();
   const rawQualification = String(body?.rawQualification ?? "").trim().replace(/\s+/g, " ");
+  const seekerId = String(body?.seekerId ?? "").trim();
 
   if (!rawQualification) {
     return NextResponse.json({ error: "Raw qualification is required" }, { status: 400 });
@@ -70,7 +71,24 @@ export async function POST(request: Request) {
     }
 
     invalidateQualificationMappingsCache();
-    return NextResponse.json({ success: true, domainName: domain.name });
+
+    const writebackPayload = {
+      domain_id: domain.id,
+      domain_classified_at: new Date().toISOString(),
+      domain_source: "admin_force",
+    };
+
+    if (seekerId) {
+      await supabase.from("job_seekers").update(writebackPayload).eq("id", seekerId);
+    }
+
+    await supabase
+      .from("job_seekers")
+      .update(writebackPayload)
+      .is("domain_id", null)
+      .ilike("qualification", rawQualification);
+
+    return NextResponse.json({ success: true, domainName: domain.name, domainId: domain.id });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Classification failed";
     return NextResponse.json({ error: message }, { status: 500 });

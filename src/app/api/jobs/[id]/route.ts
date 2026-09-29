@@ -110,6 +110,27 @@ export async function PUT(
             return NextResponse.json({ error: "No valid fields provided for update" }, { status: 400 });
         }
 
+        // Auto-resolve job domain if qualification or title was modified
+        if (parsed.data.qualification !== undefined || parsed.data.title !== undefined) {
+            const { getQualificationDomains } = await import("@/lib/matching-helpers");
+            const qualText = `${updateData.qualification ?? ""} ${updateData.title ?? ""}`.trim();
+            const resolvedDomains = getQualificationDomains(qualText);
+
+            if (resolvedDomains.length > 0) {
+                const { data: matchedDomain } = await supabase
+                    .from("qualification_domains")
+                    .select("id")
+                    .ilike("name", resolvedDomains[0])
+                    .maybeSingle();
+
+                if (matchedDomain?.id) {
+                    (updateData as any).domain_id = matchedDomain.id;
+                    (updateData as any).domain_classified_at = new Date().toISOString();
+                    (updateData as any).domain_source = "keyword_match";
+                }
+            }
+        }
+
         const { data, error } = await supabase
             .from("jobs")
             .update(updateData)

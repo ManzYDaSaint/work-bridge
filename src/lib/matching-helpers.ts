@@ -135,22 +135,40 @@ export function evaluateQualificationMatch(
   seekerQualification?: string | null,
   jobTitle?: string | null,
   seekerSkills?: string[] | string | null,
-  seekerEducation?: Array<Record<string, any>> | string[] | null
+  seekerEducation?: Array<Record<string, any>> | string[] | null,
+  /** Optional: pre-resolved domain name stored on seeker (job_seekers.domain_id resolved to domain name) */
+  seekerStoredDomainName?: string | null,
+  /** Optional: pre-resolved domain name stored on job */
+  jobStoredDomainName?: string | null,
 ): { passed: boolean; score: number; mismatchedDomain?: boolean } {
   // Extract full seeker education qualification text
   const fullSeekerEducationQual = extractSeekerEducationQualification(seekerQualification, seekerEducation);
 
-  // Extract domains from qualification text AND job title / seeker skills & education
-  const jobDomains = Array.from(new Set([
-    ...getQualificationDomains(jobQualification),
-    ...getQualificationDomains(jobTitle)
-  ]));
+  // ─── FAST PATH: use pre-stored domain names when available ──────────────
+  // If job/seeker already have their domain resolved and stored in the DB,
+  // use those directly — no text parsing needed on every match evaluation.
+  let jobDomains: string[];
+  let seekerDomains: string[];
 
-  const seekerSkillStr = Array.isArray(seekerSkills) ? seekerSkills.join(" ") : (seekerSkills || "");
-  const seekerDomains = Array.from(new Set([
-    ...getQualificationDomains(fullSeekerEducationQual),
-    ...getQualificationDomains(seekerSkillStr)
-  ]));
+  if (jobStoredDomainName) {
+    jobDomains = [jobStoredDomainName];
+  } else {
+    jobDomains = Array.from(new Set([
+      ...getQualificationDomains(jobQualification),
+      ...getQualificationDomains(jobTitle),
+    ]));
+  }
+
+  if (seekerStoredDomainName) {
+    seekerDomains = [seekerStoredDomainName];
+  } else {
+    const seekerSkillStr = Array.isArray(seekerSkills) ? seekerSkills.join(" ") : (seekerSkills || "");
+    seekerDomains = Array.from(new Set([
+      ...getQualificationDomains(fullSeekerEducationQual),
+      ...getQualificationDomains(seekerSkillStr),
+    ]));
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Domain mismatch check: if job belongs to specific discipline(s) and candidate belongs to other discipline(s)
   if (jobDomains.length > 0 && seekerDomains.length > 0) {
@@ -213,12 +231,16 @@ export function scoreJobSeekerMatch(
   seeker: any,
   weights: any = { qualification: 80, experience: 10, skills: 10, certifications: 0 }
 ): any {
+  // Use stored domain names (fast-path) when seeker/job have domain_id pre-resolved via DB join.
+  // Fields: seeker._domain_name (resolved from domain_id FK), job._domain_name (same pattern).
   const qualEval = evaluateQualificationMatch(
     job.qualification,
     seeker.qualification,
     (job as any).title,
     seeker.skills,
-    seeker.education
+    seeker.education,
+    (seeker as any)._domain_name ?? null,
+    (job as any)._domain_name ?? null,
   );
   const qualificationPassed = qualEval.passed;
   const qualificationScore = qualEval.score;

@@ -84,6 +84,8 @@ export async function GET(req: Request) {
     .limit(500);
 
   const unmappedSet = new Set<string>();
+  // Track which rawQual strings originated from seekers (not jobs)
+  const seekerQualSet = new Set<string>();
 
   // Collect from jobs
   for (const job of jobs ?? []) {
@@ -121,6 +123,7 @@ export async function GET(req: Request) {
       const domainId = mappedDomainMap.get(key);
       if (!mappedDomainMap.has(key) || !domainId) {
         unmappedSet.add(raw);
+        seekerQualSet.add(raw); // mark as seeker-sourced
       }
     }
   }
@@ -135,6 +138,7 @@ export async function GET(req: Request) {
   const currentDomainNames = domains.map((d) => d.name);
   let classifiedCount = 0;
   const results: Array<{ qualification: string; domain: string; isNewDomain: boolean }> = [];
+  const classifiedMappings: Array<{ raw: string; domainId: string }> = [];
 
   for (const rawQual of batch) {
     try {
@@ -183,6 +187,10 @@ export async function GET(req: Request) {
         if (!upsertError) {
           classifiedCount++;
           results.push({ qualification: rawQual, domain: domainName, isNewDomain });
+          // Track seeker-sourced mappings for domain writeback
+          if (seekerQualSet.has(rawQual)) {
+            classifiedMappings.push({ raw: rawQual, domainId: targetDomainId });
+          }
         }
       }
     } catch (err) {
@@ -194,10 +202,51 @@ export async function GET(req: Request) {
     invalidateQualificationMappingsCache();
   }
 
+  // Write resolved domain_id back to job_seekers for every seeker-sourced classification
+  let seekerUpdateCount = 0;
+  let jobUpdateCount = 0;
+  if (classifiedMappings.length > 0) {
+    const now = new Date().toISOString();
+    for (const mapping of classifiedMappings) {
+      const { error: updateError, count } = await supabase
+        .from("job_seekers")
+        .update({
+          domain_id: mapping.domainId,
+          domain_classified_at: now,
+          domain_source: "ai_cron",
+        })
+        .is("domain_id", null)
+        .filter("qualification", "ilike", mapping.raw);
+
+      if (!updateError && count != null) {
+        seekerUpdateCount += count;
+      } else if (updateError) {
+        console.error(`Error updating job_seekers domain for qualification "${mapping.raw}":`, updateError);
+      }
+
+      // Also update jobs table where domain_id is null
+      const { error: jobUpdateError, count: jCount } = await supabase
+        .from("jobs")
+        .update({
+          domain_id: mapping.domainId,
+          domain_classified_at: now,
+          domain_source: "ai_cron",
+        })
+        .is("domain_id", null)
+        .filter("qualification", "ilike", mapping.raw);
+
+      if (!jobUpdateError && jCount != null) {
+        jobUpdateCount += jCount;
+      }
+    }
+  }
+
   return NextResponse.json({
     success: true,
     processed: classifiedCount,
     totalUnmappedFound: rawList.length,
+    seekerDomainsUpdated: seekerUpdateCount,
+    jobDomainsUpdated: jobUpdateCount,
     results,
   });
 }

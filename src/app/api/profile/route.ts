@@ -1,3 +1,5 @@
+import { extractSeekerEducationQualification } from "@/lib/matching-helpers-shared";
+import { getQualificationDomains } from "@/lib/matching-helpers";
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
@@ -119,6 +121,27 @@ export async function PUT(request: Request) {
 
         const public_slug = currentProfile?.public_slug || buildPublicProfileSlug(body.full_name, auth.userId);
 
+        // Auto-resolve qualification domain on profile save
+        const fullEduQual = extractSeekerEducationQualification(body.qualification, body.education);
+        const resolvedDomains = getQualificationDomains(fullEduQual);
+        let domain_id: string | null = null;
+        let domain_classified_at: string | null = null;
+        let domain_source: string | null = null;
+
+        if (resolvedDomains.length > 0) {
+            const { data: matchedDomain } = await supabase
+                .from("qualification_domains")
+                .select("id")
+                .ilike("name", resolvedDomains[0])
+                .maybeSingle();
+
+            if (matchedDomain?.id) {
+                domain_id = matchedDomain.id;
+                domain_classified_at = new Date().toISOString();
+                domain_source = "keyword_match";
+            }
+        }
+
         const upsertPayload = {
             id: auth.userId,
             full_name: body.full_name,
@@ -138,6 +161,9 @@ export async function PUT(request: Request) {
             profile_visibility: body.profileVisibility || "HIDDEN",
             public_slug,
             completion,
+            domain_id,
+            domain_classified_at,
+            domain_source,
         };
         console.log("Profile PUT upsertPayload:", JSON.stringify(upsertPayload, null, 2));
 

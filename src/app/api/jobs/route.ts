@@ -1,3 +1,4 @@
+import { getQualificationDomains } from "@/lib/matching-helpers";
 import { validateAuth } from "@/lib/auth-guard";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
@@ -149,6 +150,27 @@ export async function POST(request: Request) {
             deadlineRaw ||
             new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
+        // Resolve job domain from qualification + title
+        const jobQualText = `${body.qualification || ""} ${body.title || ""}`.trim();
+        const resolvedJobDomains = getQualificationDomains(jobQualText);
+        let domain_id: string | null = null;
+        let domain_classified_at: string | null = null;
+        let domain_source: string | null = null;
+
+        if (resolvedJobDomains.length > 0) {
+            const { data: matchedDomain } = await supabase
+                .from("qualification_domains")
+                .select("id")
+                .ilike("name", resolvedJobDomains[0])
+                .maybeSingle();
+
+            if (matchedDomain?.id) {
+                domain_id = matchedDomain.id;
+                domain_classified_at = new Date().toISOString();
+                domain_source = "keyword_match";
+            }
+        }
+
         const { data: createdJob, error: insertError } = await supabase
             .from("jobs")
             .insert({
@@ -178,6 +200,9 @@ export async function POST(request: Request) {
                 posting_type: body.postingType || 'DIRECT',
                 display_company_name: body.displayCompanyName || null,
                 job_source: body.jobSource || 'Employer Portal',
+                domain_id,
+                domain_classified_at,
+                domain_source,
             })
             .select()
             .single();

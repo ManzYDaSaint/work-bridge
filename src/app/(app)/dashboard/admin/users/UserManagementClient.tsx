@@ -33,7 +33,7 @@ export default function UserManagementClient({
     const [classifyingSeeker, setClassifyingSeeker] = useState<boolean>(false);
     const [classifiedDomains, setClassifiedDomains] = useState<Record<string, string>>({});
 
-    const handleForceClassifySeeker = async (rawQual: string) => {
+    const handleForceClassifySeeker = async (rawQual: string, seekerId?: string) => {
         if (!rawQual || !rawQual.trim()) {
             toast.error("No education qualification details found for this candidate.");
             return;
@@ -43,7 +43,7 @@ export default function UserManagementClient({
             const res = await apiFetch("/api/admin/qualifications/classify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ rawQualification: rawQual }),
+                body: JSON.stringify({ rawQualification: rawQual, seekerId: seekerId || "" }),
             });
             if (res.ok) {
                 const data = await res.json();
@@ -672,7 +672,7 @@ export default function UserManagementClient({
                                                         🎓 Education Qualification & Domain
                                                     </p>
                                                     <button
-                                                        onClick={() => handleForceClassifySeeker(rawEduQual || displayQual)}
+                                                        onClick={() => handleForceClassifySeeker(rawEduQual || displayQual, inspectingUser?.seekerId)}
                                                         disabled={classifyingSeeker || (displayQual === "Not specified" && !rawEduQual)}
                                                         className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1 text-[11px] font-bold text-purple-700 hover:bg-purple-100 dark:border-purple-900 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-purple-900/50 disabled:opacity-50 transition-colors"
                                                         title="Force classify education qualification into a canonical domain using Gemini AI"

@@ -75,7 +75,7 @@ export class RecommendationService {
     const supabase = await this.getSupabase();
     const { data: seeker, error: seekerError } = await supabase
       .from('job_seekers')
-      .select('id, full_name, bio, location, skills, experience, education, qualification, embedding')
+      .select('id, full_name, bio, location, skills, experience, education, qualification, embedding, domain_id, qualification_domains(name)')
       .eq('id', userId)
       .single();
 
@@ -215,7 +215,7 @@ export class RecommendationService {
     // 3. Fetch candidate job seekers directly
     const { data: seekerRows, error: seekerRowsError } = await supabase
       .from('job_seekers')
-      .select('id, full_name, bio, location, skills, completion, experience, education, qualification, seniority_level, employment_status, profile_visibility, avatar_url')
+      .select('id, full_name, bio, location, skills, completion, experience, education, qualification, seniority_level, employment_status, profile_visibility, avatar_url, domain_id, qualification_domains(name)')
       .limit(200);
 
     if (seekerRowsError) {
@@ -325,7 +325,7 @@ export class RecommendationService {
 
     const { data: anchorJob, error: anchorError } = await supabase
       .from('jobs')
-      .select('id, title, type, work_mode, qualification, minimum_years_experience, skills, must_have_skills, nice_to_have_skills, location, status, public_slug, display_company_name, employer_id, created_at')
+      .select('id, title, type, work_mode, qualification, minimum_years_experience, skills, must_have_skills, nice_to_have_skills, location, status, public_slug, display_company_name, employer_id, created_at, domain_id, qualification_domains(name)')
       .eq('id', jobId)
       .maybeSingle();
 
@@ -341,7 +341,7 @@ export class RecommendationService {
 
     const { data: jobs, error: jobsError } = await supabase
       .from('jobs')
-      .select('id, title, type, work_mode, qualification, minimum_years_experience, skills, must_have_skills, nice_to_have_skills, location, status, public_slug, display_company_name, employer_id, created_at')
+      .select('id, title, type, work_mode, qualification, minimum_years_experience, skills, must_have_skills, nice_to_have_skills, location, status, public_slug, display_company_name, employer_id, created_at, domain_id, qualification_domains(name)')
       .eq('status', 'ACTIVE')
       .neq('id', jobId)
       .order('created_at', { ascending: false })
@@ -474,7 +474,7 @@ export class RecommendationService {
     // Fetch anchor job's embedding + fields needed for domain resolution
     const { data: anchorJob, error: anchorError } = await supabase
       .from('jobs')
-      .select('id, title, qualification, embedding, must_have_skills, skills, nice_to_have_skills')
+      .select('id, title, qualification, embedding, must_have_skills, skills, nice_to_have_skills, domain_id, qualification_domains(name)')
       .eq('id', jobId)
       .single();
 
