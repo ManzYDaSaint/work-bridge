@@ -404,7 +404,8 @@ export default function UserManagementClient({
                                                     user.seekerProfile?.qualification || user.qualification,
                                                     user.seekerProfile?.education
                                                 );
-                                                const assignedDomain = classifiedDomains[rawQual];
+                                                const dbDomain = user.seekerProfile?.qualification_domains?.name;
+                                                const assignedDomain = classifiedDomains[rawQual] || dbDomain;
                                                 return (
                                                     <div className="mt-1 flex items-center gap-1">
                                                         {assignedDomain ? (
