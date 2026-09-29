@@ -179,8 +179,9 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
         const supabase = createBrowserSupabaseClient();
         if (!supabase) return;
 
+        const channelId = `realtime-communications_${Math.random().toString(36).substring(2, 9)}`;
         const channel = supabase
-            .channel("realtime-communications")
+            .channel(channelId)
             .on(
                 "postgres_changes",
                 { event: "*", schema: "public", table: "whatsapp_messages" },
