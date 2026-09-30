@@ -30,14 +30,14 @@ export async function GET(request: Request) {
   const { data: seekers } = await supabase
     .from("job_seekers")
     .select(
-      "id, user_id, full_name, qualification, education, skills, experience, location, phone, notification_preferences(whatsapp_enabled, min_match_score)"
+      "id, user_id, full_name, qualification, education, skills, experience, location, phone, domain_id, qualification_domains(name), notification_preferences(whatsapp_enabled, min_match_score)"
     )
     .in("id", premiumSeekerIds.length ? premiumSeekerIds : ["__none__"]);
 
   // 3. Fetch active jobs
   const { data: jobs } = await supabase
     .from("jobs")
-    .select("id, title, qualification, minimum_years_experience, must_have_skills, display_company_name")
+    .select("id, title, qualification, minimum_years_experience, must_have_skills, display_company_name, domain_id, qualification_domains(name)")
     .eq("status", "ACTIVE");
 
   const results: any[] = [];
@@ -57,6 +57,7 @@ export async function GET(request: Request) {
       experience: seeker.experience || [],
       education: seeker.education || [],
       certifications: [],
+      _domain_name: (seeker.qualification_domains as any)?.name || null,
     };
 
     const seekerEntry: any = {
@@ -70,7 +71,11 @@ export async function GET(request: Request) {
       matches: [],
     };
 
-    for (const job of jobs || []) {
+    for (const rawJob of jobs || []) {
+      const job = {
+        ...rawJob,
+        _domain_name: (rawJob.qualification_domains as any)?.name || null,
+      };
       const ruleMatch = scoreJobSeekerMatch(job, seekerProfile);
       const qualScore = ruleMatch.breakdown.qualification.score;
       const passedKnockout = !(job.qualification && qualScore === 0);

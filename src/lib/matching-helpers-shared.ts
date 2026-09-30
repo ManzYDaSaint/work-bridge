@@ -4,6 +4,7 @@ export interface SeekerProfile {
   qualification?: string | null;
   education?: Array<Record<string, any>> | null;
   certifications?: string[] | string | null;
+  _domain_name?: string | null;
 }
 
 export interface JobRequirements {

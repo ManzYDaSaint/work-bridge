@@ -14,15 +14,21 @@ async function computeMatchScore(supabase: any, job: any, seeker: any) {
   // Resolve exact specific certificate/degree title from the detailed education history array
   const resolvedQual = resolveHighestEducationQualification(seeker.qualification, seeker.education) || seeker.qualification;
 
+  const normalizedJob = {
+    ...job,
+    _domain_name: job._domain_name || (job.qualification_domains as any)?.name || null,
+  };
+
   const seekerProfile: SeekerProfile = {
     qualification: resolvedQual || null,
     skills: seeker.skills || [],
     experience: seeker.experience || [],
     education: seeker.education || [],
-    certifications: []
+    certifications: [],
+    _domain_name: seeker._domain_name || (seeker.qualification_domains as any)?.name || null,
   };
 
-  const ruleMatch = scoreJobSeekerMatch(job, seekerProfile);
+  const ruleMatch = scoreJobSeekerMatch(normalizedJob, seekerProfile);
 
   // Education knockout gate
   const qualScore = ruleMatch.breakdown.qualification.score;
@@ -95,7 +101,7 @@ export async function runPremiumJobMatchingForJob(jobId: string) {
 
   const { data: job } = await supabase
     .from("jobs")
-    .select("*")
+    .select("*, qualification_domains(name)")
     .eq("id", jobId)
     .single();
 
@@ -113,7 +119,7 @@ export async function runPremiumJobMatchingForJob(jobId: string) {
 
   const { data: seekers } = await supabase
     .from("job_seekers")
-    .select("id, user_id, full_name, qualification, education, skills, experience, location, phone, notification_preferences(whatsapp_enabled, min_match_score)")
+    .select("id, user_id, full_name, qualification, education, skills, experience, location, phone, domain_id, qualification_domains(name), notification_preferences(whatsapp_enabled, min_match_score)")
     .in("id", premiumSeekerIds);
 
   if (!seekers || seekers.length === 0) return;

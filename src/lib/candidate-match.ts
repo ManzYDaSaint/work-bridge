@@ -77,12 +77,17 @@ export function evaluateCandidateMatch(
     });
 
     // Qualification & Domain Check
+    const seekerDomainName = (seeker as any)._domain_name || (seeker as any).qualification_domains?.name || null;
+    const jobDomainName = (job as any)._domain_name || (job as any).qualification_domains?.name || null;
+
     const qualEval = evaluateQualificationMatch(
         job.qualification,
         seeker.qualification,
         job.title,
         seeker.skills,
-        seeker.education
+        seeker.education,
+        seekerDomainName,
+        jobDomainName
     );
     const qualPassed = qualEval.passed;
     if (!qualPassed) {

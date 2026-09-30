@@ -400,22 +400,31 @@ export const jobService = {
     createJob: async (employerId: string, jobData: any) => {
         const supabase = await createSupabaseServerClient();
 
-        // New: Perform AI Classification for the qualification
-        if (jobData.qualification) {
+        let resolvedDomainId = jobData.domain_id || null;
+        let domainSource = jobData.domain_source || null;
+        let domainClassifiedAt = jobData.domain_classified_at || null;
+
+        // Perform AI Classification for the qualification or title if domain_id is not already provided
+        const textToClassify = jobData.qualification || jobData.title;
+        if (textToClassify && !resolvedDomainId) {
             try {
                 const { classifyQualification } = await import("@/lib/qualification-classifier");
                 const { data: domains } = await supabase.from('qualification_domains').select('id, name');
                 const domainNames = (domains || []).map(d => d.name);
                 
-                const domain = await classifyQualification(jobData.qualification, domainNames);
+                const domain = await classifyQualification(textToClassify, domainNames);
                 const matchedDomain = domains?.find(d => d.name.toLowerCase() === domain.toLowerCase());
                 
                 if (matchedDomain) {
+                    resolvedDomainId = matchedDomain.id;
+                    domainSource = 'keyword_match';
+                    domainClassifiedAt = new Date().toISOString();
+
                     // Save the mapping
                     await supabase
                         .from('qualification_mappings')
                         .upsert({ 
-                            raw_qualification: jobData.qualification,
+                            raw_qualification: textToClassify,
                             domain_id: matchedDomain.id
                         }, { onConflict: 'raw_qualification' });
                 }
@@ -426,7 +435,13 @@ export const jobService = {
 
         const { data, error } = await supabase
             .from("jobs")
-            .insert({ ...jobData, employer_id: employerId })
+            .insert({
+                ...jobData,
+                employer_id: employerId,
+                domain_id: resolvedDomainId,
+                domain_source: domainSource,
+                domain_classified_at: domainClassifiedAt,
+            })
             .select()
             .single();
 

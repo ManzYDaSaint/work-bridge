@@ -182,7 +182,7 @@ export async function fetchJobsWithEmployers(
         return { data: [], error: null };
     }
 
-    let query = supabase.from("jobs").select("*").in("id", jobIds);
+    let query = supabase.from("jobs").select("*, qualification_domains(name)").in("id", jobIds);
     if (options?.status) {
         query = query.eq("status", options.status);
     }
@@ -192,7 +192,11 @@ export async function fetchJobsWithEmployers(
         return { data: [], error: new Error(jobsError.message) };
     }
 
-    const jobs = jobsData || [];
+    const rawJobs = jobsData || [];
+    const jobs = rawJobs.map((j: any) => ({
+        ...j,
+        _domain_name: j._domain_name || (j.qualification_domains as any)?.name || null,
+    }));
     const employerMap = await fetchEmployersForJobs(supabase, jobs);
     const jobMap = attachEmployersToJobs(jobs, employerMap);
 

@@ -113,6 +113,7 @@ export class RecommendationService {
       qualification: resolveHighestEducationQualification(null, seeker.education || []),
       education: seeker.education || [],
       certifications: [],
+      _domain_name: (seeker.qualification_domains as any)?.name || null,
     };
 
     // Fetch active jobs for recommendation scoring
@@ -195,16 +196,22 @@ export class RecommendationService {
     let job: any = null;
 
     if (typeof jobOrId === "object" && jobOrId !== null) {
-      job = jobOrId;
+      job = {
+        ...jobOrId,
+        _domain_name: jobOrId._domain_name || (jobOrId.qualification_domains as any)?.name || null,
+      };
     } else if (typeof jobOrId === "string") {
       const { data, error } = await supabase
         .from('jobs')
-        .select('*')
+        .select('*, qualification_domains(name)')
         .eq('id', jobOrId)
         .maybeSingle();
       
       if (!error && data) {
-        job = data;
+        job = {
+          ...data,
+          _domain_name: (data.qualification_domains as any)?.name || null,
+        };
       }
     }
 
@@ -261,6 +268,7 @@ export class RecommendationService {
           qualification: resolveHighestEducationQualification(null, seeker.education || []),
           education: seeker.education || [],
           certifications: certList,
+          _domain_name: (seeker.qualification_domains as any)?.name || null,
         };
 
         const structuredMatch = scoreJobSeekerMatch(job, seekerProfile);
