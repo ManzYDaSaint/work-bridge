@@ -10,7 +10,7 @@ import { sendStandardJobMatchEmail } from "./email-matching";
  * Resolves full education certificate details (e.g. "Bachelors Degree In Social Science")
  * from seeker.education JSON array if present, rather than relying solely on highest tier string.
  */
-async function computeMatchScore(supabase: any, job: any, seeker: any) {
+export async function computeMatchScore(supabase: any, job: any, seeker: any) {
   // Resolve exact specific certificate/degree title from the detailed education history array
   const resolvedQual = resolveHighestEducationQualification(seeker.qualification, seeker.education) || seeker.qualification;
 
@@ -124,9 +124,7 @@ export async function runPremiumJobMatchingForJob(jobId: string) {
 
   if (!seekers || seekers.length === 0) return;
 
-  const { getMatchDispatchMode } = await import("./settings");
-  const dispatchMode = await getMatchDispatchMode();
-  const initialStatus = dispatchMode === "AUTO" ? "PENDING" : "REQUIRES_APPROVAL";
+  const initialStatus = "PENDING";
 
   for (const seeker of seekers) {
     const userPrefs = Array.isArray(seeker.notification_preferences)
@@ -135,17 +133,10 @@ export async function runPremiumJobMatchingForJob(jobId: string) {
 
     const matchRes = await computeMatchScore(supabase, job, seeker);
 
-    // --- Dispatch mode: AUTO → immediate WhatsApp send requires phone + prefs + threshold ---
-    if (dispatchMode === "AUTO") {
-      if (!seeker.phone) continue;
-      if (userPrefs?.whatsapp_enabled === false) continue;
-      const requiredThreshold = userPrefs?.min_match_score || 50;
-      if (!matchRes.passedKnockout || matchRes.finalScore < requiredThreshold) continue;
-    } else {
-      // --- Dispatch mode: REQUIRES_APPROVAL → queue any viable candidate for admin review ---
-      // Only hard filter: must have cleared the qualification knockout gate
-      if (!matchRes.passedKnockout || matchRes.finalScore < 1) continue;
-    }
+    if (!seeker.phone) continue;
+    if (userPrefs?.whatsapp_enabled === false) continue;
+    const requiredThreshold = userPrefs?.min_match_score || 50;
+    if (!matchRes.passedKnockout || matchRes.finalScore < requiredThreshold) continue;
 
     // Check if notification already queued for this seeker+job pair
     const { data: existingNotif } = await supabase

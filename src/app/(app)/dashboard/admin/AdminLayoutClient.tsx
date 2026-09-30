@@ -16,7 +16,7 @@ const adminNavGroups: NavGroup[] = [
             { label: "Market Moderation", href: "/dashboard/admin/jobs", icon: Briefcase },
             { label: "User Management", href: "/dashboard/admin/users", icon: Users },
             { label: "Communications", href: "/dashboard/admin/communications", icon: Mail },
-            { label: "Match Approvals", href: "/dashboard/admin/notifications", icon: ShieldCheck },
+            { label: "Dispatched Matches", href: "/dashboard/admin/notifications", icon: ShieldCheck },
         ]
     },
     {

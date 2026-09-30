@@ -2,8 +2,8 @@ import { Suspense } from "react";
 import NotificationReviewClient from "./NotificationReviewClient";
 
 export const metadata = {
-    title: "Match Approvals & WhatsApp Queue | Admin Dashboard",
-    description: "Review and approve job matches before dispatching WhatsApp alerts."
+    title: "Dispatched Job Matches & Delivery Audit | Admin Dashboard",
+    description: "Monitor automated instant WhatsApp matches for Premium seekers and 24-hour delayed Email matches for Free seekers."
 };
 
 export default function NotificationReviewPage() {

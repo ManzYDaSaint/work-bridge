@@ -5,19 +5,17 @@ import { apiFetch } from "@/lib/api";
 import { PageHeader, Badge } from "@/components/dashboard/ui";
 import { 
     CheckCircle2, XCircle, ShieldCheck, Zap, RefreshCw, Loader2, 
-    Send, Sparkles, AlertCircle, Building2, User, Phone, BookOpen, Clock, Layers, Mail
+    Send, Sparkles, AlertCircle, Building2, User, Phone, BookOpen, Clock, Layers, MessageSquare, Mail
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function NotificationReviewClient() {
     const [loading, setLoading] = useState(true);
-    const [actioningId, setActioningId] = useState<string | null>(null);
     const [triggeringMatching, setTriggeringMatching] = useState(false);
-    const [dispatchMode, setDispatchMode] = useState<"MANUAL" | "AUTO">("MANUAL");
-    const [pendingItems, setPendingItems] = useState<any[]>([]);
-    const [recentHistory, setRecentHistory] = useState<any[]>([]);
+    const [dispatches, setDispatches] = useState<any[]>([]);
+    const [stats, setStats] = useState({ totalDispatched: 0, sentCount: 0, pendingCount: 0, failedCount: 0, whatsappCount: 0, emailCount: 0 });
     const [diagnostics, setDiagnostics] = useState<any>({ activeJobs: 0, activeSeekers: 0, premiumSeekers: 0 });
-    const [activeTab, setActiveTab] = useState<"PENDING" | "HISTORY">("PENDING");
+    const [filterTier, setFilterTier] = useState<"ALL" | "WHATSAPP" | "EMAIL">("ALL");
 
     const fetchData = async () => {
         setLoading(true);
@@ -25,15 +23,21 @@ export default function NotificationReviewClient() {
             const res = await apiFetch("/api/admin/notifications");
             if (res.ok) {
                 const data = await res.json();
-                setDispatchMode(data.dispatchMode || "MANUAL");
-                setPendingItems(data.requiresApproval || []);
-                setRecentHistory(data.recentHistory || []);
+                setDispatches(data.dispatches || []);
+                setStats({
+                    totalDispatched: data.totalDispatched || 0,
+                    sentCount: data.sentCount || 0,
+                    pendingCount: data.pendingCount || 0,
+                    failedCount: data.failedCount || 0,
+                    whatsappCount: data.whatsappCount || 0,
+                    emailCount: data.emailCount || 0,
+                });
                 if (data.diagnostics) setDiagnostics(data.diagnostics);
             } else {
-                toast.error("Failed to load match approval queue");
+                toast.error("Failed to load dispatched matches");
             }
         } catch {
-            toast.error("Network error fetching notifications");
+            toast.error("Network error fetching dispatched matches");
         } finally {
             setLoading(false);
         }
@@ -52,10 +56,8 @@ export default function NotificationReviewClient() {
             });
 
             if (res.ok) {
-                toast.success("Matching orchestration started — checking for results in ~6s...");
-                // Async orchestration takes time (LLM calls, vector lookups)
+                toast.success("Matching & automated dispatch triggered — refreshing in ~6s...");
                 setTimeout(() => fetchData(), 6000);
-                setTimeout(() => fetchData(), 12000);
             } else {
                 toast.error("Failed to start matching routine");
             }
@@ -66,392 +68,185 @@ export default function NotificationReviewClient() {
         }
     };
 
-    const handleToggleDispatchMode = async (newMode: "MANUAL" | "AUTO") => {
+    const handleRequeue = async (id: string) => {
         try {
             const res = await apiFetch("/api/admin/notifications", {
                 method: "POST",
-                body: JSON.stringify({ action: "SET_MODE", dispatchMode: newMode })
+                body: JSON.stringify({ action: "REQUEUE", notificationId: id })
             });
-
             if (res.ok) {
-                setDispatchMode(newMode);
-                toast.success(newMode === "AUTO" ? "Auto-Pilot Mode Activated!" : "Manual Review Mode Activated!");
-            }
-        } catch {
-            toast.error("Failed to update dispatch mode");
-        }
-    };
-
-    const handleApproveSingle = async (notificationId: string) => {
-        setActioningId(notificationId);
-        try {
-            const res = await apiFetch("/api/admin/notifications", {
-                method: "POST",
-                body: JSON.stringify({ action: "APPROVE", notificationId })
-            });
-
-            const data = await res.json();
-            if (res.ok) {
-                toast.success(data.message || "Match approved & WhatsApp sent!");
-                setPendingItems(prev => prev.filter(i => i.id !== notificationId));
-            } else {
-                toast.error(data.error || "Approval failed");
-            }
-        } catch {
-            toast.error("Action error");
-        } finally {
-            setActioningId(null);
-        }
-    };
-
-    const handleRejectSingle = async (notificationId: string) => {
-        setActioningId(notificationId);
-        try {
-            const res = await apiFetch("/api/admin/notifications", {
-                method: "POST",
-                body: JSON.stringify({ action: "REJECT", notificationId })
-            });
-
-            if (res.ok) {
-                toast.success("Match rejected");
-                setPendingItems(prev => prev.filter(i => i.id !== notificationId));
-            }
-        } catch {
-            toast.error("Reject action error");
-        } finally {
-            setActioningId(null);
-        }
-    };
-
-    const handleBulkApproveHighScores = async () => {
-        if (!confirm("Approve all high-confidence matches (score >= 80%) for WhatsApp delivery?")) return;
-        setLoading(true);
-        try {
-            const res = await apiFetch("/api/admin/notifications", {
-                method: "POST",
-                body: JSON.stringify({ action: "APPROVE", approveHighScores: true, minScore: 80 })
-            });
-
-            const data = await res.json();
-            if (res.ok) {
-                toast.success(data.message || "High score matches dispatched!");
+                toast.success("Match re-queued for delivery retry!");
                 fetchData();
             } else {
-                toast.error(data.error || "Bulk approval failed");
-                setLoading(false);
+                toast.error("Failed to requeue match");
             }
         } catch {
-            toast.error("Bulk approval error");
-            setLoading(false);
+            toast.error("Network error");
         }
     };
+
+    const filteredDispatches = dispatches.filter(item => {
+        const isEmail = item.template_id === "standard_email_job_alert" || (item.payload as any)?.channel === "EMAIL";
+        if (filterTier === "WHATSAPP") return !isEmail;
+        if (filterTier === "EMAIL") return isEmail;
+        return true;
+    });
 
     return (
         <div className="space-y-6 pb-20">
             <PageHeader
-                title="Match Approvals & Delivery Engine"
-                subtitle="Two-Tier Match Management: Instant WhatsApp for Premium candidates (Admin Approved) and Automated CRON Emails for Standard candidates."
+                title="Dispatched Job Matches & Delivery Audit"
+                subtitle="Fully automated two-tier dispatch: Instant WhatsApp alerts for Premium Seekers and 24-Hour delayed Email alerts for Free Plan Seekers."
             />
 
-            {/* Diagnostics Telemetry Banner */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {/* Telemetry Stats Grid */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
                 <div className="rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <p className="text-[11px] font-semibold uppercase text-slate-400">Active Jobs</p>
-                    <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{diagnostics.activeJobs}</p>
+                    <p className="text-[11px] font-semibold uppercase text-slate-400">Total Dispatched</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{stats.totalDispatched}</p>
                 </div>
                 <div className="rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <p className="text-[11px] font-semibold uppercase text-slate-400">Registered Seekers</p>
-                    <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{diagnostics.activeSeekers}</p>
+                    <p className="text-[11px] font-semibold uppercase text-emerald-600 dark:text-emerald-400">Sent Success</p>
+                    <p className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.sentCount}</p>
                 </div>
-                <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3.5 shadow-sm dark:border-amber-900/40 dark:bg-amber-950/20">
-                    <p className="text-[11px] font-semibold uppercase text-amber-600 dark:text-amber-400">Premium Seekers</p>
-                    <p className="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{diagnostics.premiumSeekers}</p>
+                <div className="rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <p className="text-[11px] font-semibold uppercase text-amber-600 dark:text-amber-400">Premium WhatsApp</p>
+                    <p className="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.whatsappCount}</p>
+                </div>
+                <div className="rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <p className="text-[11px] font-semibold uppercase text-blue-600 dark:text-blue-400">Free 24h Email</p>
+                    <p className="mt-1 text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.emailCount}</p>
+                </div>
+                <div className="rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <p className="text-[11px] font-semibold uppercase text-red-500">Failed / Errors</p>
+                    <p className="mt-1 text-2xl font-bold text-red-500">{stats.failedCount}</p>
                 </div>
                 <div className="rounded-xl border border-stone-200 bg-white p-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between">
                     <div>
-                        <p className="text-[11px] font-semibold uppercase text-slate-400">System Action</p>
+                        <p className="text-[11px] font-semibold uppercase text-slate-400">Matching Engine</p>
                         <button
                             onClick={handleTriggerMatchingNow}
                             disabled={triggeringMatching}
                             className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-emerald-700 disabled:opacity-50"
                         >
                             {triggeringMatching ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                            Run Matching
+                            Run Run
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* Mode Switcher & Stats Bar */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                {/* Mode Controller */}
-                <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            {dispatchMode === "MANUAL" ? (
-                                <ShieldCheck className="text-amber-500" size={20} />
-                            ) : (
-                                <Zap className="text-emerald-500" size={20} />
-                            )}
-                            <span className="text-sm font-bold text-slate-900 dark:text-white">
-                                {dispatchMode === "MANUAL" ? "Manual Review Mode" : "Auto-Pilot Mode"}
-                            </span>
-                        </div>
-                        <button onClick={fetchData} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-                        </button>
-                    </div>
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                        {dispatchMode === "MANUAL"
-                            ? "Premium WhatsApp matches require Admin approval before messages are sent."
-                            : "High-confidence premium WhatsApp matches are automatically dispatched."}
-                    </p>
-
-                    <div className="mt-4 flex gap-2">
-                        <button
-                            onClick={() => handleToggleDispatchMode("MANUAL")}
-                            className={`flex-1 rounded-xl py-2 text-xs font-semibold transition-all ${
-                                dispatchMode === "MANUAL"
-                                    ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
-                                    : "border border-stone-200 bg-stone-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                            }`}
-                        >
-                            <ShieldCheck size={14} className="inline mr-1" /> Manual Review
-                        </button>
-                        <button
-                            onClick={() => handleToggleDispatchMode("AUTO")}
-                            className={`flex-1 rounded-xl py-2 text-xs font-semibold transition-all ${
-                                dispatchMode === "AUTO"
-                                    ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
-                                    : "border border-stone-200 bg-stone-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                            }`}
-                        >
-                            <Zap size={14} className="inline mr-1" /> Auto-Pilot
-                        </button>
-                    </div>
+            {/* Filter Tabs & Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setFilterTier("ALL")}
+                        className={`rounded-xl px-4 py-2 text-xs font-bold transition ${filterTier === "ALL" ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "bg-stone-100 text-slate-600 hover:bg-stone-200 dark:bg-slate-800 dark:text-slate-300"}`}
+                    >
+                        All Dispatches ({stats.totalDispatched})
+                    </button>
+                    <button
+                        onClick={() => setFilterTier("WHATSAPP")}
+                        className={`rounded-xl px-4 py-2 text-xs font-bold transition flex items-center gap-1.5 ${filterTier === "WHATSAPP" ? "bg-emerald-600 text-white" : "bg-stone-100 text-slate-600 hover:bg-stone-200 dark:bg-slate-800 dark:text-slate-300"}`}
+                    >
+                        <MessageSquare size={13} /> Premium WhatsApp ({stats.whatsappCount})
+                    </button>
+                    <button
+                        onClick={() => setFilterTier("EMAIL")}
+                        className={`rounded-xl px-4 py-2 text-xs font-bold transition flex items-center gap-1.5 ${filterTier === "EMAIL" ? "bg-blue-600 text-white" : "bg-stone-100 text-slate-600 hover:bg-stone-200 dark:bg-slate-800 dark:text-slate-300"}`}
+                    >
+                        <Mail size={13} /> Free 24h Email ({stats.emailCount})
+                    </button>
                 </div>
-
-                {/* Queue Summary */}
-                <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between">
-                    <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Pending WhatsApp Approvals</p>
-                        <p className="mt-1 text-3xl font-extrabold text-amber-600 dark:text-amber-400">{pendingItems.length}</p>
-                        <p className="mt-1 text-xs text-slate-500">Premium Seeker Instant Alerts</p>
-                    </div>
-                    {pendingItems.length > 0 && (
-                        <button
-                            onClick={handleBulkApproveHighScores}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-amber-500/30 hover:bg-amber-600"
-                        >
-                            <Sparkles size={14} /> Approve High Scores (≥80%)
-                        </button>
-                    )}
-                </div>
-
-                {/* Delivery History Stats */}
-                <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between">
-                    <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Delivery History</p>
-                        <p className="mt-1 text-3xl font-extrabold text-slate-900 dark:text-white">{recentHistory.length}</p>
-                        <p className="mt-1 text-xs text-slate-500">WhatsApp + Resend Email Logs</p>
-                    </div>
-                    <div className="text-right">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                            <Send size={12} /> {recentHistory.filter(h => h.status === "SENT").length} Sent
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Navigation Tabs */}
-            <div className="flex border-b border-stone-200 dark:border-slate-800">
                 <button
-                    onClick={() => setActiveTab("PENDING")}
-                    className={`border-b-2 px-4 py-2 text-sm font-semibold transition-colors ${
-                        activeTab === "PENDING"
-                            ? "border-amber-500 text-amber-600 dark:text-amber-400"
-                            : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                    }`}
+                    onClick={fetchData}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                 >
-                    Pending Approvals ({pendingItems.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab("HISTORY")}
-                    className={`border-b-2 px-4 py-2 text-sm font-semibold transition-colors ${
-                        activeTab === "HISTORY"
-                            ? "border-amber-500 text-amber-600 dark:text-amber-400"
-                            : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                    }`}
-                >
-                    Delivery Logs & History ({recentHistory.length})
+                    <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Refresh
                 </button>
             </div>
 
-            {/* Tab 1: Pending Approvals Queue */}
-            {activeTab === "PENDING" && (
-                <div className="space-y-4">
-                    {loading ? (
-                        <div className="flex h-48 items-center justify-center rounded-2xl border border-stone-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-                            <Loader2 className="animate-spin text-amber-500" size={28} />
-                        </div>
-                    ) : pendingItems.length === 0 ? (
-                        <div className="rounded-2xl border border-stone-200 bg-white/80 p-12 text-center dark:border-slate-800 dark:bg-slate-900/70">
-                            <CheckCircle2 className="mx-auto text-emerald-500" size={36} />
-                            <p className="mt-3 text-base font-semibold text-slate-900 dark:text-white">Queue is clear!</p>
-                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">There are no pending premium WhatsApp matches requiring manual review.</p>
-                            <button
-                                onClick={handleTriggerMatchingNow}
-                                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white dark:bg-slate-100 dark:text-slate-900"
-                            >
-                                <Sparkles size={14} /> Run Job Matching Algorithm Now
-                            </button>
-                        </div>
-                    ) : (
-                        pendingItems.map((item) => {
-                            const seeker = item.job_seekers || {};
-                            const job = item.jobs || {};
-                            const matchScore = item.payload?.matchScore || 0;
-                            const ruleScore = item.payload?._scoring?.qualScore || 0;
+            {/* Dispatches List / Table */}
+            <div className="rounded-2xl border border-stone-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+                <div className="border-b border-stone-200 px-6 py-4 dark:border-slate-800">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Dispatched Match Audit Log</h3>
+                    <p className="text-xs text-slate-500">Inspecting match preciseness scores, domain classifications, and delivery statuses.</p>
+                </div>
+
+                {loading ? (
+                    <div className="flex h-48 items-center justify-center">
+                        <Loader2 className="animate-spin text-amber-500" size={28} />
+                    </div>
+                ) : filteredDispatches.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                        <CheckCircle2 size={48} className="text-emerald-500 mb-3" />
+                        <h4 className="text-base font-bold text-slate-900 dark:text-white">No Dispatched Matches Found</h4>
+                        <p className="text-xs text-slate-500 mt-1">Dispatched alerts for premium WhatsApp and free 24h email will appear here automatically.</p>
+                    </div>
+                ) : (
+                    <div className="divide-y divide-stone-200 dark:divide-slate-800">
+                        {filteredDispatches.map((item: any) => {
+                            const isEmail = item.template_id === "standard_email_job_alert" || (item.payload as any)?.channel === "EMAIL";
+                            const matchScore = item.payload?.matchScore || item.payload?._scoring?.finalScore || 0;
+                            const company = item.payload?.company || item.jobs?.display_company_name || "Employer";
+                            const jobTitle = item.jobs?.title || item.payload?.jobTitle || "Job Opportunity";
+                            const seekerName = item.job_seekers?.full_name || item.payload?.seekerName || "Job Seeker";
+                            const phoneOrEmail = item.job_seekers?.phone || item.payload?.email || "N/A";
 
                             return (
-                                <div key={item.id} className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-stone-100 pb-4 dark:border-slate-800">
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 font-extrabold text-lg">
-                                                {matchScore}%
-                                            </div>
+                                <div key={item.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-stone-50/60 dark:hover:bg-slate-800/40 transition">
+                                    <div className="space-y-2 flex-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-0.5 text-[11px] font-bold ${isEmail ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"}`}>
+                                                {isEmail ? <Mail size={11} /> : <MessageSquare size={11} />}
+                                                {isEmail ? "Free (24h Email)" : "Premium (Instant WhatsApp)"}
+                                            </span>
+                                            <Badge label={`Match Score: ${matchScore}%`} variant={matchScore >= 80 ? "green" : matchScore >= 60 ? "yellow" : "slate"} />
+                                            <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold ${item.status === "SENT" ? "bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800" : item.status === "PENDING" ? "bg-amber-50 text-amber-600 border border-amber-200" : "bg-red-50 text-red-600 border border-red-200"}`}>
+                                                {item.status}
+                                            </span>
+                                        </div>
+
                                         <div>
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Premium WhatsApp Alert</span>
-                                                    <Badge label={`Qual: ${ruleScore}%`} variant="blue" />
-                                                    {!item.payload?._dispatch?.hasPhone && (
-                                                        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-950 dark:text-red-300">
-                                                            <Phone size={10} /> No Phone
-                                                        </span>
-                                                    )}
-                                                    {item.payload?._dispatch?.hasPhone && !item.payload?._dispatch?.meetsThreshold && (
-                                                        <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-bold text-orange-700 dark:bg-orange-950 dark:text-orange-300">
-                                                            <AlertCircle size={10} /> Below Threshold ({item.payload._dispatch.minThreshold}%)
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className="text-xs text-slate-400 mt-0.5">Queued {new Date(item.created_at).toLocaleString()}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => handleRejectSingle(item.id)}
-                                                disabled={actioningId === item.id}
-                                                className="rounded-xl border border-stone-200 px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-stone-50 hover:text-red-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                                            >
-                                                Reject Match
-                                            </button>
-                                            <button
-                                                onClick={() => handleApproveSingle(item.id)}
-                                                disabled={actioningId === item.id}
-                                                className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-white shadow-md shadow-amber-500/20 hover:bg-amber-600"
-                                            >
-                                                {actioningId === item.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                                                Approve & Send WhatsApp
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Match Side-by-Side Breakdown */}
-                                    <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                                        {/* Candidate Side */}
-                                        <div className="rounded-xl bg-stone-50/80 p-3.5 dark:bg-slate-800/50">
-                                            <div className="flex items-center gap-2 text-xs font-bold uppercase text-slate-400">
-                                                <User size={14} /> Premium Job Seeker Profile
-                                            </div>
-                                            <p className="mt-1.5 text-sm font-bold text-slate-900 dark:text-white">{seeker.full_name || "Unnamed Seeker"}</p>
-                                            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
-                                                <Phone size={12} /> {seeker.phone || "No phone number"}
+                                            <h4 className="text-sm font-bold text-slate-900 dark:text-white">{jobTitle}</h4>
+                                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                                                Company: <strong className="text-slate-900 dark:text-white">{company}</strong> • Seeker: <strong className="text-slate-900 dark:text-white">{seekerName}</strong> ({phoneOrEmail})
                                             </p>
-                                            <div className="mt-2 text-xs space-y-1 text-slate-600 dark:text-slate-300">
-                                                <p>
-                                                    <span className="font-semibold text-slate-400">Education Certification:</span>{" "}
-                                                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                                                        {item.payload?._scoring?.resolvedQual ||
-                                                            (Array.isArray(seeker.education) && seeker.education[0]?.certificate) ||
-                                                            (Array.isArray(seeker.education) && seeker.education[0]?.qualification) ||
-                                                            seeker.qualification ||
-                                                            "Unlisted"}
-                                                    </span>
-                                                </p>
-                                                <p><span className="font-semibold text-slate-400">Skills:</span> {Array.isArray(seeker.skills) ? seeker.skills.join(", ") : (seeker.skills || "None")}</p>
-                                            </div>
                                         </div>
 
-                                        {/* Job Requirements Side */}
-                                        <div className="rounded-xl bg-stone-50/80 p-3.5 dark:bg-slate-800/50">
-                                            <div className="flex items-center gap-2 text-xs font-bold uppercase text-slate-400">
-                                                <Building2 size={14} /> Job Requirements
-                                            </div>
-                                            <p className="mt-1.5 text-sm font-bold text-slate-900 dark:text-white">{job.title || item.payload?.jobTitle}</p>
-                                            <p className="text-xs text-slate-500 font-semibold mt-0.5">{job.display_company_name || item.payload?.company}</p>
-                                            <div className="mt-2 text-xs space-y-1 text-slate-600 dark:text-slate-300">
-                                                <p><span className="font-semibold text-slate-400">Req. Qualification:</span> {job.qualification || "Any"}</p>
-                                                <p><span className="font-semibold text-slate-400">Min Experience:</span> {job.minimum_years_experience || 0} Yrs</p>
-                                            </div>
+                                        {item.payload?.resolvedQual && (
+                                            <p className="text-[11px] text-slate-500">
+                                                Resolved Qualification Match: <span className="font-semibold text-slate-700 dark:text-slate-300">{item.payload.resolvedQual}</span>
+                                            </p>
+                                        )}
+
+                                        {item.last_error && (
+                                            <p className="text-[11px] text-red-500 font-medium">
+                                                Error: {item.last_error}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center gap-3 text-right text-xs text-slate-400">
+                                        <div>
+                                            <p>{new Date(item.created_at).toLocaleString()}</p>
+                                            {item.sent_at && <p className="text-[10px] text-emerald-500">Sent: {new Date(item.sent_at).toLocaleTimeString()}</p>}
                                         </div>
+                                        {item.status === "FAILED" && (
+                                            <button
+                                                onClick={() => handleRequeue(item.id)}
+                                                className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-amber-600"
+                                            >
+                                                Retry
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             );
-                        })
-                    )}
-                </div>
-            )}
-
-            {/* Tab 2: Delivery History */}
-            {activeTab === "HISTORY" && (
-                <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-                    <div className="grid grid-cols-1 gap-2 border-b border-stone-200/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:border-slate-800 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1.5fr)_minmax(0,1fr)_auto]">
-                        <span>Candidate & Channel</span>
-                        <span>Job Title</span>
-                        <span>Match Score</span>
-                        <span className="sm:text-right">Status</span>
+                        })}
                     </div>
-
-                    {recentHistory.length === 0 ? (
-                        <div className="p-8 text-center text-sm text-slate-500">No delivery history recorded yet.</div>
-                    ) : (
-                        recentHistory.map((hist) => {
-                            const isEmail = hist.payload?.channel === "EMAIL" || hist.template_id === "standard_email_job_alert";
-                            return (
-                                <div key={hist.id} className="grid grid-cols-1 gap-3 border-b border-stone-200/70 px-4 py-3.5 last:border-b-0 dark:border-slate-800 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1.5fr)_minmax(0,1fr)_auto] sm:items-center">
-                                    <div>
-                                        <p className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-                                            {isEmail ? <Mail size={12} className="text-blue-500" /> : <Phone size={12} className="text-emerald-500" />}
-                                            {hist.job_seekers?.full_name || hist.payload?.seekerName || "Seeker"}
-                                        </p>
-                                        <p className="text-[11px] text-slate-400">{isEmail ? hist.payload?.email : hist.job_seekers?.phone}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-semibold text-slate-900 dark:text-white">{hist.jobs?.title || hist.payload?.jobTitle}</p>
-                                        <p className="text-[11px] text-slate-400">{hist.jobs?.display_company_name || hist.payload?.company}</p>
-                                    </div>
-                                    <div>
-                                        <span className="text-xs font-bold text-amber-600 dark:text-amber-400">{hist.payload?.matchScore || 0}%</span>
-                                    </div>
-                                    <div className="sm:text-right">
-                                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
-                                            hist.status === "SENT"
-                                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                                                : hist.status === "REJECTED"
-                                                ? "bg-stone-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                                                : "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
-                                        }`}>
-                                            {hist.status} {isEmail ? "(Email)" : "(WhatsApp)"}
-                                        </span>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }

@@ -153,7 +153,7 @@ export async function triggerDelayedFreeMatchNotifications(jobId: string) {
     if (!supabase) return;
 
     try {
-        const { data: job } = await supabase.from("jobs").select("*, employer:employers(company_name)").eq("id", jobId).single();
+        const { data: job } = await supabase.from("jobs").select("*, employer:employers(company_name), qualification_domains(name)").eq("id", jobId).single();
         if (!job || !job.embedding) return;
 
         const { data: matches } = await supabase.rpc("match_candidates", {
@@ -167,7 +167,7 @@ export async function triggerDelayedFreeMatchNotifications(jobId: string) {
         const seekerIds = matches.map((m: any) => m.id);
         const { data: seekers } = await supabase
             .from("job_seekers")
-            .select("id, user_id, skills, experience, qualification, certifications")
+            .select("id, user_id, full_name, skills, experience, qualification, education, certifications, users!inner(email)")
             .in("id", seekerIds);
         if (!seekers) return;
 
@@ -193,27 +193,69 @@ export async function triggerDelayedFreeMatchNotifications(jobId: string) {
                 return passesJobHardRequirements(job, seekerProfile).passed;
             });
 
-        const notifications = freeSeekers.map((seeker: any) =>
-            createNotification({
-              userId: seeker.user_id,
-              type: "JOB_MATCH",
-              templateVars: {
-                companyName: job.display_company_name || job.employer?.company_name || "a company",
-                jobTitle: job.title,
-              },
-              link: `/dashboard/seeker/recommendations`,
-            }).catch(() => {})
-        );
+        const { sendStandardJobMatchEmail } = await import("@/lib/notification/email-matching");
+        const { computeMatchScore } = await import("@/lib/notification/orchestrator");
 
-        await Promise.all(notifications);
-        console.log(`[MATCH_SERVICE] Sent DELAYED AI Match alerts to ${notifications.length} Free candidates for job ${jobId}.`);
+        let sentCount = 0;
+        for (const seeker of freeSeekers) {
+            const email = (seeker as any).users?.email;
+            if (!email) continue;
+
+            // Check if already notified for this job
+            const { data: existing } = await supabase
+                .from("notification_queue")
+                .select("id")
+                .eq("seeker_id", seeker.id)
+                .eq("job_id", job.id)
+                .maybeSingle();
+
+            if (existing) continue;
+
+            const matchRes = await computeMatchScore(supabase, job, seeker);
+            if (!matchRes.passedKnockout || matchRes.finalScore < 50) continue;
+
+            const companyName = job.display_company_name || job.employer?.company_name || "Direct Employer";
+
+            const res = await sendStandardJobMatchEmail({
+                seekerEmail: email,
+                seekerName: seeker.full_name || "Job Seeker",
+                jobTitle: job.title,
+                companyName,
+                location: job.location || "Malawi",
+                jobId: job.id,
+                matchScore: matchRes.finalScore
+            });
+
+            if (res.success) {
+                sentCount++;
+                await supabase.from("notification_queue").insert({
+                    seeker_id: seeker.id,
+                    job_id: job.id,
+                    template_id: "standard_email_job_alert",
+                    payload: {
+                        channel: "EMAIL",
+                        tier: "FREE_DELAYED",
+                        email,
+                        jobTitle: job.title,
+                        matchScore: matchRes.finalScore,
+                        company: companyName,
+                        resolvedQual: matchRes.resolvedQual
+                    },
+                    status: "SENT",
+                    attempts: 1,
+                    sent_at: new Date().toISOString()
+                });
+            }
+        }
+
+        console.log(`[MATCH_SERVICE] Sent 24h delayed Email match alerts to ${sentCount} Free candidates for job ${jobId}.`);
         
         await emitSystemEvent({
             category: "MATCHING",
             severity: "SUCCESS",
             event: "DELAYED_AI_MATCH_ALERTS_SENT",
-            message: `Sent DELAYED AI Match alerts to ${notifications.length} Free candidates for job ${jobId}`,
-            metadata: { jobId, count: notifications.length, type: "FREE_DELAYED" }
+            message: `Sent 24h delayed Email match alerts to ${sentCount} Free candidates for job ${jobId}`,
+            metadata: { jobId, count: sentCount, type: "FREE_DELAYED" }
         });
     } catch (err: any) {
         console.error("[MATCH_SERVICE] Delayed error:", err);
