@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 import { Bot, CheckCircle2, Filter, Loader2, Plus, RefreshCw, Save, Search, Trash2, Layers } from "lucide-react";
+import { Pagination } from "@/components/dashboard/ui";
 
 type Domain = { id: string; name: string };
 type Mapping = {
@@ -92,6 +93,19 @@ export default function QualificationMappingAdminClient() {
       return matchesSearch && matchesStatus;
     });
   }, [mappings, mappingSearch, statusFilter]);
+
+  // Pagination states for Qualification Mapping Review
+  const [mappingPage, setMappingPage] = useState(1);
+  const [mappingLimit, setMappingLimit] = useState(10);
+
+  useEffect(() => {
+    setMappingPage(1);
+  }, [mappingSearch, statusFilter]);
+
+  const paginatedMappings = useMemo(() => {
+    const start = (mappingPage - 1) * mappingLimit;
+    return filteredMappings.slice(start, start + mappingLimit);
+  }, [filteredMappings, mappingPage, mappingLimit]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -592,7 +606,7 @@ export default function QualificationMappingAdminClient() {
               <span>Set Domain</span>
               <span className="text-right">Actions</span>
             </div>
-            {filteredMappings.map((mapping) => (
+            {paginatedMappings.map((mapping) => (
               <div key={mapping.id} className="grid grid-cols-1 gap-3 border-t border-slate-200 px-4 py-3 dark:border-slate-800 lg:grid-cols-[1.5fr_1fr_1fr_150px] lg:items-center">
                 <div>
                   <p className="text-sm font-semibold text-slate-950 dark:text-white">{mapping.raw_qualification}</p>
@@ -654,6 +668,22 @@ export default function QualificationMappingAdminClient() {
                 {mappings.length === 0 ? "No qualification mappings yet." : "No qualification mappings match your search/filter criteria."}
               </div>
             )}
+          </div>
+        )}
+
+        {filteredMappings.length > 0 && (
+          <div className="mt-4">
+            <Pagination
+              currentPage={mappingPage}
+              totalPages={Math.ceil(filteredMappings.length / mappingLimit) || 1}
+              totalItems={filteredMappings.length}
+              itemsPerPage={mappingLimit}
+              onPageChange={(newPage) => setMappingPage(newPage)}
+              onLimitChange={(newLimit) => {
+                setMappingLimit(newLimit);
+                setMappingPage(1);
+              }}
+            />
           </div>
         )}
       </div>

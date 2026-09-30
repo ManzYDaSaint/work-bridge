@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
-import { Check, Edit2, GitMerge, Loader2, Plus, Sparkles, Tags, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Edit2, GitMerge, Loader2, Plus, Sparkles, Tags, Trash2, X } from "lucide-react";
 
 type Domain = {
   id: string;
@@ -53,6 +53,8 @@ export default function DomainManagerClient() {
   const [sourceDomainId, setSourceDomainId] = useState("");
   const [targetDomainId, setTargetDomainId] = useState("");
   const [merging, setMerging] = useState(false);
+
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const sortedDomains = useMemo(
     () => [...domains].sort((a, b) => a.name.localeCompare(b.name)),
@@ -243,11 +245,21 @@ export default function DomainManagerClient() {
             <Tags size={16} />
             {domains.length} domains
           </div>
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+            title={isCollapsed ? "Expand Domain Management" : "Collapse Domain Management"}
+          >
+            {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+            <span>{isCollapsed ? "Expand" : "Collapse"}</span>
+          </button>
         </div>
       </div>
 
-      {/* CREATE DOMAIN CARD */}
-      <div className="mt-5 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50 md:grid-cols-[1fr_1fr_1.5fr_auto]">
+      {!isCollapsed && (
+        <>
+          {/* CREATE DOMAIN CARD */}
+          <div className="mt-5 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50 md:grid-cols-[1fr_1fr_1.5fr_auto]">
         <input
           value={newDomain.name}
           onChange={(e) => setNewDomain({ ...newDomain, name: e.target.value })}
@@ -388,6 +400,8 @@ export default function DomainManagerClient() {
             </div>
           )}
         </div>
+      )}
+        </>
       )}
 
       {/* MERGE DOMAINS MODAL */}
