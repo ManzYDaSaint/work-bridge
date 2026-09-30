@@ -256,10 +256,10 @@ export default function AdminOverviewClient({
 
             <SectionCard title="Operations queue">
                 <div className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-4">
-                    <Link href="/dashboard/admin/jobs?filter=pending" className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 transition-colors hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-950/20 dark:hover:bg-amber-950/30">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700 dark:text-amber-300">Approvals</p>
-                        <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{stats?.pendingJobs || 0}</p>
-                        <p className="mt-1 text-sm text-amber-800/80 dark:text-amber-300/80">Jobs waiting for review</p>
+                    <Link href="/dashboard/admin/notifications" className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 transition-colors hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">Dispatches</p>
+                        <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">Active</p>
+                        <p className="mt-1 text-sm text-emerald-800/80 dark:text-emerald-300/80">Automated match dispatches</p>
                     </Link>
 
                     <Link href="/dashboard/admin/users?filter=close-requests" className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 transition-colors hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/20 dark:hover:bg-rose-950/30">
@@ -340,59 +340,59 @@ export default function AdminOverviewClient({
                 </div>
             </SectionCard>
 
-            {/* ── WhatsApp Premium Match Telemetry Card ── */}
+            {/* ── Automated Dispatched Matches Telemetry ── */}
             {(() => {
                 return (
                     <div className="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-100 dark:border-slate-800/80">
                             <div className="flex items-center gap-3">
-                                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
-                                    <Crown className="w-5 h-5" />
+                                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+                                    <Zap className="w-5 h-5" />
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <h3 className="text-base font-bold text-slate-900 dark:text-white">WhatsApp Match Alerts Telemetry</h3>
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse mr-1" /> Active
+                                        <h3 className="text-base font-bold text-slate-900 dark:text-white">Automated Tiered Match Dispatches</h3>
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse mr-1" /> Automated
                                         </span>
                                     </div>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                        Three-stage hybrid match engine (Qualification 80% + LLM Skills + Vector Boost)
+                                        Instant WhatsApp for Premium Seekers • 24-Hour Delayed Email for Free Seekers
                                     </p>
                                 </div>
                             </div>
 
                             <Link
                                 href="/dashboard/admin/notifications"
-                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition"
+                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition"
                             >
-                                Open Approval Queue <ExternalLink size={12} />
+                                View Dispatched Matches <ExternalLink size={12} />
                             </Link>
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-5">
-                            <div className="bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/50 p-4 rounded-xl">
-                                <span className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">Pending Review</span>
-                                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">Live Queue</p>
-                                <span className="text-[11px] text-slate-500 mt-1 block">Awaiting admin dispatch</span>
+                            <div className="bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/50 p-4 rounded-xl">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Premium Tier</span>
+                                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">Instant WhatsApp</p>
+                                <span className="text-[11px] text-slate-500 mt-1 block">Fired immediately on job post</span>
                             </div>
 
-                            <div className="bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/50 p-4 rounded-xl">
-                                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Qualification Gate</span>
-                                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">80% Weight</p>
-                                <span className="text-[11px] text-slate-500 mt-1 block">Strict knockout floor</span>
+                            <div className="bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/50 p-4 rounded-xl">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-400">Free Tier</span>
+                                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">24h Delayed Email</p>
+                                <span className="text-[11px] text-slate-500 mt-1 block">Scheduled cron via Resend</span>
                             </div>
 
                             <div className="bg-sky-50/60 dark:bg-sky-950/20 border border-sky-200/60 dark:border-sky-900/50 p-4 rounded-xl">
-                                <span className="text-xs font-semibold uppercase tracking-wider text-sky-700 dark:text-sky-400">Skills Evaluator</span>
-                                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">Gemini LLM</p>
-                                <span className="text-[11px] text-slate-500 mt-1 block">Semantic skill understanding</span>
+                                <span className="text-xs font-semibold uppercase tracking-wider text-sky-700 dark:text-sky-400">Matching Engine</span>
+                                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">Domain Precision</p>
+                                <span className="text-[11px] text-slate-500 mt-1 block">pgvector + LLM Evaluation</span>
                             </div>
 
                             <div className="bg-violet-50/60 dark:bg-violet-950/20 border border-violet-200/60 dark:border-violet-900/50 p-4 rounded-xl">
-                                <span className="text-xs font-semibold uppercase tracking-wider text-violet-700 dark:text-violet-400">Dispatch Channel</span>
-                                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">WhatsApp API</p>
-                                <span className="text-[11px] text-slate-500 mt-1 block">aganyu_job_match_alert_v1</span>
+                                <span className="text-xs font-semibold uppercase tracking-wider text-violet-700 dark:text-violet-400">Delivery Audit</span>
+                                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">Live Monitor</p>
+                                <span className="text-[11px] text-slate-500 mt-1 block">Admin inspection log</span>
                             </div>
                         </div>
                     </div>
