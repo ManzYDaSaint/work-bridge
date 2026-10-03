@@ -181,6 +181,19 @@ export async function PUT(request: Request) {
             console.error("[profile/PUT] Background embedding sync failed:", err)
         );
 
+        // --- Domain Classification Agent ---
+        // Fire-and-forget: classify the seeker's qualification/education into a domain.
+        // Skips if domain_id was already set by the keyword matcher above.
+        import("@/lib/agents/domain-classifier-agent").then(({ classifyDomainForRecord }) => {
+            classifyDomainForRecord({
+                target: "SEEKER",
+                recordId: auth.userId,
+                qualification: body.qualification ?? null,
+                education: body.education ?? null,
+                currentDomainId: domain_id ?? null,
+            }).catch((err) => console.error("[DomainAgent/Seeker] Classification failed:", err));
+        }).catch((err) => console.error("[DomainAgent/Seeker] Import failed:", err));
+
         // Fix: atomically try to grant the early-adopter badge via Postgres function.
         // This replaces the previous read-count-then-write pattern which had a race condition
         // where concurrent requests could both see count < 100 and both grant the badge.

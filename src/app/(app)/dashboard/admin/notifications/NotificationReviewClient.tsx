@@ -216,8 +216,22 @@ export default function NotificationReviewClient() {
 
                                         {item.payload?.resolvedQual && (
                                             <p className="text-[11px] text-slate-500">
-                                                Resolved Qualification Match: <span className="font-semibold text-slate-700 dark:text-slate-300">{item.payload.resolvedQual}</span>
+                                                Resolved Qualification: <span className="font-semibold text-slate-700 dark:text-slate-300">{item.payload.resolvedQual}</span>
                                             </p>
+                                        )}
+
+                                        {item.payload?._scoring && (
+                                            <div className="flex items-center gap-2 flex-wrap text-[10px] text-slate-500 pt-1">
+                                                <span className="rounded bg-stone-100 dark:bg-slate-800 px-2 py-0.5">
+                                                    Qual Score: <strong className="text-slate-700 dark:text-slate-200">{item.payload._scoring.qualScore ?? "N/A"}</strong>
+                                                </span>
+                                                <span className="rounded bg-stone-100 dark:bg-slate-800 px-2 py-0.5">
+                                                    Exp Score: <strong className="text-slate-700 dark:text-slate-200">{item.payload._scoring.expScore ?? "N/A"}</strong>
+                                                </span>
+                                                <span className="rounded bg-stone-100 dark:bg-slate-800 px-2 py-0.5">
+                                                    AI Skill Score: <strong className="text-slate-700 dark:text-slate-200">{item.payload._scoring.llmSkillScore ?? "N/A"}</strong>
+                                                </span>
+                                            </div>
                                         )}
 
                                         {item.last_error && (

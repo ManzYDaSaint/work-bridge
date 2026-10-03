@@ -2,9 +2,12 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export type DispatchMode = "MANUAL" | "AUTO";
 
-let inMemoryDispatchMode: DispatchMode = "MANUAL";
+let inMemoryDispatchMode: DispatchMode = "AUTO";
 
 export async function getMatchDispatchMode(): Promise<DispatchMode> {
+  if (process.env.ADMIN_MATCH_DISPATCH_MODE === "MANUAL") {
+    return "MANUAL";
+  }
   if (process.env.ADMIN_MATCH_DISPATCH_MODE === "AUTO") {
     return "AUTO";
   }

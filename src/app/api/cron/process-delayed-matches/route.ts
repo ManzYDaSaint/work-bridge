@@ -52,6 +52,50 @@ export async function GET(request: Request) {
             }
         }
 
+        // Process any queued delayed match emails in notification_queue whose scheduled_for <= now
+        const nowIso = new Date().toISOString();
+        const { data: queuedFreeEmails } = await supabase
+            .from("notification_queue")
+            .select("id, payload, seeker_id, job_id")
+            .eq("status", "PENDING")
+            .lte("scheduled_for", nowIso)
+            .filter("payload->>channel", "eq", "EMAIL")
+            .limit(25);
+
+        let queuedSentCount = 0;
+        if (queuedFreeEmails && queuedFreeEmails.length > 0) {
+            const { sendStandardJobMatchEmail } = await import("@/lib/notification/email-matching");
+
+            for (const item of queuedFreeEmails) {
+                const payload = item.payload || {};
+                const email = payload.email;
+                if (!email) continue;
+
+                const res = await sendStandardJobMatchEmail({
+                    seekerEmail: email,
+                    seekerName: payload.seekerName || "Job Seeker",
+                    jobTitle: payload.jobTitle || "Job Opportunity",
+                    companyName: payload.company || "Direct Employer",
+                    location: payload.location || "Malawi",
+                    jobId: item.job_id,
+                    matchScore: payload.matchScore || 50,
+                });
+
+                if (res.success) {
+                    queuedSentCount++;
+                    await supabase
+                        .from("notification_queue")
+                        .update({ status: "SENT", sent_at: new Date().toISOString() })
+                        .eq("id", item.id);
+                } else {
+                    await supabase
+                        .from("notification_queue")
+                        .update({ status: "FAILED", last_error: res.error })
+                        .eq("id", item.id);
+                }
+            }
+        }
+
         await emitSystemEvent({
             category: "MATCHING",
             severity: "SUCCESS",

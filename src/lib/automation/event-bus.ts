@@ -7,7 +7,8 @@ export type AutomationEvent = {
 };
 
 const EVENT_PLUGIN_MAP: Record<string, string[]> = {
-    JOB_POSTED: ["crm-manager", "buffer-social-poster"],
+    JOB_POSTED: ["crm-manager", "buffer-social-poster", "match-dispatch-agent"],
+    JOB_APPROVED: ["match-dispatch-agent"],
     EMPLOYER_REGISTERED: ["crm-manager"],
     EMAIL_REQUESTED: ["email-notifier"],
     OPPORTUNITY_PUBLISHED: ["opportunity-matcher", "buffer-social-poster"],

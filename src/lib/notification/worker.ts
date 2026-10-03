@@ -1,4 +1,5 @@
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
+import { normalizeWhatsAppPhone } from "@/lib/whatsapp-messages";
 
 /**
  * Worker to process the notification_queue and send via WhatsApp
@@ -77,6 +78,15 @@ export async function processNotificationQueue() {
           status: "PERMANENT_FAILURE",
           error: error?.message || String(error)
         });
+
+        // Notify Admin of permanent WhatsApp delivery failure
+        const { notifyAdmin } = await import("@/lib/notifications");
+        await notifyAdmin({
+          title: "WhatsApp Dispatch Delivery Failed",
+          message: `Permanent failure for notification ${item.id} (Seeker: ${item.seeker_id}): ${error?.message || String(error)}`,
+          type: "WARNING",
+          link: "/dashboard/admin/notifications",
+        }).catch((e) => console.warn("[Worker] Failed to notify admin:", e));
       } else {
         // Exponential backoff: base 60s * 2^(attempts-1), capped at 1 hour
         const baseSeconds = 60;
@@ -114,10 +124,10 @@ export async function sendWhatsAppTemplate(to: string, templateId: string, paylo
     throw new Error("Missing WHATSAPP_PHONE_NUMBER_ID in environment variables");
   }
 
-  // Format recipient phone number (remove +, spaces, hyphens)
-  const formattedTo = to ? to.replace(/[^\d]/g, "") : "";
+  // Format recipient phone number using canonical WhatsApp normalizer
+  const formattedTo = normalizeWhatsAppPhone(to);
   if (!formattedTo) {
-    throw new Error("Invalid or empty destination phone number");
+    throw new Error(`Invalid or unparseable destination phone number: "${to}"`);
   }
 
   const apiVersion = process.env.WHATSAPP_API_VERSION || "v20.0";

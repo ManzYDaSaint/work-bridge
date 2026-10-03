@@ -30,6 +30,7 @@ export async function GET(req: Request) {
         'process-opportunity-ingestion',
         'check-source-health',
         'subscriptions-expiry',
+        'classify-domains',
         'cleanup-system'
     ];
 

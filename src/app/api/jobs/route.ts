@@ -263,16 +263,26 @@ export async function POST(request: Request) {
             }).catch((err) => console.error("Immediate Buffer job post failed:", err));
         }).catch((err) => console.error("Failed to import Buffer lib:", err));
 
-        // --- Notification Trigger ---
-        // Fire-and-forget AI matchmaking notifications
-        try {
-            const { triggerMatchNotifications } = await import("@/lib/match-notification-service");
-            triggerMatchNotifications(data.id).catch((err) =>
-                console.error("Background match notification failed:", err)
+        // --- Domain Classification Agent ---
+        // Fire-and-forget: classify the job's qualification into a domain immediately.
+        // Runs before match notifications so domain_id is ready for the matching engine.
+        import("@/lib/agents/domain-classifier-agent").then(({ classifyDomainForRecord }) => {
+            classifyDomainForRecord({
+                target: "JOB",
+                recordId: data.id,
+                qualification: data.qualification ?? null,
+                title: data.title,
+                currentDomainId: data.domain_id ?? null,
+            }).catch((err) => console.error("[DomainAgent/Job] Classification failed:", err));
+        }).catch((err) => console.error("[DomainAgent/Job] Import failed:", err));
+
+        // --- Match Dispatch Agent Trigger ---
+        // Fire-and-forget: evaluate candidate matches and dispatch to Premium (WhatsApp) and Free (Email)
+        import("@/lib/agents/match-dispatch-agent").then(({ runMatchDispatchAgent }) => {
+            runMatchDispatchAgent({ jobId: data.id }).catch((err) =>
+                console.error("[MatchDispatchAgent] Background execution failed:", err)
             );
-        } catch (e) {
-            console.error("Failed to trigger match notifications:", e);
-        }
+        }).catch((err) => console.error("[MatchDispatchAgent] Import failed:", err));
 
         return NextResponse.json({ success: true, job: data });
     } catch (error: any) {
