@@ -25,7 +25,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const GEMINI_MODEL = "gemini-1.5-flash-latest";
+const GEMINI_MODEL = "gemini-3.1-flash-lite";
 const DOMAIN_SOURCE = "ai_agent" as const;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
