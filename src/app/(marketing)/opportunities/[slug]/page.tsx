@@ -8,7 +8,12 @@ export const revalidate = 0;
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
     const opp = await getOpportunityBySlug(slug);
-    if (!opp) return { title: "Opportunity Not Found — Aganyu" };
+    if (!opp) {
+        return {
+            title: "Opportunity Not Found — Aganyu",
+            robots: { index: false, follow: false },
+        };
+    }
 
     return {
         title: `${opp.title} — ${opp.organization_name} | Aganyu`,

@@ -219,7 +219,7 @@ export async function updateApplicationStatus(
                     jobTitle: job?.title || "the position",
                     status: status,
                 },
-                link: `/dashboard/seeker/applications/${applicationId}`,
+                link: `/dashboard/seeker/applications`,
             });
         }
 

@@ -226,9 +226,9 @@ export default function ResetPasswordPage() {
 
                 <p className="mt-10 text-[10px] text-center text-slate-400 font-black uppercase tracking-widest">
                     Need support?{" "}
-                    <Link href="/help" className="text-blue-600 hover:text-blue-700 transition-colors ml-1">
-                        Go to Help Center
-                    </Link>
+                    <a href="mailto:support@aganyu.com" className="text-blue-600 hover:text-blue-700 transition-colors ml-1">
+                        Contact Support
+                    </a>
                 </p>
             </motion.div>
         </AuthLayout>

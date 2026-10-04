@@ -255,7 +255,7 @@ export const NotificationService = {
                             companyName: job.employer?.name || "a company",
                             jobTitle: job.title,
                         },
-                        link: `/dashboard/jobs/${job.id}`,
+                        link: `/jobs/${job.id}`,
                     });
                 }
             });

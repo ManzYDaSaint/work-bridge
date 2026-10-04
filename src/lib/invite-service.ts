@@ -34,7 +34,7 @@ export async function sendInviteToApply(userId: string, jobId: string, companyNa
         companyName,
         jobTitle,
       },
-      link: `/dashboard/jobs/${jobId}`,
+      link: `/jobs/${jobId}`,
     });
 
     console.log(`[INVITE_SERVICE] SUCCESS: Invite sent to user ${userId} for job ${jobId}`);
