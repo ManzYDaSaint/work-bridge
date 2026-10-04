@@ -88,7 +88,7 @@ async function handleMessages(value: any) {
     // 3. Persist incoming message to DB
     try {
       await supabase.from("whatsapp_messages").insert({
-        user_id: seeker?.user_id || null,
+        user_id: seeker?.id || null,
         phone: senderPhone,
         direction: "INBOUND",
         message_text: textBody || `[Media/Interactive: ${msg.type || "unknown"}]`,
@@ -105,7 +105,6 @@ async function handleMessages(value: any) {
       // Fallback log
       try {
         await supabase.from("whatsapp_delivery_logs").insert({
-          user_id: seeker?.user_id || null,
           status: "RECEIVED",
           error: `INBOUND: ${textBody}`,
           metadata: { phone: senderPhone, text: textBody, contactName }

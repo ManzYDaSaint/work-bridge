@@ -183,7 +183,6 @@ export async function POST(request: Request) {
                         // Log delivery
                         try {
                             await supabase.from("whatsapp_delivery_logs").insert({
-                                user_id: userId,
                                 seeker_id: effectiveSeekerId,
                                 template_name: "aganyu_job_match_alert_v1",
                                 phone: seeker.phone,
@@ -242,7 +241,6 @@ export async function POST(request: Request) {
                                 },
                                 status: "SENT",
                                 attempts: 1,
-                                sent_at: new Date().toISOString()
                             });
                         } catch { /* non-critical audit log */ }
 

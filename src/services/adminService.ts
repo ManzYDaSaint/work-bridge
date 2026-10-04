@@ -129,7 +129,7 @@ export const adminService = {
                 "premium subscriptions count"
             ),
             safeQuery(
-                () => supabase.from("employers").select("*", { count: "exact", head: true }).eq("is_premium", true),
+                () => supabase.from("premium_subscriptions").select("seeker_id", { count: "exact", head: true }).eq("status", "ACTIVE"),
                 { count: 0, error: null } as any,
                 "premium employers count"
             ),

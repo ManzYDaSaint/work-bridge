@@ -243,7 +243,6 @@ export async function triggerDelayedFreeMatchNotifications(jobId: string) {
                     },
                     status: "SENT",
                     attempts: 1,
-                    sent_at: new Date().toISOString()
                 });
             }
         }

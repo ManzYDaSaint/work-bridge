@@ -60,13 +60,13 @@ export async function POST(request: Request) {
                                 if (senderPhone && textBody) {
                                     const { data: seeker } = await supabase
                                         .from("job_seekers")
-                                        .select("id, user_id, full_name, phone")
+                                        .select("id, full_name, phone")
                                         .or(`phone.eq.${senderPhone},phone.eq.+${senderPhone}`)
                                         .maybeSingle();
 
                                     try {
                                         await supabase.from("whatsapp_messages").insert({
-                                            user_id: seeker?.user_id || null,
+                                            user_id: seeker?.id || null,
                                             phone: senderPhone,
                                             direction: "INBOUND",
                                             message_text: textBody,
@@ -82,7 +82,6 @@ export async function POST(request: Request) {
                                     } catch {
                                         // Fallback to whatsapp_delivery_logs
                                         await supabase.from("whatsapp_delivery_logs").insert({
-                                            user_id: seeker?.user_id || null,
                                             status: "RECEIVED",
                                             error: `INBOUND: ${textBody}`,
                                             metadata: { phone: senderPhone, text: textBody, contactName }

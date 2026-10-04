@@ -22,7 +22,6 @@ export async function GET(request: Request) {
             .select(`
                 id,
                 created_at,
-                sent_at,
                 status,
                 template_id,
                 payload,

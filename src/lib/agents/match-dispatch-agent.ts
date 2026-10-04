@@ -19,7 +19,7 @@ import { sendStandardJobMatchEmail } from "@/lib/notification/email-matching";
 import { getMatchDispatchMode } from "@/lib/notification/settings";
 import { processNotificationQueue } from "@/lib/notification/worker";
 import { emitSystemEvent } from "@/lib/mission-control";
-import { notifyAdmin } from "@/lib/notifications";
+import { notifyAdmin, createNotification } from "@/lib/notifications";
 import { passesJobHardRequirements, SeekerProfile } from "@/lib/matching-helpers";
 
 export interface MatchDispatchOptions {
@@ -259,6 +259,15 @@ export async function runMatchDispatchAgent(
 
           if (!insertErr) {
             summary.premiumDispatched++;
+            // Fire in-app notification bell for the seeker (non-blocking)
+            createNotification({
+              userId: seeker.id, // job_seekers.id = users.id
+              type: "JOB_MATCH",
+              templateVars: { companyName, jobTitle: job.title },
+              link: `/dashboard/seeker/recommendations`,
+            }).catch((e: any) =>
+              console.warn(`[MatchDispatchAgent] In-app notify failed for seeker ${seeker.id}:`, e)
+            );
           } else {
             summary.errors.push(`Queue error for seeker ${seeker.id}: ${insertErr.message}`);
           }
@@ -301,6 +310,15 @@ export async function runMatchDispatchAgent(
                 status: "SENT",
                 attempts: 1,
               });
+              // Fire in-app notification bell (non-blocking)
+              createNotification({
+                userId: seeker.id,
+                type: "JOB_MATCH",
+                templateVars: { companyName, jobTitle: job.title },
+                link: `/dashboard/seeker/recommendations`,
+              }).catch((e: any) =>
+                console.warn(`[MatchDispatchAgent] In-app notify failed for seeker ${seeker.id}:`, e)
+              );
             } else {
               summary.errors.push(`Email send failed for seeker ${seeker.id}: ${emailRes.error}`);
             }
@@ -333,6 +351,15 @@ export async function runMatchDispatchAgent(
 
             if (!freeQueueErr) {
               summary.freeDispatched++;
+              // Fire in-app notification bell so seeker sees "Check your email for a job match" (non-blocking)
+              createNotification({
+                userId: seeker.id,
+                type: "JOB_MATCH",
+                templateVars: { companyName, jobTitle: job.title },
+                link: `/dashboard/seeker/recommendations`,
+              }).catch((e: any) =>
+                console.warn(`[MatchDispatchAgent] In-app notify failed for seeker ${seeker.id}:`, e)
+              );
             }
           }
         }

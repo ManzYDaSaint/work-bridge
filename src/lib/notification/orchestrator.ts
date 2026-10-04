@@ -274,7 +274,6 @@ export async function runStandardJobMatchingCron() {
             },
             status: "SENT",
             attempts: 1,
-            sent_at: new Date().toISOString()
           });
       }
     }

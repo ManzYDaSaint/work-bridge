@@ -108,8 +108,28 @@ Do not include explanations, punctuation beyond what is shown, or markdown.`;
 
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-  const result = await model.generateContent(prompt);
-  const raw = (result.response.text() || "").trim();
+
+  // Retry up to 3 attempts with exponential backoff on transient errors (503 High Demand, 429 Rate Limit)
+  let result: any = null;
+  const maxRetries = 3;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      result = await model.generateContent(prompt);
+      break;
+    } catch (err: any) {
+      const errMsg = err?.message || String(err);
+      const isTransient = errMsg.includes("503") || errMsg.includes("429") || errMsg.includes("high demand") || errMsg.includes("Service Unavailable");
+      if (isTransient && attempt < maxRetries) {
+        const delayMs = attempt * 1000; // 1s, 2s backoff
+        console.warn(`[DomainAgent] Gemini API transient error (attempt ${attempt}/${maxRetries}): ${errMsg}. Retrying in ${delayMs}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  const raw = (result?.response?.text() || "").trim();
 
   if (raw.startsWith("MATCH:")) {
     const suggested = normalizeDomainName(raw.replace(/^MATCH:/i, "").trim());

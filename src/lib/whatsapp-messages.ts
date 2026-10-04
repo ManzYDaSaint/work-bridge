@@ -191,7 +191,6 @@ export async function logWhatsAppMessage(data: {
         // Fallback to whatsapp_delivery_logs if whatsapp_messages table doesn't exist
         try {
             await supabase.from("whatsapp_delivery_logs").insert({
-                user_id: data.user_id || null,
                 status: data.status,
                 error: data.direction === "INBOUND" ? `INBOUND: ${data.message_text}` : null,
                 metadata: { phone: normalizedPhone, text: data.message_text, direction: data.direction, ...(data.metadata || {}) }
