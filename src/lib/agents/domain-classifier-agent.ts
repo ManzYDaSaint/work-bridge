@@ -26,7 +26,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const GEMINI_MODEL = "gemini-3.1-flash-lite";
-const DOMAIN_SOURCE = "ai_agent" as const;
+const DOMAIN_SOURCE = "ai_cron" as const;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -234,7 +234,7 @@ export async function classifyDomainForRecord(
       domainName: null,
       isNewDomain: false,
       qualificationText: "",
-      source: "ai_agent",
+      source: DOMAIN_SOURCE,
       error: "Admin client unavailable",
     };
   }
@@ -276,7 +276,7 @@ export async function classifyDomainForRecord(
         domainName: null,
         isNewDomain: false,
         qualificationText: "",
-        source: "ai_agent",
+        source: DOMAIN_SOURCE,
         error: "No qualification text to classify",
       };
     }
@@ -330,7 +330,7 @@ export async function classifyDomainForRecord(
           domainName: null,
           isNewDomain: false,
           qualificationText,
-          source: "ai_agent",
+          source: DOMAIN_SOURCE,
           error: "Gemini returned UNKNOWN",
         };
       }
@@ -362,7 +362,7 @@ export async function classifyDomainForRecord(
         domainName: null,
         isNewDomain: false,
         qualificationText,
-        source: "ai_agent",
+        source: DOMAIN_SOURCE,
         error: "No domain resolved",
       };
     }
@@ -440,7 +440,7 @@ export async function classifyDomainForRecord(
       domainName: null,
       isNewDomain: false,
       qualificationText: "",
-      source: "ai_agent",
+      source: DOMAIN_SOURCE,
       error: err?.message || "Unknown error",
     };
   }

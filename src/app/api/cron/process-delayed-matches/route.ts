@@ -85,7 +85,7 @@ export async function GET(request: Request) {
                     queuedSentCount++;
                     await supabase
                         .from("notification_queue")
-                        .update({ status: "SENT", sent_at: new Date().toISOString() })
+                        .update({ status: "SENT" })
                         .eq("id", item.id);
                 } else {
                     await supabase

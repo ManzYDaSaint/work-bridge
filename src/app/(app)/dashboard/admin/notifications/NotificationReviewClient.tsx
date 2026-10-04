@@ -244,7 +244,7 @@ export default function NotificationReviewClient() {
                                     <div className="flex items-center gap-3 text-right text-xs text-slate-400">
                                         <div>
                                             <p>{new Date(item.created_at).toLocaleString()}</p>
-                                            {item.sent_at && <p className="text-[10px] text-emerald-500">Sent: {new Date(item.sent_at).toLocaleTimeString()}</p>}
+                                            {item.status === "SENT" && <p className="text-[10px] text-emerald-500 font-semibold">Dispatched / Sent</p>}
                                         </div>
                                         {item.status === "FAILED" && (
                                             <button

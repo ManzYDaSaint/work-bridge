@@ -300,7 +300,6 @@ export async function runMatchDispatchAgent(
                 },
                 status: "SENT",
                 attempts: 1,
-                sent_at: new Date().toISOString(),
               });
             } else {
               summary.errors.push(`Email send failed for seeker ${seeker.id}: ${emailRes.error}`);
