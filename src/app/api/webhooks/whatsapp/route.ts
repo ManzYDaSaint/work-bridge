@@ -37,7 +37,10 @@ export async function POST(request: Request) {
         }
 
         const body = JSON.parse(rawBody);
-        const supabase = await createSupabaseServerClient();
+        const supabase = getSupabaseAdminClient();
+        if (!supabase) {
+            return NextResponse.json({ error: "DB client unavailable" }, { status: 500 });
+        }
         const adminSupabase = getSupabaseAdminClient();
 
         if (body.object === "whatsapp_business_account") {

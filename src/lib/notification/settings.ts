@@ -21,8 +21,12 @@ export async function getMatchDispatchMode(): Promise<DispatchMode> {
         .eq("key", "ADMIN_MATCH_DISPATCH_MODE")
         .single();
 
-      if (data?.value === "AUTO" || data?.value === "MANUAL") {
-        return data.value as DispatchMode;
+      const val = typeof data?.value === "string" 
+        ? data.value.replace(/^"|"$/g, '') 
+        : (data?.value as any)?.mode || data?.value;
+
+      if (val === "AUTO" || val === "MANUAL") {
+        return val as DispatchMode;
       }
     } catch {
       // Fall back to in-memory state

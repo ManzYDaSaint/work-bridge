@@ -333,6 +333,7 @@ export async function runMatchDispatchAgent(
                 channel: "EMAIL",
                 tier: "FREE_DELAYED",
                 email: seekerEmail,
+                seekerName: seeker.full_name || "Job Seeker",
                 jobTitle: job.title,
                 matchScore: matchRes.finalScore,
                 company: companyName,

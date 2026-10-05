@@ -150,7 +150,19 @@ export const JobIngestionPublisherWorker = {
             }).eq('id', item.source_id);
         }
 
-        // 6. Trigger downstream events (Buffer social post, AI candidate matching)
+        // 6. Run Domain Classifier Agent then trigger downstream events (Buffer social post, AI candidate matching)
+        try {
+            const { classifyDomainForRecord } = await import("@/lib/agents/domain-classifier-agent");
+            await classifyDomainForRecord({
+                target: "JOB",
+                recordId: publishedJob.id,
+                qualification: item.qualification,
+                title: item.title,
+            });
+        } catch (clsErr) {
+            console.warn("[PublisherWorker] Domain classification failed (non-fatal):", clsErr);
+        }
+
         await emitEvent({
             type: 'JOB_POSTED',
             payload: { jobId: publishedJob.id, employerId },
