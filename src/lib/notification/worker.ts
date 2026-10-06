@@ -10,12 +10,13 @@ export async function processNotificationQueue() {
     console.error("[WhatsApp Worker] Admin Supabase client not initialized.");
     return;
   }
-  // 1. Fetch pending notifications whose next_attempt_at is null or <= now
+  // 1. Fetch pending notifications for WhatsApp template whose next_attempt_at is null or <= now
   const nowIso = new Date().toISOString();
   const { data: queueItems } = await supabase
     .from("notification_queue")
     .select("*, job_seekers(phone)")
     .eq("status", "PENDING")
+    .eq("template_id", "aganyu_job_match_alert_v1")
     .or(`next_attempt_at.is.null,next_attempt_at.lte.${nowIso}`)
     .order("next_attempt_at", { ascending: true })
     .limit(10);

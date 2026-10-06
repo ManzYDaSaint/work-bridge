@@ -263,26 +263,33 @@ export async function POST(request: Request) {
             }).catch((err) => console.error("Immediate Buffer job post failed:", err));
         }).catch((err) => console.error("Failed to import Buffer lib:", err));
 
-        // --- Domain Classification Agent ---
-        // Fire-and-forget: classify the job's qualification into a domain immediately.
-        // Runs before match notifications so domain_id is ready for the matching engine.
-        import("@/lib/agents/domain-classifier-agent").then(({ classifyDomainForRecord }) => {
-            classifyDomainForRecord({
-                target: "JOB",
-                recordId: data.id,
-                qualification: data.qualification ?? null,
-                title: data.title,
-                currentDomainId: data.domain_id ?? null,
-            }).catch((err) => console.error("[DomainAgent/Job] Classification failed:", err));
-        }).catch((err) => console.error("[DomainAgent/Job] Import failed:", err));
+        // --- Domain Classification → Match Dispatch (sequenced, fire-and-forget) ---
+        // Domain classifier MUST run first so job.domain_id is written before matching
+        // evaluates candidate domain scores. Both run in the background without
+        // blocking the HTTP response.
+        (async () => {
+            try {
+                // Step 1: classify job domain (awaited — ensures domain_id is set on job row)
+                const { classifyDomainForRecord } = await import("@/lib/agents/domain-classifier-agent");
+                await classifyDomainForRecord({
+                    target: "JOB",
+                    recordId: data.id,
+                    qualification: data.qualification ?? null,
+                    title: data.title,
+                    currentDomainId: data.domain_id ?? null,
+                });
+            } catch (err) {
+                console.error("[DomainAgent/Job] Classification failed:", err);
+            }
 
-        // --- Match Dispatch Agent Trigger ---
-        // Fire-and-forget: evaluate candidate matches and dispatch to Premium (WhatsApp) and Free (Email)
-        import("@/lib/agents/match-dispatch-agent").then(({ runMatchDispatchAgent }) => {
-            runMatchDispatchAgent({ jobId: data.id }).catch((err) =>
-                console.error("[MatchDispatchAgent] Background execution failed:", err)
-            );
-        }).catch((err) => console.error("[MatchDispatchAgent] Import failed:", err));
+            try {
+                // Step 2: run full match dispatch now that domain_id is ready
+                const { runMatchDispatchAgent } = await import("@/lib/agents/match-dispatch-agent");
+                await runMatchDispatchAgent({ jobId: data.id, forceImmediateEmail: true });
+            } catch (err) {
+                console.error("[MatchDispatchAgent] Background execution failed:", err);
+            }
+        })();
 
         return NextResponse.json({ success: true, job: data });
     } catch (error: any) {

@@ -45,7 +45,7 @@ export interface MatchDispatchSummary {
 export async function runMatchDispatchAgent(
   options: MatchDispatchOptions
 ): Promise<MatchDispatchSummary> {
-  const { jobId, forceImmediateEmail = false } = options;
+  const { jobId, forceImmediateEmail = true } = options;
   const summary: MatchDispatchSummary = {
     jobId,
     jobTitle: "",
@@ -202,16 +202,18 @@ export async function runMatchDispatchAgent(
         continue;
       }
 
-      // Check for deduplication in notification_queue
+      // Deduplicate per channel: check for matching template_id + seeker_id + job_id
+      const expectedTemplateId = isPremium ? "aganyu_job_match_alert_v1" : "standard_email_job_alert";
       const { data: existingQueue } = await supabase
         .from("notification_queue")
         .select("id, status")
         .eq("seeker_id", seeker.id)
         .eq("job_id", job.id)
+        .eq("template_id", expectedTemplateId)
         .maybeSingle();
 
       if (existingQueue) {
-        continue; // Already notified or in queue
+        continue; // Already notified or in queue for this channel
       }
 
       const companyName = job.display_company_name || job.employer?.company_name || "Direct Employer";

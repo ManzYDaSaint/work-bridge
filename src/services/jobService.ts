@@ -454,7 +454,14 @@ export const jobService = {
             );
         }).catch((err) => console.error("[JOB_SERVICE] Failed to import sync-embeddings:", err));
 
-        // Fire-and-forget: do NOT await — this runs in the background.
+        // Fire-and-forget: run full match dispatch for both Premium (WhatsApp) and Free (Email) instantly.
+        import("@/lib/agents/match-dispatch-agent").then(({ runMatchDispatchAgent }) => {
+            runMatchDispatchAgent({ jobId: data.id, forceImmediateEmail: true }).catch((err) =>
+                console.error("[JOB_SERVICE] Match dispatch agent failed:", err)
+            );
+        }).catch((err) => console.error("[JOB_SERVICE] Failed to import match-dispatch-agent:", err));
+
+        // Also fire legacy in-app notification bells for premium seekers (non-blocking).
         triggerMatchNotifications(data.id).catch((err) =>
             console.error("[JOB_SERVICE] Background match notification failed:", err)
         );

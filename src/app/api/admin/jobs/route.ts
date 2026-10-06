@@ -4,6 +4,7 @@ import { jobService } from "@/services/jobService";
 import { withAudit } from "@/lib/api-utils";
 import { NextResponse } from "next/server";
 import { emitSystemEvent } from "@/lib/mission-control";
+import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const ALLOWED_JOB_STATUSES = new Set(["ACTIVE", "PENDING", "REJECTED", "EXPIRED", "FILLED", "ARCHIVED"]);
 
@@ -91,16 +92,53 @@ export const PATCH = withAudit(async (request: Request) => {
         await jobService.updateJob(jobId, { status });
 
         if (status === "ACTIVE") {
-            const { runJobMatchingOrchestration } = await import("@/lib/notification/orchestrator");
-            const { triggerMatchNotifications } = await import("@/lib/match-notification-service");
-            
-            // Fire instant matching routines asynchronously
-            triggerMatchNotifications(jobId).catch((err) =>
-                console.error("[Admin Job PATCH] Instant notification error:", err)
-            );
-            runJobMatchingOrchestration().catch((err) =>
-                console.error("[Admin Job PATCH] Orchestration error:", err)
-            );
+            const supabase = getSupabaseAdminClient();
+
+            // Sequence: Domain Classification → Match Dispatch (fire-and-forget from response)
+            (async () => {
+                // Step 1: Classify job domain so domain_id is ready before matching
+                try {
+                    const job = supabase ? await supabase
+                        .from("jobs")
+                        .select("qualification, title, domain_id")
+                        .eq("id", jobId)
+                        .single()
+                        .then(r => r.data) : null;
+
+                    const { classifyDomainForRecord } = await import("@/lib/agents/domain-classifier-agent");
+                    await classifyDomainForRecord({
+                        target: "JOB",
+                        recordId: jobId,
+                        qualification: job?.qualification ?? null,
+                        title: job?.title ?? "",
+                        currentDomainId: job?.domain_id ?? null,
+                    });
+                } catch (err) {
+                    console.error("[Admin Job PATCH] Domain classification failed:", err);
+                }
+
+                // Step 2: Full match dispatch (Premium WhatsApp + Free Email) now domain_id is set
+                try {
+                    const { runMatchDispatchAgent } = await import("@/lib/agents/match-dispatch-agent");
+                    await runMatchDispatchAgent({ jobId, forceImmediateEmail: true });
+                } catch (err) {
+                    console.error("[Admin Job PATCH] Match dispatch agent error:", err);
+                }
+
+                // Step 3: Legacy in-app bell notifications + orchestration
+                try {
+                    const { triggerMatchNotifications } = await import("@/lib/match-notification-service");
+                    const { runJobMatchingOrchestration } = await import("@/lib/notification/orchestrator");
+                    triggerMatchNotifications(jobId).catch((err) =>
+                        console.error("[Admin Job PATCH] Instant notification error:", err)
+                    );
+                    runJobMatchingOrchestration().catch((err) =>
+                        console.error("[Admin Job PATCH] Orchestration error:", err)
+                    );
+                } catch (err) {
+                    console.error("[Admin Job PATCH] Legacy notifications failed:", err);
+                }
+            })();
         }
 
         await emitSystemEvent({

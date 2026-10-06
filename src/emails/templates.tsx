@@ -377,6 +377,18 @@ export const JobAlertEmail = ({ seekerName, matchedJobs }: { seekerName: string;
     <Text style={text}>Hello {seekerName},</Text>
     <Text style={text}>We found <strong>{matchedJobs.length} new {matchedJobs.length === 1 ? 'job' : 'jobs'}</strong> that match your saved search alert.</Text>
     
+    <Section style={{ ...cardAlert, backgroundColor: "#ecfdf5", borderLeftColor: "#10b981", marginTop: "16px", marginBottom: "24px" }}>
+      <Text style={{ margin: 0, fontWeight: "800", color: "#065f46", fontSize: "14px" }}>
+        ⚡ Want Instant WhatsApp Job Alerts?
+      </Text>
+      <Text style={{ margin: "4px 0 12px 0", fontSize: "13px", color: "#047857" }}>
+        Premium Seekers get matched job alerts directly on WhatsApp within 60 seconds of job posting with 1-click application.
+      </Text>
+      <Link href={`${APP_URL}/dashboard/seeker/subscription`} style={{ ...btn, backgroundColor: "#10b981", padding: "10px 20px", fontSize: "13px" }}>
+        Upgrade to Premium WhatsApp
+      </Link>
+    </Section>
+
     <Section style={{ margin: "24px 0" }}>
       {matchedJobs.map((job, i) => (
         <Section key={i} style={{ padding: "20px", marginBottom: "16px", border: "1px solid #e2e8f0", borderRadius: "16px", backgroundColor: "#ffffff", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
