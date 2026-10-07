@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiFetchJson } from "@/lib/api";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
-import { PageHeader, Badge } from "@/components/dashboard/ui";
+import { PageHeader, Badge, Pagination } from "@/components/dashboard/ui";
 import { Send, Sparkles, Mail, Eye, Save, CheckCircle2, MessageSquare, Phone, Crown, RefreshCw, MessageCircle, CheckCheck, XCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -86,6 +86,16 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
     const [previewRecipients, setPreviewRecipients] = useState<Array<{ email: string; first_name: string; phone?: string; is_premium?: boolean }>>([]);
     const [result, setResult] = useState<{ sentEmail: number; failedEmail: number; sentWhatsApp: number; failedWhatsApp: number; skippedWhatsApp: number; total: number } | null>(null);
     const [campaignHistory, setCampaignHistory] = useState<Array<any>>([]);
+
+    // Campaign History Pagination
+    const [campaignPage, setCampaignPage] = useState(1);
+    const [campaignLimit, setCampaignLimit] = useState(5);
+
+    const totalCampaignPages = Math.ceil(campaignHistory.length / campaignLimit) || 1;
+    const paginatedCampaignHistory = useMemo(() => {
+        const start = (campaignPage - 1) * campaignLimit;
+        return campaignHistory.slice(start, start + campaignLimit);
+    }, [campaignHistory, campaignPage, campaignLimit]);
 
     // UI Tabs & Modals
     const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -1000,59 +1010,76 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                     </div>
 
                     {campaignHistory.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
-                                <thead className="border-b border-stone-200 bg-stone-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
-                                    <tr>
-                                        <th className="px-4 py-3">Date</th>
-                                        <th className="px-4 py-3">Audience & Channel</th>
-                                        <th className="px-4 py-3">Status</th>
-                                        <th className="px-4 py-3">Total</th>
-                                        <th className="px-4 py-3">Sent</th>
-                                        <th className="px-4 py-3">Failed</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-stone-100 dark:divide-slate-800">
-                                    {campaignHistory.map((camp) => (
-                                        <tr key={camp.id} className="hover:bg-stone-50/50 dark:hover:bg-slate-800/40">
-                                            <td className="whitespace-nowrap px-4 py-3 font-mono text-[11px]">
-                                                {new Date(camp.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="font-semibold text-slate-900 dark:text-slate-100">{camp.audience}</div>
-                                                <div className="text-[10px] text-slate-400">{camp.channel}</div>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold ${
-                                                    camp.status === 'COMPLETED'
-                                                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                                                        : camp.status === 'PROCESSING'
-                                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                                                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                                                }`}>
-                                                    {camp.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 font-semibold">{camp.total_recipients || 0}</td>
-                                            <td className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">{camp.sent_count || 0}</td>
-                                            <td className="px-4 py-3 font-semibold text-red-600 dark:text-red-400">{camp.failed_count || 0}</td>
-                                            <td className="px-4 py-3 text-right">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setSelectedCampaign(camp);
-                                                        void fetchCampaignRecipients(camp.id);
-                                                    }}
-                                                    className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                                                >
-                                                    <Eye size={12} /> Details
-                                                </button>
-                                            </td>
+                        <>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+                                    <thead className="border-b border-stone-200 bg-stone-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+                                        <tr>
+                                            <th className="px-4 py-3">Date</th>
+                                            <th className="px-4 py-3">Audience & Channel</th>
+                                            <th className="px-4 py-3">Status</th>
+                                            <th className="px-4 py-3">Total</th>
+                                            <th className="px-4 py-3">Sent</th>
+                                            <th className="px-4 py-3">Failed</th>
+                                            <th className="px-4 py-3 text-right">Actions</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-stone-100 dark:divide-slate-800">
+                                        {paginatedCampaignHistory.map((camp) => (
+                                            <tr key={camp.id} className="hover:bg-stone-50/50 dark:hover:bg-slate-800/40">
+                                                <td className="whitespace-nowrap px-4 py-3 font-mono text-[11px]">
+                                                    {new Date(camp.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="font-semibold text-slate-900 dark:text-slate-100">{camp.audience}</div>
+                                                    <div className="text-[10px] text-slate-400">{camp.channel}</div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                                                        camp.status === 'COMPLETED'
+                                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                                            : camp.status === 'PROCESSING'
+                                                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                                                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                                    }`}>
+                                                        {camp.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 font-semibold">{camp.total_recipients || 0}</td>
+                                                <td className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">{camp.sent_count || 0}</td>
+                                                <td className="px-4 py-3 font-semibold text-red-600 dark:text-red-400">{camp.failed_count || 0}</td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSelectedCampaign(camp);
+                                                            void fetchCampaignRecipients(camp.id);
+                                                        }}
+                                                        className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                                                    >
+                                                        <Eye size={12} /> Details
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="p-4 border-t border-stone-200/80 dark:border-slate-800">
+                                <Pagination
+                                    currentPage={campaignPage}
+                                    totalPages={totalCampaignPages}
+                                    totalItems={campaignHistory.length}
+                                    itemsPerPage={campaignLimit}
+                                    pageSizeOptions={[5, 10, 20]}
+                                    onPageChange={(page) => setCampaignPage(page)}
+                                    onLimitChange={(newLimit) => {
+                                        setCampaignLimit(newLimit);
+                                        setCampaignPage(1);
+                                    }}
+                                />
+                            </div>
+                        </>
                     ) : (
                         <div className="py-12 text-center text-xs text-slate-400">
                             No campaigns dispatched yet. Dispatched campaigns will record delivery logs here.

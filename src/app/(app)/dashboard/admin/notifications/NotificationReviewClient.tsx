@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { PageHeader, Badge } from "@/components/dashboard/ui";
+import { PageHeader, Badge, Pagination } from "@/components/dashboard/ui";
 import { 
     CheckCircle2, XCircle, ShieldCheck, Zap, RefreshCw, Loader2, 
     Send, Sparkles, AlertCircle, Building2, User, Phone, BookOpen, Clock, Layers, MessageSquare, Mail
@@ -17,10 +17,16 @@ export default function NotificationReviewClient() {
     const [diagnostics, setDiagnostics] = useState<any>({ activeJobs: 0, activeSeekers: 0, premiumSeekers: 0 });
     const [filterTier, setFilterTier] = useState<"ALL" | "WHATSAPP" | "EMAIL">("ALL");
 
-    const fetchData = async () => {
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [limit, setLimit] = useState(20);
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+
+    const fetchData = async (page = currentPage, currentLimit = limit, tier = filterTier) => {
         setLoading(true);
         try {
-            const res = await apiFetch("/api/admin/notifications");
+            const res = await apiFetch(`/api/admin/notifications?page=${page}&limit=${currentLimit}&channel=${tier}`);
             if (res.ok) {
                 const data = await res.json();
                 setDispatches(data.dispatches || []);
@@ -33,6 +39,10 @@ export default function NotificationReviewClient() {
                     emailCount: data.emailCount || 0,
                 });
                 if (data.diagnostics) setDiagnostics(data.diagnostics);
+                if (data.pagination) {
+                    setTotalItems(data.pagination.totalItems || 0);
+                    setTotalPages(data.pagination.totalPages || 1);
+                }
             } else {
                 toast.error("Failed to load dispatched matches");
             }
@@ -44,8 +54,13 @@ export default function NotificationReviewClient() {
     };
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        fetchData(currentPage, limit, filterTier);
+    }, [currentPage, limit, filterTier]);
+
+    const handleFilterTierChange = (tier: "ALL" | "WHATSAPP" | "EMAIL") => {
+        setFilterTier(tier);
+        setCurrentPage(1);
+    };
 
     const handleTriggerMatchingNow = async () => {
         setTriggeringMatching(true);
@@ -57,7 +72,7 @@ export default function NotificationReviewClient() {
 
             if (res.ok) {
                 toast.success("Matching & automated dispatch triggered — refreshing in ~6s...");
-                setTimeout(() => fetchData(), 6000);
+                setTimeout(() => fetchData(currentPage, limit, filterTier), 6000);
             } else {
                 toast.error("Failed to start matching routine");
             }
@@ -76,7 +91,7 @@ export default function NotificationReviewClient() {
             });
             if (res.ok) {
                 toast.success("Match re-queued for delivery retry!");
-                fetchData();
+                fetchData(currentPage, limit, filterTier);
             } else {
                 toast.error("Failed to requeue match");
             }
@@ -84,13 +99,6 @@ export default function NotificationReviewClient() {
             toast.error("Network error");
         }
     };
-
-    const filteredDispatches = dispatches.filter(item => {
-        const isEmail = item.template_id === "standard_email_job_alert" || (item.payload as any)?.channel === "EMAIL";
-        if (filterTier === "WHATSAPP") return !isEmail;
-        if (filterTier === "EMAIL") return isEmail;
-        return true;
-    });
 
     return (
         <div className="space-y-6 pb-20">
@@ -140,26 +148,26 @@ export default function NotificationReviewClient() {
             <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={() => setFilterTier("ALL")}
+                        onClick={() => handleFilterTierChange("ALL")}
                         className={`rounded-xl px-4 py-2 text-xs font-bold transition ${filterTier === "ALL" ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : "bg-stone-100 text-slate-600 hover:bg-stone-200 dark:bg-slate-800 dark:text-slate-300"}`}
                     >
                         All Dispatches ({stats.totalDispatched})
                     </button>
                     <button
-                        onClick={() => setFilterTier("WHATSAPP")}
+                        onClick={() => handleFilterTierChange("WHATSAPP")}
                         className={`rounded-xl px-4 py-2 text-xs font-bold transition flex items-center gap-1.5 ${filterTier === "WHATSAPP" ? "bg-emerald-600 text-white" : "bg-stone-100 text-slate-600 hover:bg-stone-200 dark:bg-slate-800 dark:text-slate-300"}`}
                     >
                         <MessageSquare size={13} /> Premium WhatsApp ({stats.whatsappCount})
                     </button>
                     <button
-                        onClick={() => setFilterTier("EMAIL")}
+                        onClick={() => handleFilterTierChange("EMAIL")}
                         className={`rounded-xl px-4 py-2 text-xs font-bold transition flex items-center gap-1.5 ${filterTier === "EMAIL" ? "bg-blue-600 text-white" : "bg-stone-100 text-slate-600 hover:bg-stone-200 dark:bg-slate-800 dark:text-slate-300"}`}
                     >
                         <Mail size={13} /> Free 24h Email ({stats.emailCount})
                     </button>
                 </div>
                 <button
-                    onClick={fetchData}
+                    onClick={() => fetchData(currentPage, limit, filterTier)}
                     className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                 >
                     <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Refresh
@@ -177,7 +185,7 @@ export default function NotificationReviewClient() {
                     <div className="flex h-48 items-center justify-center">
                         <Loader2 className="animate-spin text-amber-500" size={28} />
                     </div>
-                ) : filteredDispatches.length === 0 ? (
+                ) : dispatches.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                         <CheckCircle2 size={48} className="text-emerald-500 mb-3" />
                         <h4 className="text-base font-bold text-slate-900 dark:text-white">No Dispatched Matches Found</h4>
@@ -185,7 +193,7 @@ export default function NotificationReviewClient() {
                     </div>
                 ) : (
                     <div className="divide-y divide-stone-200 dark:divide-slate-800">
-                        {filteredDispatches.map((item: any) => {
+                        {dispatches.map((item: any) => {
                             const isEmail = item.template_id === "standard_email_job_alert" || (item.payload as any)?.channel === "EMAIL";
                             const matchScore = item.payload?.matchScore || item.payload?._scoring?.finalScore || 0;
                             const company = item.payload?.company || item.jobs?.display_company_name || "Employer";
@@ -261,6 +269,20 @@ export default function NotificationReviewClient() {
                     </div>
                 )}
             </div>
+
+            {totalItems > 0 && (
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    itemsPerPage={limit}
+                    onPageChange={(page) => setCurrentPage(page)}
+                    onLimitChange={(newLimit) => {
+                        setLimit(newLimit);
+                        setCurrentPage(1);
+                    }}
+                />
+            )}
         </div>
     );
 }

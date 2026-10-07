@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
-import { Badge, EmptyState } from "@/components/dashboard/ui";
+import { Badge, EmptyState, Pagination } from "@/components/dashboard/ui";
 import {
     Sparkles, RefreshCw, CheckCircle2, XCircle, Pencil,
     Globe, Building2, Calendar, ShieldCheck
@@ -17,13 +17,23 @@ export default function OpportunityIngestionQueue() {
     const [actioningId, setActioningId] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState("PENDING_REVIEW");
 
-    const fetchQueue = async () => {
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+
+    const fetchQueue = async (page = currentPage, currentLimit = limit, status = statusFilter) => {
         setLoading(true);
         try {
-            const res = await apiFetch(`/api/admin/opportunities/ingestion?status=${statusFilter}`);
+            const res = await apiFetch(`/api/admin/opportunities/ingestion?status=${status}&page=${page}&limit=${currentLimit}`);
             if (res.ok) {
                 const data = await res.json();
                 setQueue(data.queue || []);
+                if (data.pagination) {
+                    setTotalItems(data.pagination.totalItems || 0);
+                    setTotalPages(data.pagination.totalPages || 1);
+                }
             } else {
                 toast.error("Failed to load ingestion queue.");
             }
@@ -35,8 +45,13 @@ export default function OpportunityIngestionQueue() {
     };
 
     useEffect(() => {
-        fetchQueue();
-    }, [statusFilter]);
+        fetchQueue(currentPage, limit, statusFilter);
+    }, [currentPage, limit, statusFilter]);
+
+    const handleStatusFilterChange = (st: string) => {
+        setStatusFilter(st);
+        setCurrentPage(1);
+    };
 
     const handleForceCrawl = async () => {
         setCrawling(true);
@@ -49,7 +64,7 @@ export default function OpportunityIngestionQueue() {
             if (res.ok) {
                 const data = await res.json();
                 toast.success(`Crawl completed! Found ${data.newCount || 0} new opportunities.`);
-                fetchQueue();
+                fetchQueue(currentPage, limit, statusFilter);
             } else {
                 const err = await res.json().catch(() => ({}));
                 toast.error(err.error || "Crawl failed.");
@@ -71,7 +86,7 @@ export default function OpportunityIngestionQueue() {
             });
             if (res.ok) {
                 toast.success("Opportunity approved & published!");
-                fetchQueue();
+                fetchQueue(currentPage, limit, statusFilter);
             } else {
                 const err = await res.json();
                 toast.error(err.error || "Approval failed.");
@@ -91,7 +106,7 @@ export default function OpportunityIngestionQueue() {
             });
             if (res.ok) {
                 toast.success("Opportunity rejected.");
-                fetchQueue();
+                fetchQueue(currentPage, limit, statusFilter);
             } else {
                 toast.error("Rejection failed.");
             }
@@ -121,7 +136,7 @@ export default function OpportunityIngestionQueue() {
                         {["PENDING_REVIEW", "APPROVED", "REJECTED", "DUPLICATE", "ALL"].map((st) => (
                             <button
                                 key={st}
-                                onClick={() => setStatusFilter(st)}
+                                onClick={() => handleStatusFilterChange(st)}
                                 className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
                                     statusFilter === st
                                         ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white"
@@ -241,6 +256,20 @@ export default function OpportunityIngestionQueue() {
                     </div>
                 )}
             </div>
+
+            {totalItems > 0 && (
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    itemsPerPage={limit}
+                    onPageChange={(page) => setCurrentPage(page)}
+                    onLimitChange={(newLimit) => {
+                        setLimit(newLimit);
+                        setCurrentPage(1);
+                    }}
+                />
+            )}
         </div>
     );
 }

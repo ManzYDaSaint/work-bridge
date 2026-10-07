@@ -91,6 +91,21 @@ export async function runMatchDispatchAgent(
       metadata: { jobId, title: job.title },
     });
 
+    // ─── Auto-classify job if domain_id is missing (fire-and-forget) ─────────
+    // Ensures the domain check in the matching engine is accurate for this
+    // dispatch and for all future re-evaluations of this job.
+    if (!job.domain_id) {
+      import("@/lib/agents/domain-classifier-agent").then(({ classifyDomainForRecord }) => {
+        classifyDomainForRecord({
+          target: "JOB",
+          recordId: job.id,
+          qualification: job.qualification ?? null,
+          title: job.title,
+          currentDomainId: null,
+        }).catch(() => {/* silently ignore classification errors */});
+      }).catch(() => {/* silently ignore import errors */});
+    }
+
     // 2. Fetch candidates via Vector RPC or fallback query
     let candidateIds: string[] = [];
 

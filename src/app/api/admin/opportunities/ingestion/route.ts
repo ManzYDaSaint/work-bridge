@@ -13,9 +13,23 @@ export async function GET(request: Request) {
 
         const { searchParams } = new URL(request.url);
         const status = searchParams.get("status") || "PENDING_REVIEW";
+        const page = parseInt(searchParams.get("page") || "1", 10);
+        const limit = parseInt(searchParams.get("limit") || "10", 10);
 
-        const queue = await getStagedOpportunitiesQueue(status);
-        return NextResponse.json({ queue });
+        const result = await getStagedOpportunitiesQueue(status, page, limit);
+        const queue = Array.isArray(result) ? result : result.items;
+        const total = typeof result === "object" && "total" in result ? result.total : queue.length;
+        const totalPages = Math.ceil(total / limit) || 1;
+
+        return NextResponse.json({
+            queue,
+            pagination: {
+                page,
+                limit,
+                totalItems: total,
+                totalPages,
+            }
+        });
     } catch (err: any) {
         return NextResponse.json({ error: err.message || "Failed to fetch queue" }, { status: 500 });
     }

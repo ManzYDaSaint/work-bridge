@@ -16,8 +16,16 @@ export async function GET(request: Request) {
     }
 
     try {
-        // Fetch all dispatched matches from notification_queue ordered by created_at desc
-        const { data: dispatches, error } = await supabase
+        const { searchParams } = new URL(request.url);
+        const page = parseInt(searchParams.get("page") || "1", 10);
+        const limit = parseInt(searchParams.get("limit") || "20", 10);
+        const channel = searchParams.get("channel") || "ALL"; // ALL | WHATSAPP | EMAIL
+
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
+
+        // Build base query for dispatched matches from notification_queue
+        let query = supabase
             .from("notification_queue")
             .select(`
                 id,
@@ -40,12 +48,45 @@ export async function GET(request: Request) {
                     qualification,
                     minimum_years_experience
                 )
-            `)
+            `, { count: "exact" });
+
+        if (channel === "WHATSAPP") {
+            query = query.or("template_id.eq.aganyu_job_match_alert_v1,payload->>channel.neq.EMAIL");
+        } else if (channel === "EMAIL") {
+            query = query.or("template_id.eq.standard_email_job_alert,payload->>channel.eq.EMAIL");
+        }
+
+        const { data: dispatches, count, error } = await query
             .order("created_at", { ascending: false })
-            .limit(100);
+            .range(from, to);
 
         if (error) {
             console.error("[Admin Dispatches API] DB Error:", error);
+        }
+
+        // Fetch overall stats for telemetry header cards
+        const { data: allStats, error: statsError } = await supabase
+            .from("notification_queue")
+            .select("status, template_id, payload");
+
+        let sentCount = 0;
+        let pendingCount = 0;
+        let failedCount = 0;
+        let whatsappCount = 0;
+        let emailCount = 0;
+        let totalDispatched = 0;
+
+        if (allStats) {
+            totalDispatched = allStats.length;
+            allStats.forEach(i => {
+                if (i.status === "SENT") sentCount++;
+                else if (i.status === "PENDING") pendingCount++;
+                else if (i.status === "FAILED") failedCount++;
+
+                const isEmail = i.template_id === "standard_email_job_alert" || (i.payload as any)?.channel === "EMAIL";
+                if (isEmail) emailCount++;
+                else whatsappCount++;
+            });
         }
 
         // System telemetry for stats UI
@@ -60,13 +101,8 @@ export async function GET(request: Request) {
             .gt("ends_at", nowIso);
 
         const items = dispatches || [];
-        const totalDispatched = items.length;
-        const sentCount = items.filter(i => i.status === "SENT").length;
-        const pendingCount = items.filter(i => i.status === "PENDING").length;
-        const failedCount = items.filter(i => i.status === "FAILED").length;
-        
-        const whatsappCount = items.filter(i => i.template_id === "aganyu_job_match_alert_v1" || (i.payload as any)?.channel !== "EMAIL").length;
-        const emailCount = items.filter(i => i.template_id === "standard_email_job_alert" || (i.payload as any)?.channel === "EMAIL").length;
+        const totalItems = count ?? totalDispatched;
+        const totalPages = Math.ceil(totalItems / limit) || 1;
 
         return NextResponse.json({
             totalDispatched,
@@ -76,6 +112,12 @@ export async function GET(request: Request) {
             whatsappCount,
             emailCount,
             dispatches: items,
+            pagination: {
+                page,
+                limit,
+                totalItems,
+                totalPages,
+            },
             diagnostics: {
                 activeJobs: activeJobsCount || 0,
                 activeSeekers: activeSeekersCount || 0,

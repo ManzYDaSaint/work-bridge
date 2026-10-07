@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Calendar, DollarSign, ArrowUpRight, Globe, Search, Filter, X, ArrowUpDown, UserPlus } from "lucide-react";
+import { Pagination } from "@/components/dashboard/ui";
 
 const CATEGORIES = [
     { value: "ALL", label: "All Opportunities", emoji: "✨" },
@@ -32,6 +33,10 @@ export default function PublicOpportunitiesClient({ initialOpportunities }: { in
     const [category, setCategory] = useState("ALL");
     const [search, setSearch] = useState("");
     const [sortBy, setSortBy] = useState<"NEWEST" | "EXPIRING_SOON">("NEWEST");
+
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(9);
 
     // Dynamic Category Counts
     const categoryCounts = useMemo(() => {
@@ -72,6 +77,23 @@ export default function PublicOpportunitiesClient({ initialOpportunities }: { in
 
         return result;
     }, [initialOpportunities, category, search, sortBy]);
+
+    // Paginated Sliced View
+    const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+    const paginatedOpportunities = useMemo(() => {
+        const start = (currentPage - 1) * itemsPerPage;
+        return filtered.slice(start, start + itemsPerPage);
+    }, [filtered, currentPage, itemsPerPage]);
+
+    const handleCategoryChange = (c: string) => {
+        setCategory(c);
+        setCurrentPage(1);
+    };
+
+    const handleSearchChange = (val: string) => {
+        setSearch(val);
+        setCurrentPage(1);
+    };
 
     return (
         <div className="min-h-screen bg-[#fafafa] text-slate-900 dark:bg-slate-950 dark:text-white transition-colors duration-300">
@@ -235,7 +257,7 @@ export default function PublicOpportunitiesClient({ initialOpportunities }: { in
                         className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
                     >
                         <AnimatePresence mode="popLayout">
-                            {filtered.map((opp, index) => {
+                            {paginatedOpportunities.map((opp, index) => {
                                 const emoji = CATEGORY_EMOJI[opp.category] || "✨";
                                 const isExpired = opp.deadline && new Date(opp.deadline) < new Date();
 
@@ -372,6 +394,21 @@ export default function PublicOpportunitiesClient({ initialOpportunities }: { in
                             })}
                         </AnimatePresence>
                     </motion.div>
+                )}
+
+                {filtered.length > 0 && (
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalItems={filtered.length}
+                        itemsPerPage={itemsPerPage}
+                        pageSizeOptions={[6, 9, 18, 36]}
+                        onPageChange={(page) => setCurrentPage(page)}
+                        onLimitChange={(newLimit) => {
+                            setItemsPerPage(newLimit);
+                            setCurrentPage(1);
+                        }}
+                    />
                 )}
             </main>
         </div>

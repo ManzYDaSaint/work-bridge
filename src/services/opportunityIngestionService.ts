@@ -192,29 +192,35 @@ export async function crawlOpportunitySource(sourceId: string) {
 // Fetch Staged Opportunities Queue
 // ──────────────────────────────────────────────────────────────────────────────
 
-export async function getStagedOpportunitiesQueue(status = "PENDING_REVIEW") {
+export async function getStagedOpportunitiesQueue(status = "PENDING_REVIEW", page?: number, limit?: number) {
     const supabase = getSupabaseAdminClient();
-    if (!supabase) return [];
+    if (!supabase) return { items: [], total: 0 };
 
     let query = supabase
         .from("ingested_opportunities_queue")
         .select(`
             *,
             source:opportunity_ingestion_sources(name, slug)
-        `)
+        `, { count: "exact" })
         .order("created_at", { ascending: false });
 
     if (status !== "ALL") {
         query = query.eq("status", status);
     }
 
-    const { data, error } = await query;
-    if (error) {
-        console.error("[OpportunityIngestion] Fetch queue error:", error);
-        return [];
+    if (page && limit) {
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
+        query = query.range(from, to);
     }
 
-    return data || [];
+    const { data, count, error } = await query;
+    if (error) {
+        console.error("[OpportunityIngestion] Fetch queue error:", error);
+        return { items: [], total: 0 };
+    }
+
+    return { items: data || [], total: count ?? (data?.length || 0) };
 }
 
 export async function getStagedOpportunityById(id: string) {

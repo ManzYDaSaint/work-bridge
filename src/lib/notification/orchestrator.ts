@@ -28,6 +28,22 @@ export async function computeMatchScore(supabase: any, job: any, seeker: any) {
     _domain_name: seeker._domain_name || (seeker.qualification_domains as any)?.name || null,
   };
 
+  // ─── Auto-classify unclassified jobs (fire-and-forget) ───────────────────
+  // If this job has no domain_id, the keyword domain gate may be bypassed.
+  // Kick off the AI classifier agent asynchronously so subsequent matches
+  // benefit from the fast-path stored domain comparison.
+  if (!job.domain_id && !normalizedJob._domain_name && job.title) {
+    import("@/lib/agents/domain-classifier-agent").then(({ classifyDomainForRecord }) => {
+      classifyDomainForRecord({
+        target: "JOB",
+        recordId: job.id,
+        qualification: job.qualification ?? null,
+        title: job.title,
+        currentDomainId: null,
+      }).catch(() => {/* silently ignore classification errors */});
+    }).catch(() => {/* silently ignore import errors */});
+  }
+
   const ruleMatch = scoreJobSeekerMatch(normalizedJob, seekerProfile);
 
   // Education knockout gate

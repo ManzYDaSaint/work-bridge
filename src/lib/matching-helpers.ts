@@ -27,77 +27,81 @@ const DISCIPLINE_DOMAINS: Record<string, string[]> = {
     "information systems", "ict", "data science", "cybersecurity",
     "artificial intelligence", "programming", "computer studies",
     "network engineering", "telecommunications", "communication technology",
-    "systems support", "information science",
+    "systems support", "information science", "it", "software", "web development",
   ],
   nursing_health: [
     "nursing", "midwif", "clinical medicine", "clinical science",
     "medical laboratory", "pharmacy", "pharmaceutical", "laboratory sciences",
     "biomedical", "public health", "occupational health", "health science",
-    "clinical medicine", "physiotherapy", "radiography", "environmental health",
-    "medical imaging", "optometry", "dentistry", "medicine",
+    "physiotherapy", "radiography", "environmental health",
+    "medical imaging", "optometry", "dentistry", "medicine", "medical",
+    "doctor", "physician", "surgeon", "clinical officer", "medical officer",
+    "health officer", "health", "healthcare", "hospital",
   ],
   education: [
     "education", "teaching", "pedagogy", "curriculum",
     "early childhood", "primary education", "secondary education",
-    "civic education",
+    "civic education", "teacher", "tutor", "lecturer",
   ],
   finance_accounting: [
     "accountancy", "accounting", "finance", "economics", "commerce",
     "financial management", "banking", "actuarial", "audit", "taxation",
-    "bcom", "acca", "cima", "cia",
+    "bcom", "acca", "cima", "cia", "accountant", "auditor",
   ],
   engineering: [
     "engineering", "civil engineering", "mechanical engineering",
     "electrical engineering", "electronics engineering", "structural engineering",
     "chemical engineering", "materials science", "telecommunication engineering",
+    "engineer",
   ],
   agriculture: [
     "agriculture", "agronomy", "soil science", "agribusiness",
     "horticulture", "veterinary", "fisheries", "food science",
     "natural resources", "forestry", "climate smart agriculture",
     "environmental science", "environmental management", "biomass",
+    "agricultural",
   ],
-  law: ["law", "legal studies", "jurisprudence", "llb"],
+  law: ["law", "legal studies", "jurisprudence", "llb", "legal", "attorney", "lawyer", "paralegal"],
   social_science: [
     "social science", "sociology", "psychology", "social work",
-    "social work", "anthropology", "political science", "development studies",
+    "anthropology", "political science", "development studies",
     "community development", "transformative community", "gender studies",
     "public policy", "human rights", "governance",
     "rural development", "international relations",
   ],
   humanities: [
-    "humanities", "arts", "philosophy", "history", "languages", "literature",
+    "humanities", "arts", "philosophy", "history", "languages", "literature", "linguistics",
   ],
   media_journalism: [
     "mass communication", "journalism", "media", "public relations",
     "communication studies", "corporate communication", "broadcasting",
-    "media and development", "media and culture",
+    "media and development", "media and culture", "reporter", "editor",
   ],
   library_information: [
     "library science", "information management", "records management",
-    "archives", "documentation", "library studies",
+    "archives", "documentation", "library studies", "librarian",
   ],
   procurement_logistics: [
     "procurement", "supply chain management", "logistics management",
-    "purchasing", "supply chain", "logistics",
+    "purchasing", "supply chain", "logistics", "stores officer", "inventory",
   ],
   human_resources: [
     "human resource", "human resources", "hr management", "personnel management",
-    "industrial relations",
+    "industrial relations", "hr officer",
   ],
   business_admin: [
     "business administration", "business management", "management studies",
-    "office administration", "public administration", "bba", "mba",
+    "office administration", "public administration", "bba", "mba", "administrator",
   ],
   trades_construction: [
     "foreman", "construction", "building", "masonry", "carpentry",
     "plumbing", "electrical installation", "welding", "artisan",
     "site supervisor", "site foreman", "mechanic", "civil works",
-    "pipefitting", "scaffolding", "bricklaying",
+    "pipefitting", "scaffolding", "bricklaying", "builder", "electrician",
   ],
   hospitality: [
     "hospitality", "food and beverages", "front office", "catering",
-    "hotel management", "tourism", "restaurant management",
+    "hotel management", "tourism", "restaurant management", "chef", "cook",
   ],
 };
 
@@ -174,8 +178,30 @@ export function evaluateQualificationMatch(
   if (jobDomains.length > 0 && seekerDomains.length > 0) {
     const hasDomainOverlap = seekerDomains.some((sd) => jobDomains.includes(sd));
     if (!hasDomainOverlap) {
-      // Cross-discipline domain mismatch (e.g. Software Engineer applying for Foreman)
+      // Cross-discipline domain mismatch (e.g. IT candidate applying for Medical Officer role)
       return { passed: false, score: 0, mismatchedDomain: true };
+    }
+  }
+
+  // ─── SAFETY GATE: Job domain unresolved but seeker domain is specific ───
+  // When the job's discipline cannot be detected (jobDomains is empty) but the
+  // seeker clearly belongs to a specific domain, flag a mismatch only if the
+  // job title or qualification text itself contains domain-like terminology
+  // that we simply didn't recognise via keyword scan.
+  //
+  // Example: "Medical Officer" → job title hint = nursing_health domain.
+  // If the seeker is computing/IT, this should still be blocked.
+  // We do this by trying a broader scan: if job title yields any domain
+  // (even via partial match not captured in the original combined scan),
+  // and the seeker is in a DIFFERENT known domain, block.
+  if (jobDomains.length === 0 && seekerDomains.length > 0) {
+    // Re-check the job title individually using a slightly broader check
+    const titleOnlyDomains = getQualificationDomains(jobTitle);
+    if (titleOnlyDomains.length > 0) {
+      const hasDomainOverlap = seekerDomains.some((sd) => titleOnlyDomains.includes(sd));
+      if (!hasDomainOverlap) {
+        return { passed: false, score: 0, mismatchedDomain: true };
+      }
     }
   }
 
