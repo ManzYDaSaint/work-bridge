@@ -226,7 +226,7 @@ async function cacheMapping(
       {
         raw_qualification: rawQualification,
         domain_id: domainId,
-        is_confirmed: false, // admin can confirm later
+        is_confirmed: true, // AI classification is trusted — auto-confirmed
       },
       { onConflict: "raw_qualification" }
     )

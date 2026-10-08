@@ -179,7 +179,7 @@ export async function GET(req: Request) {
             {
               raw_qualification: rawQual,
               domain_id: targetDomainId,
-              is_confirmed: false, // Flag for optional admin review
+              is_confirmed: true, // AI classification is trusted — auto-confirmed
             },
             { onConflict: "raw_qualification" }
           );
