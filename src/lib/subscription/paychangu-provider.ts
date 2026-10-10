@@ -26,13 +26,15 @@ export class PayChanguProvider implements IPaymentProvider {
         userId: string, 
         amount: number,
         options?: {
+            durationMonths?: number;
             txPrefix?: string;
             returnUrlPath?: string;
             title?: string;
             description?: string;
         }
     ): Promise<{ paymentUrl: string; reference: string; isSimulated?: boolean }> {
-        const prefix = options?.txPrefix || "aganyu_prem_";
+        const months = options?.durationMonths || 1;
+        const prefix = options?.txPrefix || `aganyu_prem_m${months}_`;
         const txRef = `${prefix}${userId}_${Date.now()}`;
         const siteUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://aganyu.com";
         const returnPath = options?.returnUrlPath || "/dashboard/seeker/subscription";

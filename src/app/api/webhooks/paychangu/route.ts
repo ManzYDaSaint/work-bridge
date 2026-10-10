@@ -9,7 +9,7 @@ const corsHeaders = {
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
 };
 
-async function processPayChanguActivation(targetRef: string, durationMonths: number = 1) {
+async function processPayChanguActivation(targetRef: string, defaultDurationMonths: number = 1) {
     const supabase = getSupabaseAdminClient();
     if (!supabase) return { success: false, error: "Database client unavailable" };
 
@@ -59,10 +59,18 @@ async function processPayChanguActivation(targetRef: string, durationMonths: num
         }
     }
 
-    // Derive seekerId from tx_ref: format `aganyu_prem_${seekerId}_${timestamp}`
+    // Derive seekerId and durationMonths from tx_ref: format `aganyu_prem_m{months}_${seekerId}_${timestamp}` or `aganyu_prem_${seekerId}_${timestamp}`
     let finalSeekerId: string | null = null;
+    let durationMonths = defaultDurationMonths;
+
     if (targetRef.startsWith("aganyu_prem_")) {
-        const prefix = "aganyu_prem_";
+        // Check for duration tag like `aganyu_prem_m3_` or `aganyu_prem_m6_`
+        const durationMatch = targetRef.match(/^aganyu_prem_m(\d+)_/);
+        if (durationMatch && durationMatch[1]) {
+            durationMonths = parseInt(durationMatch[1], 10) || 1;
+        }
+
+        const prefix = durationMatch ? durationMatch[0] : "aganyu_prem_";
         const lastUnderscore = targetRef.lastIndexOf("_");
         if (lastUnderscore > prefix.length) {
             finalSeekerId = targetRef.substring(prefix.length, lastUnderscore);
@@ -83,6 +91,23 @@ async function processPayChanguActivation(targetRef: string, durationMonths: num
         .maybeSingle();
 
     const actualSeekerId = seeker?.id || finalSeekerId;
+
+    // Check for Idempotency: Has this transaction reference already been processed?
+    const { data: existingPayment } = await supabase
+        .from("subscription_payments")
+        .select("id, subscription_id")
+        .eq("provider_reference", targetRef)
+        .maybeSingle();
+
+    if (existingPayment) {
+        // Payment was already verified and processed. Return current active subscription ends_at without double-stacking.
+        const { data: existingSub } = await supabase
+            .from("premium_subscriptions")
+            .select("ends_at")
+            .eq("seeker_id", actualSeekerId)
+            .maybeSingle();
+        return { success: true, endsAt: existingSub?.ends_at || new Date().toISOString(), alreadyProcessed: true };
+    }
 
     // Subscription Stacking Logic: calculate endsAt
     const { data: currentSub } = await supabase
@@ -123,23 +148,15 @@ async function processPayChanguActivation(targetRef: string, durationMonths: num
     }
 
     if (subscriptionId) {
-        const { data: existingPayment } = await supabase
-            .from("subscription_payments")
-            .select("id")
-            .eq("provider_reference", targetRef)
-            .maybeSingle();
-
-        if (!existingPayment) {
-            const { error: paymentErr } = await supabase.from("subscription_payments").insert({
-                subscription_id: subscriptionId,
-                amount: verification.amount || (1000 * Number(durationMonths)),
-                currency: "MWK",
-                status: "PAID",
-                provider_reference: targetRef
-            });
-            if (paymentErr) {
-                console.error("[PayChangu Webhook] Failed to insert subscription_payments record:", paymentErr);
-            }
+        const { error: paymentErr } = await supabase.from("subscription_payments").insert({
+            subscription_id: subscriptionId,
+            amount: verification.amount || (1000 * Number(durationMonths)),
+            currency: "MWK",
+            status: "PAID",
+            provider_reference: targetRef
+        });
+        if (paymentErr) {
+            console.error("[PayChangu Webhook] Failed to insert subscription_payments record:", paymentErr);
         }
     }
 

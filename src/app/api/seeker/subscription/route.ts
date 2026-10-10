@@ -127,7 +127,9 @@ export async function POST(request: Request) {
             const totalAmount = amountPerMonth * Number(durationMonths);
 
             const provider = new PayChanguProvider();
-            const checkout = await provider.initiatePayment(seeker.id, totalAmount);
+            const checkout = await provider.initiatePayment(seeker.id, totalAmount, {
+                durationMonths: Number(durationMonths)
+            });
 
             return NextResponse.json({
                 success: true,
@@ -143,6 +145,29 @@ export async function POST(request: Request) {
             const { reference } = body;
             if (!reference) {
                 return NextResponse.json({ error: "Reference required for verification" }, { status: 400 });
+            }
+
+            // Check for Idempotency: Has this transaction reference already been verified & recorded?
+            const { data: existingPayment } = await supabase
+                .from("subscription_payments")
+                .select("id")
+                .eq("provider_reference", reference)
+                .maybeSingle();
+
+            if (existingPayment) {
+                const { data: currentSub } = await supabase
+                    .from("premium_subscriptions")
+                    .select("ends_at")
+                    .eq("seeker_id", seeker.id)
+                    .maybeSingle();
+
+                return NextResponse.json({
+                    success: true,
+                    verified: true,
+                    message: "Aganyu Premium already verified and active.",
+                    endsAt: currentSub?.ends_at || new Date().toISOString(),
+                    alreadyProcessed: true
+                });
             }
 
             const provider = new PayChanguProvider();
@@ -171,7 +196,7 @@ export async function POST(request: Request) {
 
             const endsAt = new Date(baseDate);
             endsAt.setMonth(endsAt.getMonth() + Number(durationMonths));
-            const amount = verification.amount || (500 * Number(durationMonths));
+            const amount = verification.amount || (1000 * Number(durationMonths));
 
             const { data: subData, error: subErr } = await supabase.from("premium_subscriptions").upsert({
                 seeker_id: seeker.id,
