@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, MoreHorizontal } from "lucide-react";
+import { LogOut, MoreHorizontal, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import NotificationCenter from "@/components/dashboard/NotificationCenter";
 
@@ -17,6 +17,8 @@ export type NavItem = {
 
 export type NavGroup = {
     title?: string;
+    collapsible?: boolean;
+    defaultCollapsed?: boolean;
     items: NavItem[];
 };
 
@@ -40,6 +42,86 @@ interface DashboardLayoutProps {
 /** Flatten all nav items from all groups into a single list */
 function flattenNav(groups: NavGroup[]): NavItem[] {
     return groups.flatMap((g) => g.items);
+}
+
+function NavGroupSection({
+    group,
+    pathname,
+    isLast
+}: {
+    group: NavGroup;
+    pathname: string;
+    isLast: boolean;
+}) {
+    const hasActiveItem = group.items.some((item) =>
+        item.href === "/dashboard/admin" ? pathname === "/dashboard/admin" : pathname.startsWith(item.href)
+    );
+    const isCollapsible = group.collapsible ?? true;
+    const [isOpen, setIsOpen] = useState(
+        group.defaultCollapsed ? hasActiveItem : true
+    );
+
+    return (
+        <div className="space-y-1">
+            {group.title && (
+                <button
+                    type="button"
+                    onClick={() => isCollapsible && setIsOpen((prev) => !prev)}
+                    className={cn(
+                        "mb-1 flex w-full items-center justify-between px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors group/title text-left select-none",
+                        !isCollapsible && "cursor-default"
+                    )}
+                >
+                    <span>{group.title}</span>
+                    {isCollapsible && (
+                        <ChevronDown
+                            size={12}
+                            className={cn(
+                                "transition-transform duration-200 text-slate-400 group-hover/title:text-slate-600 dark:group-hover/title:text-slate-200",
+                                isOpen ? "rotate-0" : "-rotate-90"
+                            )}
+                        />
+                    )}
+                </button>
+            )}
+            <AnimatePresence initial={false}>
+                {(isOpen || !group.title) && (
+                    <motion.div
+                        initial={group.title ? { height: 0, opacity: 0 } : false}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        className="space-y-1 overflow-hidden"
+                    >
+                        {group.items.map((item) => {
+                            const isActive =
+                                item.href === "/dashboard/admin"
+                                    ? pathname === "/dashboard/admin"
+                                    : pathname.startsWith(item.href);
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className={cn(
+                                        "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all",
+                                        isActive
+                                            ? "bg-white text-[#16324f] shadow-sm dark:bg-slate-900 dark:text-white font-semibold"
+                                            : "text-slate-500 hover:bg-white/80 hover:text-slate-800 dark:hover:bg-slate-900"
+                                    )}
+                                >
+                                    <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+                                    <span>{item.label}</span>
+                                </Link>
+                            );
+                        })}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            {!isLast && (
+                <hr className="mx-3 !mt-3 border-stone-200/70 dark:border-slate-800" />
+            )}
+        </div>
+    );
 }
 
 export default function DashboardLayout({
@@ -98,36 +180,14 @@ export default function DashboardLayout({
                 </div>
 
                 {/* Nav Groups */}
-                <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+                <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
                     {navGroups.map((group, gi) => (
-                        <div key={gi} className="space-y-1">
-                            {group.title && (
-                                <h4 className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                                    {group.title}
-                                </h4>
-                            )}
-                            {group.items.map((item) => {
-                                const isActive = pathname === item.href;
-                                return (
-                                    <Link
-                                        key={item.href}
-                                        href={item.href}
-                                        className={cn(
-                                            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-                                            isActive
-                                                ? "bg-white text-[#16324f] shadow-sm dark:bg-slate-900 dark:text-white"
-                                                : "text-slate-500 hover:bg-white/80 hover:text-slate-800 dark:hover:bg-slate-900"
-                                        )}
-                                    >
-                                        <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                                        {item.label}
-                                    </Link>
-                                );
-                            })}
-                            {gi < navGroups.length - 1 && (
-                                <hr className="mx-3 !mt-5 border-stone-200/70 dark:border-slate-800" />
-                            )}
-                        </div>
+                        <NavGroupSection
+                            key={group.title || gi}
+                            group={group}
+                            pathname={pathname}
+                            isLast={gi === navGroups.length - 1}
+                        />
                     ))}
                 </nav>
 
