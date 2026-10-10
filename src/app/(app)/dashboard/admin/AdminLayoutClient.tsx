@@ -12,27 +12,32 @@ const adminNavGroups: NavGroup[] = [
         title: "Command Center",
         items: [
             { label: "Metrics Overview", href: "/dashboard/admin", icon: LayoutDashboard },
-            { label: "Job Ingestion", href: "/dashboard/admin/ingestion", icon: Zap },
-            { label: "Market Moderation", href: "/dashboard/admin/jobs", icon: Briefcase },
+            { label: "Communications Hub", href: "/dashboard/admin/communications", icon: Mail },
             { label: "User Management", href: "/dashboard/admin/users", icon: Users },
-            { label: "Communications", href: "/dashboard/admin/communications", icon: Mail },
-            { label: "Dispatched Matches", href: "/dashboard/admin/notifications", icon: ShieldCheck },
+            { label: "Market Moderation", href: "/dashboard/admin/jobs", icon: Briefcase },
+            { label: "Job Ingestion", href: "/dashboard/admin/ingestion", icon: Zap },
         ]
     },
     {
-        title: "Premium",
+        title: "AI Matching Engine",
         items: [
-            { label: "Subscriptions", href: "/dashboard/admin/premium", icon: Crown },
-            { label: "Analytics Insights", href: "/dashboard/admin/premium-hub", icon: BarChart3 },
+            { label: "Dispatched Matches Audit", href: "/dashboard/admin/matching/dispatches", icon: ShieldCheck },
+            { label: "Match Analytics & Insights", href: "/dashboard/admin/matching/analytics", icon: BarChart3 },
+            { label: "Qualification Domains", href: "/dashboard/admin/qualifications", icon: GraduationCap },
         ]
     },
     {
-        title: "Platform",
+        title: "Premium & Subscriptions",
+        items: [
+            { label: "Subscriptions Management", href: "/dashboard/admin/premium", icon: Crown },
+        ]
+    },
+    {
+        title: "Platform Operations",
         items: [
             { label: "Employer Verification", href: "/dashboard/admin/employers", icon: Users },
             { label: "Employer CRM", href: "/dashboard/admin/crm", icon: ClipboardList },
             { label: "Opportunities", href: "/dashboard/admin/opportunities", icon: Sparkles },
-            { label: "Qualification Domains", href: "/dashboard/admin/qualifications", icon: GraduationCap },
             { label: "AI Health", href: "/dashboard/admin/ai-health", icon: BrainCircuit },
             { label: "Mission Control", href: "/dashboard/admin/mission-control", icon: Activity },
         ]

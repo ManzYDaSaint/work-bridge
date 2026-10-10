@@ -175,14 +175,34 @@ export async function POST(request: Request) {
                             company: job.display_company_name || (job as any).employer?.company_name || "Direct Employer",
                             matchScore: job.hard_match_score ?? 0,
                             location: job.location || "Malawi",
-                            jobId: job.id
+                            jobId: job.id,
+                            channel: "WHATSAPP"
                         };
 
                         await sendWhatsAppTemplate(seeker.phone, "aganyu_job_match_alert_v1", payload);
 
+                        // Log in notification_queue as SENT for audit
+                        let queueId: string | null = null;
+                        try {
+                            const { data: queueEntry } = await supabase
+                                .from("notification_queue")
+                                .insert({
+                                    seeker_id: effectiveSeekerId,
+                                    job_id: job.id,
+                                    template_id: "aganyu_job_match_alert_v1",
+                                    payload,
+                                    status: "SENT",
+                                    attempts: 1,
+                                })
+                                .select("id")
+                                .maybeSingle();
+                            queueId = queueEntry?.id || null;
+                        } catch { /* non-critical audit log */ }
+
                         // Log delivery
                         try {
                             await supabase.from("whatsapp_delivery_logs").insert({
+                                queue_id: queueId,
                                 seeker_id: effectiveSeekerId,
                                 template_name: "aganyu_job_match_alert_v1",
                                 phone: seeker.phone,
@@ -195,6 +215,27 @@ export async function POST(request: Request) {
                         results.push({ jobId: job.id, title: job.title, status: "SENT" });
                         sentCount++;
                     } catch (err: any) {
+                        // Log failure in notification_queue for audit
+                        try {
+                            await supabase.from("notification_queue").insert({
+                                seeker_id: effectiveSeekerId,
+                                job_id: job.id,
+                                template_id: "aganyu_job_match_alert_v1",
+                                payload: {
+                                    seekerName: seekerFirstName,
+                                    jobTitle: job.title,
+                                    company: job.display_company_name || (job as any).employer?.company_name || "Direct Employer",
+                                    matchScore: job.hard_match_score ?? 0,
+                                    location: job.location || "Malawi",
+                                    jobId: job.id,
+                                    channel: "WHATSAPP"
+                                },
+                                status: "FAILED",
+                                last_error: err?.message || "WhatsApp dispatch error",
+                                attempts: 1,
+                            });
+                        } catch { /* non-critical audit log */ }
+
                         results.push({ jobId: job.id, title: job.title, status: "FAILED", error: err?.message });
                         failedCount++;
                     }

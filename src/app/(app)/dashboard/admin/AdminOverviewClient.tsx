@@ -256,7 +256,7 @@ export default function AdminOverviewClient({
 
             <SectionCard title="Operations queue">
                 <div className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-4">
-                    <Link href="/dashboard/admin/notifications" className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 transition-colors hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30">
+                    <Link href="/dashboard/admin/matching/dispatches" className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 transition-colors hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/30">
                         <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">Dispatches</p>
                         <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">Active</p>
                         <p className="mt-1 text-sm text-emerald-800/80 dark:text-emerald-300/80">Automated match dispatches</p>
@@ -363,7 +363,7 @@ export default function AdminOverviewClient({
                             </div>
 
                             <Link
-                                href="/dashboard/admin/notifications"
+                                href="/dashboard/admin/matching/dispatches"
                                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 transition"
                             >
                                 View Dispatched Matches <ExternalLink size={12} />

@@ -19,20 +19,21 @@ interface CommandItem {
 
 const commands: CommandItem[] = [
     { id: "overview", title: "Metrics Overview", description: "View marketplace telemetry and core metrics", href: "/dashboard/admin", category: "Command Center", icon: LayoutDashboard },
-    { id: "ingestion", title: "Job Ingestion Queue", description: "Review and verify incoming web-crawled jobs", href: "/dashboard/admin/ingestion", category: "Command Center", icon: Zap },
-    { id: "jobs", title: "Market Moderation", description: "Manage published jobs and moderation status", href: "/dashboard/admin/jobs", category: "Command Center", icon: Briefcase },
+    { id: "communications", title: "Communications Hub", description: "Send broadcasts and chat via WhatsApp live inbox", href: "/dashboard/admin/communications", category: "Command Center", icon: Mail },
     { id: "users", title: "User Management", description: "Oversee job seekers, employers, and account requests", href: "/dashboard/admin/users", category: "Command Center", icon: Users },
-    { id: "communications", title: "Communications & Broadcasts", description: "Send bulk emails and push notifications", href: "/dashboard/admin/communications", category: "Command Center", icon: Mail },
-    { id: "match-approvals", title: "Match Approvals", description: "Human-in-the-loop review for AI match notifications", href: "/dashboard/admin/notifications", category: "Command Center", icon: ShieldCheck },
+    { id: "jobs", title: "Market Moderation", description: "Manage published jobs and moderation status", href: "/dashboard/admin/jobs", category: "Command Center", icon: Briefcase },
+    { id: "ingestion", title: "Job Ingestion Queue", description: "Review and verify incoming web-crawled jobs", href: "/dashboard/admin/ingestion", category: "Command Center", icon: Zap },
 
-    { id: "subscriptions", title: "Subscriptions & Billings", description: "Manage seeker & employer premium tiers", href: "/dashboard/admin/premium", category: "Premium", icon: Crown },
-    { id: "analytics", title: "Analytics Insights", description: "Deep dive into funnel metrics and conversion rates", href: "/dashboard/admin/premium-hub", category: "Premium", icon: BarChart3 },
+    { id: "match-dispatches", title: "Dispatched Matches Audit", description: "Audit trail of auto & manual job match dispatches", href: "/dashboard/admin/matching/dispatches", category: "AI Matching Engine", icon: ShieldCheck },
+    { id: "match-analytics", title: "Match Analytics & Insights", description: "Match distribution scores, WhatsApp templates, and AI settings", href: "/dashboard/admin/matching/analytics", category: "AI Matching Engine", icon: BarChart3 },
 
-    { id: "employers", title: "Employer Verification", description: "Review company documentation and badges", href: "/dashboard/admin/employers", category: "Platform", icon: Users },
-    { id: "crm", title: "Employer CRM", description: "Lead tracking and employer relations management", href: "/dashboard/admin/crm", category: "Platform", icon: ClipboardList },
-    { id: "opportunities", title: "Opportunities Queue", description: "Manage non-traditional career opportunities", href: "/dashboard/admin/opportunities", category: "Platform", icon: Sparkles },
-    { id: "ai-health", title: "AI Health Monitor", description: "Inspect model accuracy, latency, and token usage", href: "/dashboard/admin/ai-health", category: "Platform", icon: BrainCircuit },
-    { id: "mission-control", title: "Mission Control Audit", description: "Real-time system events and security audit logs", href: "/dashboard/admin/mission-control", category: "Platform", icon: Activity },
+    { id: "subscriptions", title: "Subscriptions & Billings", description: "Manage seeker & employer premium tiers", href: "/dashboard/admin/premium", category: "Premium & Subscriptions", icon: Crown },
+
+    { id: "employers", title: "Employer Verification", description: "Review company documentation and badges", href: "/dashboard/admin/employers", category: "Platform Operations", icon: Users },
+    { id: "crm", title: "Employer CRM", description: "Lead tracking and employer relations management", href: "/dashboard/admin/crm", category: "Platform Operations", icon: ClipboardList },
+    { id: "opportunities", title: "Opportunities Queue", description: "Manage non-traditional career opportunities", href: "/dashboard/admin/opportunities", category: "Platform Operations", icon: Sparkles },
+    { id: "ai-health", title: "AI Health Monitor", description: "Inspect model accuracy, latency, and token usage", href: "/dashboard/admin/ai-health", category: "Platform Operations", icon: BrainCircuit },
+    { id: "mission-control", title: "Mission Control Audit", description: "Real-time system events and security audit logs", href: "/dashboard/admin/mission-control", category: "Platform Operations", icon: Activity },
 ];
 
 export default function AdminCommandPalette() {
