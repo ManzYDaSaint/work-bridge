@@ -249,6 +249,29 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
         );
     }, [conversations, inboxSearch]);
 
+    // 24h reply window — computed from last INBOUND message in the active conversation
+    const replyWindowInfo = useMemo(() => {
+        if (!activeConversation?.messages?.length) {
+            return { isOpen: false, hoursLeft: 0, hasInbound: false };
+        }
+        const inboundMsgs = (activeConversation.messages as any[]).filter((m: any) => m.direction === "INBOUND");
+        if (!inboundMsgs.length) {
+            return { isOpen: false, hoursLeft: 0, hasInbound: false };
+        }
+        const lastInbound = inboundMsgs.reduce((a: any, b: any) =>
+            new Date(a.created_at) > new Date(b.created_at) ? a : b
+        );
+        const msAgo = Date.now() - new Date(lastInbound.created_at).getTime();
+        const hoursLeft = 24 - msAgo / 3_600_000;
+        return { isOpen: hoursLeft > 0, hoursLeft: Math.max(0, hoursLeft), hasInbound: true };
+    }, [activeConversation]);
+
+    // Count conversations where the user sent the last message (unanswered / new inbound)
+    const unreadInboundCount = useMemo(
+        () => conversations.filter((c) => c.last_direction === "INBOUND").length,
+        [conversations]
+    );
+
     const targetCount = useMemo(
         () => (channel === "WHATSAPP" ? whatsappCount : previewCount),
         [channel, whatsappCount, previewCount]
@@ -473,8 +496,18 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Live Inbox</span>
                         <MessageCircle size={16} className="text-indigo-500" />
                     </div>
-                    <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{conversations.length}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">Active WhatsApp threads</p>
+                    <div className="mt-2 flex items-end gap-2">
+                        <p className="text-2xl font-black text-slate-900 dark:text-white">{conversations.length}</p>
+                        {unreadInboundCount > 0 && (
+                            <span className="mb-0.5 flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-950 dark:text-red-300">
+                                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+                                {unreadInboundCount} new
+                            </span>
+                        )}
+                    </div>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                        Active threads{unreadInboundCount > 0 ? ` · ${unreadInboundCount} awaiting reply` : ""}
+                    </p>
                 </div>
             </div>
 
@@ -505,6 +538,12 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                     {conversations.length > 0 && (
                         <span className="ml-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-black text-white">
                             {conversations.length}
+                        </span>
+                    )}
+                    {unreadInboundCount > 0 && (
+                        <span className="relative ml-0.5 flex h-4 w-4 items-center justify-center">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                            <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500" />
                         </span>
                     )}
                 </button>
@@ -863,24 +902,40 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                                                     : "hover:bg-stone-100/60 dark:hover:bg-slate-800/40"
                                             }`}
                                         >
-                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                                                {(conv.first_name || conv.phone || "U").slice(0, 2).toUpperCase()}
+                                            {/* Avatar with optional unread pulse ring */}
+                                            <div className="relative shrink-0">
+                                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                                    {(conv.first_name || conv.phone || "U").slice(0, 2).toUpperCase()}
+                                                </div>
+                                                {conv.last_direction === "INBOUND" && (
+                                                    <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3 items-center justify-center">
+                                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                                                        <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-center justify-between">
-                                                    <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
+                                                    <p className={`truncate text-xs ${conv.last_direction === "INBOUND" ? "font-black text-slate-900 dark:text-white" : "font-bold text-slate-700 dark:text-slate-300"}`}>
                                                         {conv.first_name || "WhatsApp User"}
                                                     </p>
                                                     <span className="text-[10px] text-slate-400">
                                                         {new Date(conv.updated_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>
-                                                <p className="truncate text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                                <p className={`truncate text-[11px] mt-0.5 ${conv.last_direction === "INBOUND" ? "font-semibold text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
                                                     {conv.last_message || "No messages"}
                                                 </p>
-                                                <span className="mt-1 inline-block text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
-                                                    {conv.phone}
-                                                </span>
+                                                <div className="mt-1 flex items-center gap-1.5">
+                                                    <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                                                        {conv.phone}
+                                                    </span>
+                                                    {conv.last_direction === "INBOUND" && (
+                                                        <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[8px] font-bold text-red-600 dark:bg-red-950 dark:text-red-300">
+                                                            New message
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </button>
                                     );
@@ -906,9 +961,25 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                                             <p className="text-[10px] text-slate-500">{activeConversation.phone}</p>
                                         </div>
                                     </div>
-                                    <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300">
-                                        24h Reply Window Active
-                                    </span>
+                                    {/* Dynamic 24h Reply Window Badge */}
+                                    {replyWindowInfo.hasInbound ? (
+                                        replyWindowInfo.isOpen ? (
+                                            <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 flex items-center gap-1">
+                                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                                {Math.floor(replyWindowInfo.hoursLeft)}h {Math.round((replyWindowInfo.hoursLeft % 1) * 60)}m window open
+                                            </span>
+                                        ) : (
+                                            <span className="rounded-md bg-red-50 px-2.5 py-1 text-[10px] font-bold text-red-600 dark:bg-red-950 dark:text-red-300 flex items-center gap-1">
+                                                <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                                                Window Expired — Use Template
+                                            </span>
+                                        )
+                                    ) : (
+                                        <span className="rounded-md bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700 dark:bg-amber-950 dark:text-amber-300 flex items-center gap-1">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                            User hasn&apos;t messaged yet
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Scrollable Message Bubbles */}
@@ -938,25 +1009,40 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                                     })}
                                 </div>
 
-                                {/* Reply Input Bar */}
-                                <div className="p-3 border-t border-stone-200 bg-white dark:border-slate-800 dark:bg-slate-900 flex items-center gap-2 shrink-0">
-                                    <input
-                                        type="text"
-                                        value={replyText}
-                                        onChange={(e) => setReplyText(e.target.value)}
-                                        onKeyDown={(e) => e.key === "Enter" && handleSendLiveReply()}
-                                        placeholder="Type your WhatsApp reply..."
-                                        className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs text-slate-900 focus:outline-hidden dark:border-slate-800 dark:bg-slate-800 dark:text-white"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={handleSendLiveReply}
-                                        disabled={sendingReply || !replyText.trim()}
-                                        className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-                                    >
-                                        {sendingReply ? "Sending..." : "Reply"}
-                                    </button>
-                                </div>
+                                {/* Reply Input Bar — disabled & replaced with notice when window expired */}
+                                {replyWindowInfo.hasInbound && !replyWindowInfo.isOpen ? (
+                                    <div className="p-3 border-t border-stone-200 bg-red-50 dark:border-slate-800 dark:bg-red-950/30 flex items-center justify-between gap-2 shrink-0">
+                                        <p className="text-[11px] text-red-600 dark:text-red-300 font-medium">
+                                            ⚠ The 24-hour reply window has closed. You can only reach this user via a template broadcast.
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveTab("BROADCAST")}
+                                            className="shrink-0 rounded-xl bg-[#16324f] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#1e4a72] transition-colors"
+                                        >
+                                            Open Broadcast
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="p-3 border-t border-stone-200 bg-white dark:border-slate-800 dark:bg-slate-900 flex items-center gap-2 shrink-0">
+                                        <input
+                                            type="text"
+                                            value={replyText}
+                                            onChange={(e) => setReplyText(e.target.value)}
+                                            onKeyDown={(e) => e.key === "Enter" && handleSendLiveReply()}
+                                            placeholder="Type your WhatsApp reply..."
+                                            className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs text-slate-900 focus:outline-hidden dark:border-slate-800 dark:bg-slate-800 dark:text-white"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleSendLiveReply}
+                                            disabled={sendingReply || !replyText.trim()}
+                                            className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                                        >
+                                            {sendingReply ? "Sending..." : "Reply"}
+                                        </button>
+                                    </div>
+                                )}
                             </>
                         ) : (
                             <div className="flex h-full items-center justify-center text-xs text-slate-400">
