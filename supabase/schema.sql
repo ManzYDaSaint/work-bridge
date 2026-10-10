@@ -68,7 +68,9 @@ CREATE TABLE IF NOT EXISTS public.job_seekers (
   application_limit_bonus INTEGER DEFAULT 0,
   dna_hash TEXT,
   embedding vector(384),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.employers (
@@ -125,7 +127,8 @@ CREATE TABLE IF NOT EXISTS public.jobs (
   display_company_name TEXT,
   job_source TEXT DEFAULT 'Employer Portal',
   
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.applications (
@@ -634,7 +637,8 @@ VALUES
   ('email-notifier', 'Email Notifier', 'Sends queued transactional emails.'),
   ('crm-manager', 'CRM Manager', 'Maintains employer CRM lifecycle data.'),
   ('buffer-social-poster', 'Buffer Social Poster', 'Automatically shares jobs to LinkedIn and Facebook Pages via Buffer.'),
-  ('opportunity-matcher', 'Opportunity Matcher', 'Generates AI opportunity matches for candidates.')
+  ('opportunity-matcher', 'Opportunity Matcher', 'Generates AI opportunity matches for candidates.'),
+  ('whatsapp-manager', 'WhatsApp Manager', 'Processes queued WhatsApp webhook events (opt-in / opt-out handling, message routing).')
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,
