@@ -68,7 +68,6 @@ CREATE TABLE IF NOT EXISTS public.job_seekers (
   application_limit_bonus INTEGER DEFAULT 0,
   dna_hash TEXT,
   embedding vector(384),
-  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

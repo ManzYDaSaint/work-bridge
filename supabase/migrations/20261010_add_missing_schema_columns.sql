@@ -1,19 +1,12 @@
--- Migration: Add missing updated_at and user_id columns to job_seekers and jobs tables.
+-- Migration: Add missing updated_at columns to job_seekers and jobs tables.
 -- 
 -- Fixes PostgreSQL errors:
 -- 1. "column job_seekers.updated_at does not exist" (status 42703)
 -- 2. "column jobs.updated_at does not exist" (status 42703)
--- 3. "column job_seekers.user_id does not exist" (status 42703)
 
--- 1. Add updated_at and user_id columns to job_seekers
+-- 1. Add updated_at column to job_seekers
 ALTER TABLE public.job_seekers
-  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-  ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.users(id) ON DELETE CASCADE;
-
--- Backfill user_id with id (since job_seekers.id IS the user ID in 1:1 relation)
-UPDATE public.job_seekers 
-SET user_id = id 
-WHERE user_id IS NULL;
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL;
 
 -- 2. Add updated_at column to jobs
 ALTER TABLE public.jobs

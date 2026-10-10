@@ -17,29 +17,6 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
-function getPlausibleDomain() {
-  const configuredDomain =
-    process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN ||
-    process.env.NEXT_PUBLIC_ANALYTICS_DOMAIN ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXT_PUBLIC_URL;
-
-  if (!configuredDomain) return null;
-
-  try {
-    const parsed = configuredDomain.includes("://")
-      ? new URL(configuredDomain)
-      : new URL(`https://${configuredDomain}`);
-
-    if (parsed.hostname === "localhost") return null;
-
-    return parsed.hostname;
-  } catch {
-    return configuredDomain.replace(/^https?:\/\//, "").split("/")[0] || null;
-  }
-}
-
-const plausibleDomain = getPlausibleDomain();
 
 export const metadata: Metadata = {
   metadataBase: getSiteUrlObject(),
@@ -114,14 +91,7 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="anonymous" />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
-        {plausibleDomain && (
-          <Script
-            id="plausible-analytics"
-            src="https://plausible.io/js/script.js"
-            strategy="afterInteractive"
-            data-domain={plausibleDomain}
-          />
-        )}
+
         {/* Google Analytics (gtag.js) */}
         <Script
           id="google-analytics"

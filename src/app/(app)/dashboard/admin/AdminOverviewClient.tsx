@@ -166,9 +166,12 @@ export default function AdminOverviewClient({
         fetchStats();
         fetchCloseRequests();
 
-        // Polling interval: 5 min in dev to avoid hammering the server during hot-reload;
-        // 30 s in production where instances are stable and requests are cheap.
-        const POLL_MS = process.env.NODE_ENV === "development" ? 5 * 60 * 1000 : 30_000;
+        // In development, do NOT auto-poll to prevent hot-reload/Fast Refresh re-render loops.
+        if (process.env.NODE_ENV === "development") {
+            return;
+        }
+
+        const POLL_MS = 60_000; // Poll every 60 seconds in production
 
         let interval: ReturnType<typeof setInterval> | null = null;
 
@@ -188,11 +191,8 @@ export default function AdminOverviewClient({
             }
         };
 
-        // Pause polling while the tab is not visible — this eliminates the majority of
-        // idle API load since the admin dashboard is frequently left open in the background.
         const handleVisibilityChange = () => {
             if (document.visibilityState === "visible") {
-                // Refresh immediately when the user comes back, then continue polling
                 fetchActivity();
                 fetchStats();
                 fetchCloseRequests();
@@ -202,7 +202,6 @@ export default function AdminOverviewClient({
             }
         };
 
-        // Only start polling if the tab is currently visible
         if (document.visibilityState === "visible") {
             startPolling();
         }
