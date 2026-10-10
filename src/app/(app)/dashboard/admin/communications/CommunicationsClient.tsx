@@ -4,23 +4,27 @@ import { useEffect, useMemo, useState } from "react";
 import { apiFetchJson } from "@/lib/api";
 import { createBrowserSupabaseClient } from "@/lib/supabase-client";
 import { PageHeader, Badge, Pagination } from "@/components/dashboard/ui";
-import { Send, Sparkles, Mail, Eye, Save, CheckCircle2, MessageSquare, Phone, Crown, RefreshCw, MessageCircle, CheckCheck, XCircle, Clock } from "lucide-react";
+import { 
+    Send, Sparkles, Mail, Eye, Save, CheckCircle2, MessageSquare, Phone, Crown, 
+    RefreshCw, MessageCircle, CheckCheck, XCircle, Clock, Users, Smartphone, 
+    AlertCircle, Search, UserCheck, ShieldCheck, ArrowRight
+} from "lucide-react";
 import { toast } from "sonner";
 
 type Audience = "ALL" | "SEEKERS" | "EMPLOYERS" | "PREMIUM_SEEKERS";
 type Channel = "EMAIL" | "WHATSAPP" | "BOTH";
 
 const audienceOptions: Array<{ value: Audience; label: string; description: string }> = [
-    { value: "ALL", label: "All users", description: "Every active user in the platform." },
-    { value: "SEEKERS", label: "Seekers", description: "All job seekers." },
+    { value: "ALL", label: "All users", description: "Every active user on the platform." },
+    { value: "SEEKERS", label: "Seekers", description: "All active job seekers." },
     { value: "EMPLOYERS", label: "Employers", description: "All employer accounts." },
-    { value: "PREMIUM_SEEKERS", label: "Premium seekers", description: "Only active premium job seekers with phone numbers." },
+    { value: "PREMIUM_SEEKERS", label: "Premium seekers", description: "Active premium subscribers with phone numbers." },
 ];
 
 const channelOptions: Array<{ value: Channel; label: string; description: string; icon: any }> = [
     { value: "EMAIL", label: "Email Only", description: "Deliver via Resend email service.", icon: Mail },
-    { value: "WHATSAPP", label: "WhatsApp Only", description: "Deliver personalized WhatsApp messages (Premium Seekers).", icon: MessageSquare },
-    { value: "BOTH", label: "Both Email & WhatsApp", description: "Maximize reach across both Email and WhatsApp channels.", icon: Sparkles },
+    { value: "WHATSAPP", label: "WhatsApp Only", description: "Deliver personalized WhatsApp messages.", icon: MessageSquare },
+    { value: "BOTH", label: "Email & WhatsApp", description: "Maximize reach across both Email & WhatsApp.", icon: Sparkles },
 ];
 
 const defaultEmailSubject = "Update your education details for better job matches";
@@ -40,8 +44,6 @@ const defaultWhatsappBody = `Your profile is almost ready for better job matches
 
 Tap the button below to review and update your profile!`;
 
-// Delivery status badge for outbound messages in the Live Inbox chat thread.
-// Status is sourced from whatsapp_messages.status, updated in real-time by the webhook handler.
 function DeliveryStatusBadge({ status }: { status?: string }) {
     if (!status) return null;
     const s = status.toUpperCase();
@@ -55,7 +57,6 @@ function DeliveryStatusBadge({ status }: { status?: string }) {
             <XCircle size={11} /> Failed
         </span>
     );
-    // SENT = accepted by Meta (template queued for delivery)
     return (
         <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-100/70">
             <Clock size={10} /> Sent
@@ -64,7 +65,7 @@ function DeliveryStatusBadge({ status }: { status?: string }) {
 }
 
 export default function CommunicationsClient({ initialCounts }: { initialCounts: Record<string, number> }) {
-    const [activeTab, setActiveTab] = useState<"BROADCAST" | "HISTORY" | "INBOX">("BROADCAST");
+    const [activeTab, setActiveTab] = useState<"BROADCAST" | "INBOX" | "HISTORY">("BROADCAST");
     const [audience, setAudience] = useState<Audience>("PREMIUM_SEEKERS");
     const [channel, setChannel] = useState<Channel>("BOTH");
     
@@ -106,6 +107,7 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
     const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
     const [replyText, setReplyText] = useState("");
     const [sendingReply, setSendingReply] = useState(false);
+    const [inboxSearch, setInboxSearch] = useState("");
 
     const draftKey = "aganyu-admin-communications-draft-v3";
 
@@ -175,7 +177,6 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
         }
     };
 
-    // Campaign detail modal & recipient drill-down
     const [selectedCampaign, setSelectedCampaign] = useState<any | null>(null);
     const [campaignRecipients, setCampaignRecipients] = useState<Array<any>>([]);
     const [loadingRecipients, setLoadingRecipients] = useState(false);
@@ -184,13 +185,13 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
         void fetchPreview(audience);
     }, [audience]);
 
-    // Supabase Realtime Listener for Instant Live Inbox & Campaign status updates
+    // Supabase Realtime Listener
     useEffect(() => {
         const supabase = createBrowserSupabaseClient();
         if (!supabase) return;
 
         const channelId = `realtime-communications_${Math.random().toString(36).substring(2, 9)}`;
-        const channel = supabase
+        const realChannel = supabase
             .channel(channelId)
             .on(
                 "postgres_changes",
@@ -209,7 +210,7 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
             .subscribe();
 
         return () => {
-            void supabase.removeChannel(channel);
+            void supabase.removeChannel(realChannel);
         };
     }, [audience]);
 
@@ -236,6 +237,17 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
         () => conversations.find((c) => c.phone === selectedPhone) || conversations[0] || null,
         [conversations, selectedPhone]
     );
+
+    const filteredConversations = useMemo(() => {
+        if (!inboxSearch.trim()) return conversations;
+        const q = inboxSearch.toLowerCase();
+        return conversations.filter(
+            (c) =>
+                (c.first_name || "").toLowerCase().includes(q) ||
+                (c.phone || "").includes(q) ||
+                (c.last_message || "").toLowerCase().includes(q)
+        );
+    }, [conversations, inboxSearch]);
 
     const targetCount = useMemo(
         () => (channel === "WHATSAPP" ? whatsappCount : previewCount),
@@ -363,7 +375,6 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
 
             toast.success(`WhatsApp reply sent to ${activeConversation.first_name || activeConversation.phone}`);
             
-            // Append message locally for instant UI response
             const newMessage = {
                 id: Date.now().toString(),
                 phone: activeConversation.phone,
@@ -393,7 +404,6 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                     "Meta Policy: 24-hour reply window expired for this contact. Initiating broadcast template send...",
                     { duration: 6000 }
                 );
-                // Pre-fill test phone and switch to Broadcast tab for template dispatch
                 setTestPhone(activeConversation.phone);
                 setChannel("WHATSAPP");
                 setActiveTab("BROADCAST");
@@ -417,7 +427,7 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
         try {
             window.localStorage.removeItem(draftKey);
         } catch {
-            // Ignore storage errors
+            // Ignore
         }
         toast.info("Drafts reset to template defaults.");
     };
@@ -425,99 +435,142 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
     return (
         <div className="space-y-6 pb-20">
             <PageHeader
-                title="Communications & Messaging Hub"
-                subtitle="Send personalized Email & WhatsApp messages to Seekers, Employers, or Premium accounts, and manage 2-way WhatsApp user replies."
+                title="Communications & Support Hub"
+                subtitle="Targeted email & WhatsApp broadcasts, live 2-way support inbox, and campaign delivery metrics."
             />
 
-            {/* Top Navigation Tabs */}
-            <div className="flex items-center gap-3 border-b border-stone-200 pb-3 dark:border-slate-800">
+            {/* ── Top Telemetry Overview Cards ─────────────────────────────────── */}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Reach</span>
+                        <Users size={16} className="text-blue-500" />
+                    </div>
+                    <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{previewCount}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">Recipients in {selectedAudienceMeta.label}</p>
+                </div>
+
+                <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">WhatsApp Active</span>
+                        <Smartphone size={16} className="text-emerald-500" />
+                    </div>
+                    <p className="mt-2 text-2xl font-black text-emerald-600 dark:text-emerald-400">{whatsappCount}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">Registered phone contacts</p>
+                </div>
+
+                <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">VIP Premium</span>
+                        <Crown size={16} className="text-amber-500" />
+                    </div>
+                    <p className="mt-2 text-2xl font-black text-amber-600 dark:text-amber-400">{premiumCount}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">Priority WhatsApp subscribers</p>
+                </div>
+
+                <div className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Live Inbox</span>
+                        <MessageCircle size={16} className="text-indigo-500" />
+                    </div>
+                    <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{conversations.length}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">Active WhatsApp threads</p>
+                </div>
+            </div>
+
+            {/* ── Main Workspace Tabs ────────────────────────────────────────── */}
+            <div className="flex items-center gap-2 border-b border-stone-200 pb-3 dark:border-slate-800">
                 <button
                     type="button"
                     onClick={() => setActiveTab("BROADCAST")}
-                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
                         activeTab === "BROADCAST"
                             ? "bg-[#16324f] text-white shadow-sm dark:bg-slate-100 dark:text-slate-900"
                             : "bg-white/80 text-slate-600 hover:bg-stone-100 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:bg-slate-800"
                     }`}
                 >
-                    <Send size={15} /> Broadcast Campaigns
-                </button>
-
-                <button
-                    type="button"
-                    onClick={() => setActiveTab("HISTORY")}
-                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
-                        activeTab === "HISTORY"
-                            ? "bg-[#16324f] text-white shadow-sm dark:bg-slate-100 dark:text-slate-900"
-                            : "bg-white/80 text-slate-600 hover:bg-stone-100 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:bg-slate-800"
-                    }`}
-                >
-                    <Clock size={15} className="text-amber-500" /> Campaign History
-                    {campaignHistory.length > 0 && (
-                        <span className="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-bold text-slate-800 dark:bg-slate-800 dark:text-slate-200">
-                            {campaignHistory.length}
-                        </span>
-                    )}
+                    <Send size={14} /> Broadcast Campaigns
                 </button>
 
                 <button
                     type="button"
                     onClick={() => setActiveTab("INBOX")}
-                    className={`relative inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+                    className={`relative inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
                         activeTab === "INBOX"
                             ? "bg-[#16324f] text-white shadow-sm dark:bg-slate-100 dark:text-slate-900"
                             : "bg-white/80 text-slate-600 hover:bg-stone-100 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:bg-slate-800"
                     }`}
                 >
-                    <MessageCircle size={15} className="text-emerald-500" /> Live WhatsApp Inbox
+                    <MessageCircle size={14} className="text-emerald-500" /> Live WhatsApp Inbox
                     {conversations.length > 0 && (
-                        <span className="ml-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[11px] font-bold text-white">
+                        <span className="ml-1 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-black text-white">
                             {conversations.length}
+                        </span>
+                    )}
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => setActiveTab("HISTORY")}
+                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
+                        activeTab === "HISTORY"
+                            ? "bg-[#16324f] text-white shadow-sm dark:bg-slate-100 dark:text-slate-900"
+                            : "bg-white/80 text-slate-600 hover:bg-stone-100 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:bg-slate-800"
+                    }`}
+                >
+                    <Clock size={14} className="text-amber-500" /> Campaign History
+                    {campaignHistory.length > 0 && (
+                        <span className="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+                            {campaignHistory.length}
                         </span>
                     )}
                 </button>
             </div>
 
-            {activeTab === "BROADCAST" ? (
+            {/* ── TAB 1: BROADCAST CAMPAIGNS (3-STEP GUIDED WORKFLOW) ───────── */}
+            {activeTab === "BROADCAST" && (
                 <div className="space-y-6">
-                    {/* Compact Configuration Header: Audience & Channel in a Single Crisp Card */}
-                    <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
-                        <div className="grid gap-6 lg:grid-cols-2">
-                            {/* Target Audience Segmented Pills */}
+
+                    {/* ── STEP 1: AUDIENCE & CHANNEL SELECTION ───────────────── */}
+                    <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                        <div className="mb-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#16324f] text-xs font-bold text-white">1</span>
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Target Audience & Delivery Channel</h3>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Badge label={`${targetCount} Target Recipients`} variant="green" />
+                                <button
+                                    type="button"
+                                    onClick={() => setPreviewModalOpen(true)}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                                >
+                                    <Eye size={12} /> View List ({previewRecipients.length})
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="grid gap-5 lg:grid-cols-2">
+                            {/* Audience Pills */}
                             <div>
-                                <div className="mb-2.5 flex items-center justify-between">
-                                    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Target Audience</label>
-                                    <div className="flex items-center gap-1.5">
-                                        <Badge label={`${previewCount} Total`} variant="blue" />
-                                        <Badge label={`${whatsappCount} WhatsApp`} variant="green" />
-                                        <button
-                                            type="button"
-                                            onClick={() => setPreviewModalOpen(true)}
-                                            className="ml-1 inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600 hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                                        >
-                                            <Eye size={12} /> View List
-                                        </button>
-                                    </div>
-                                </div>
+                                <label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-400">Select Segment</label>
                                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                    {audienceOptions.map((option) => {
-                                        const isSelected = audience === option.value;
+                                    {audienceOptions.map((opt) => {
+                                        const isSel = audience === opt.value;
                                         return (
                                             <button
-                                                key={option.value}
+                                                key={opt.value}
                                                 type="button"
-                                                onClick={() => setAudience(option.value)}
-                                                className={`flex flex-col items-center justify-center rounded-xl border px-3 py-2.5 text-center transition-all ${
-                                                    isSelected
-                                                        ? "border-[#16324f] bg-[#16324f] text-white shadow-sm dark:border-slate-200 dark:bg-slate-100 dark:text-slate-900"
-                                                        : "border-stone-200 bg-stone-50 text-slate-700 hover:border-stone-300 hover:bg-stone-100 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-800"
+                                                onClick={() => setAudience(opt.value)}
+                                                className={`flex flex-col items-center justify-center rounded-xl border p-2.5 text-center transition-all ${
+                                                    isSel
+                                                        ? "border-[#16324f] bg-[#16324f] text-white shadow-sm dark:border-slate-200 dark:bg-slate-100 dark:text-slate-900 font-bold"
+                                                        : "border-stone-200 bg-stone-50 text-slate-700 hover:bg-stone-100 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300"
                                                 }`}
                                             >
-                                                <span className="text-xs font-semibold leading-tight">{option.label}</span>
-                                                {option.value === "PREMIUM_SEEKERS" && (
-                                                    <span className={`mt-0.5 inline-flex items-center gap-0.5 text-[9px] font-bold ${
-                                                        isSelected ? "text-amber-300 dark:text-amber-600" : "text-amber-600 dark:text-amber-400"
-                                                    }`}>
+                                                <span className="text-xs font-bold">{opt.label}</span>
+                                                {opt.value === "PREMIUM_SEEKERS" && (
+                                                    <span className={`mt-0.5 inline-flex items-center gap-0.5 text-[9px] font-extrabold ${isSel ? "text-amber-300 dark:text-amber-600" : "text-amber-600 dark:text-amber-400"}`}>
                                                         <Crown size={9} /> VIP
                                                     </span>
                                                 )}
@@ -527,810 +580,455 @@ export default function CommunicationsClient({ initialCounts }: { initialCounts:
                                 </div>
                             </div>
 
-                            {/* Delivery Channel Segmented Pills */}
+                            {/* Channel Pills */}
                             <div>
-                                <div className="mb-2.5 flex items-center justify-between">
-                                    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Delivery Channel</label>
-                                    <span className="text-xs text-slate-400">
-                                        Targeting: <strong className="text-slate-700 dark:text-slate-200">{targetCount} recipients</strong>
-                                    </span>
-                                </div>
+                                <label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-slate-400">Select Channel</label>
                                 <div className="grid grid-cols-3 gap-2">
                                     {channelOptions.map((opt) => {
                                         const IconComp = opt.icon;
-                                        const isSelected = channel === opt.value;
+                                        const isSel = channel === opt.value;
                                         return (
                                             <button
                                                 key={opt.value}
                                                 type="button"
                                                 onClick={() => setChannel(opt.value)}
-                                                className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-center transition-all ${
-                                                    isSelected
-                                                        ? "border-[#16324f] bg-[#16324f] text-white shadow-sm dark:border-slate-200 dark:bg-slate-100 dark:text-slate-900"
-                                                        : "border-stone-200 bg-stone-50 text-slate-700 hover:border-stone-300 hover:bg-stone-100 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-800"
+                                                className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-center transition-all ${
+                                                    isSel
+                                                        ? "border-[#16324f] bg-[#16324f] text-white shadow-sm dark:border-slate-200 dark:bg-slate-100 dark:text-slate-900 font-bold"
+                                                        : "border-stone-200 bg-stone-50 text-slate-700 hover:bg-stone-100 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300"
                                                 }`}
                                             >
-                                                <IconComp size={15} className={isSelected ? "text-white dark:text-slate-900" : (opt.value === "WHATSAPP" ? "text-emerald-500" : "text-blue-500")} />
-                                                <span className="text-xs font-semibold">{opt.label}</span>
+                                                <IconComp size={15} className={isSel ? "text-white dark:text-slate-900" : (opt.value === "WHATSAPP" ? "text-emerald-500" : "text-blue-500")} />
+                                                <span className="text-xs font-bold">{opt.label}</span>
                                             </button>
                                         );
                                     })}
                                 </div>
                             </div>
                         </div>
-
-                        {/* Meta Template Banner (shown when WhatsApp channel is active) */}
-                        {(channel === "WHATSAPP" || (channel === "BOTH" && (activeDraftTab === "WHATSAPP" || previewTab === "WHATSAPP_PREVIEW"))) && (
-                            <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2.5 text-xs text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-semibold">📋 WhatsApp Meta Template:</span>
-                                    <code className="rounded bg-emerald-100 px-1.5 py-0.5 font-mono text-[11px] font-bold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">aganyu_broadcast_announcement</code>
-                                </div>
-                                <div className="flex items-center gap-3 text-[11px] text-emerald-700 dark:text-emerald-300">
-                                    <span><strong>{"{{1}}"}</strong> First name (auto)</span>
-                                    <span>•</span>
-                                    <span><strong>{"{{2}}"}</strong> Heading + Message Body</span>
-                                    <span>•</span>
-                                    <span><strong>Button</strong> Dashboard Link</span>
-                                </div>
-                            </div>
-                        )}
                     </div>
 
-                    {/* Main Two-Column Work Area */}
-                    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_380px]">
-                        {/* Left: Message Composer & Live Device Preview */}
-                        <div className="space-y-4">
-                            <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
-                                <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-3 dark:border-slate-800">
-                                    <div>
-                                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">Draft Campaign Message</h3>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            {channel === "BOTH"
-                                                ? "Customize dedicated content for each channel"
-                                                : channel === "EMAIL"
-                                                ? "Compose email campaign with rich HTML support"
-                                                : "Compose approved WhatsApp template broadcast"}
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {(channel === "WHATSAPP" || (channel === "BOTH" && activeDraftTab === "WHATSAPP")) && (
-                                            <div className="flex rounded-lg border border-stone-200 bg-stone-50 p-0.5 dark:border-slate-700 dark:bg-slate-800">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPreviewTab("EDITOR")}
-                                                    className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
-                                                        previewTab === "EDITOR"
-                                                            ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white"
-                                                            : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
-                                                    }`}
-                                                >
-                                                    Editor
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPreviewTab("WHATSAPP_PREVIEW")}
-                                                    className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
-                                                        previewTab === "WHATSAPP_PREVIEW"
-                                                            ? "bg-emerald-600 text-white shadow-sm"
-                                                            : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
-                                                    }`}
-                                                >
-                                                    <MessageSquare size={12} /> WhatsApp Bubble
-                                                </button>
-                                            </div>
-                                        )}
-                                        <button
-                                            type="button"
-                                            onClick={resetDraft}
-                                            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-stone-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                                            title="Reset draft to template default"
-                                        >
-                                            <Save size={13} /> Reset
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Channel Draft Switcher when channel === 'BOTH' */}
+                    {/* ── STEP 2: CONTENT COMPOSER & LIVE PREVIEW ────────────── */}
+                    <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                        <div className="mb-4 flex items-center justify-between border-b border-stone-100 pb-3 dark:border-slate-800">
+                            <div className="flex items-center gap-2">
+                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#16324f] text-xs font-bold text-white">2</span>
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Compose Message Content & Live Preview</h3>
+                            </div>
+                            <div className="flex items-center gap-2">
                                 {channel === "BOTH" && (
-                                    <div className="mb-4 flex items-center gap-2 rounded-xl bg-stone-100 p-1 dark:bg-slate-800/80">
+                                    <div className="flex rounded-xl bg-stone-100 p-1 dark:bg-slate-800">
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setActiveDraftTab("EMAIL");
-                                                setPreviewTab("EDITOR");
-                                            }}
-                                            className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all ${
-                                                activeDraftTab === "EMAIL"
-                                                    ? "bg-[#16324f] text-white shadow-sm dark:bg-slate-100 dark:text-slate-900"
-                                                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-                                            }`}
+                                            onClick={() => setActiveDraftTab("EMAIL")}
+                                            className={`rounded-lg px-3 py-1 text-xs font-bold transition-all ${activeDraftTab === "EMAIL" ? "bg-white text-slate-900 shadow-xs dark:bg-slate-700 dark:text-white" : "text-slate-500"}`}
                                         >
-                                            <Mail size={13} /> 📧 Email Draft
+                                            Email Draft
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setActiveDraftTab("WHATSAPP")}
-                                            className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold transition-all ${
-                                                activeDraftTab === "WHATSAPP"
-                                                    ? "bg-emerald-600 text-white shadow-sm"
-                                                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-                                            }`}
+                                            className={`rounded-lg px-3 py-1 text-xs font-bold transition-all ${activeDraftTab === "WHATSAPP" ? "bg-emerald-600 text-white shadow-xs" : "text-slate-500"}`}
                                         >
-                                            <MessageSquare size={13} /> 💬 WhatsApp Broadcast Draft
+                                            WhatsApp Draft
                                         </button>
                                     </div>
                                 )}
-
-                                {/* --- 1. EMAIL DRAFT EDITOR --- */}
-                                {(channel === "EMAIL" || (channel === "BOTH" && activeDraftTab === "EMAIL")) && (
-                                    <div className="space-y-4">
-                                        <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-200">
-                                            <p className="font-semibold">📧 Email Channel Settings</p>
-                                            <p className="mt-0.5 text-[11px] text-blue-700 dark:text-blue-300">
-                                                Emails support full formatting, multi-paragraph text, and personalized links.
-                                            </p>
-                                        </div>
-
-                                        <div>
-                                            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                                                Email Subject Line
-                                            </label>
-                                            <input
-                                                value={emailSubject}
-                                                onChange={(e) => setEmailSubject(e.target.value)}
-                                                className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                                placeholder="e.g. Update your education details for better job matches"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <div className="mb-1.5 flex items-center justify-between">
-                                                <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                                                    Email Message Body
-                                                </label>
-                                                <span className="text-[11px] text-slate-400">HTML paragraph formatting supported</span>
-                                            </div>
-                                            <textarea
-                                                rows={9}
-                                                value={emailBody}
-                                                onChange={(e) => setEmailBody(e.target.value)}
-                                                className="w-full resize-y rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm font-sans text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                            />
-                                        </div>
-
-                                        {/* Email Merge Tags */}
-                                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-stone-200 bg-stone-50/70 p-3 dark:border-slate-800 dark:bg-slate-800/40">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Email merge tags:</span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => insertEmailTag("{{first_name}}")}
-                                                    className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 shadow-2xs"
-                                                >
-                                                    + {"{{first_name}}"}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => insertEmailTag("{{profile_url}}")}
-                                                    className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 shadow-2xs"
-                                                >
-                                                    + {"{{profile_url}}"}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => insertEmailTag("{{company_name}}")}
-                                                    className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 shadow-2xs"
-                                                >
-                                                    + {"{{company_name}}"}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* --- 2. WHATSAPP DRAFT EDITOR --- */}
-                                {(channel === "WHATSAPP" || (channel === "BOTH" && activeDraftTab === "WHATSAPP")) && (
-                                    <>
-                                        {previewTab === "EDITOR" ? (
-                                            <div className="space-y-4">
-                                                <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 text-xs text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-200">
-                                                    <p className="font-semibold">💬 WhatsApp Meta Template Broadcast</p>
-                                                    <p className="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-300">
-                                                        Sent through approved template <code className="font-mono font-bold">aganyu_broadcast_announcement</code>. The recipient name is auto-injected into <strong>{"{{1}}"}</strong>, your message into <strong>{"{{2}}"}</strong>, and the button automatically routes to their dashboard.
-                                                    </p>
-                                                </div>
-
-                                                <div>
-                                                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                                                        WhatsApp Heading / Title <span className="font-normal text-slate-400">(renders in bold)</span>
-                                                    </label>
-                                                    <input
-                                                        value={whatsappHeading}
-                                                        onChange={(e) => setWhatsappHeading(e.target.value)}
-                                                        className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                                        placeholder="e.g. Update Education Details"
-                                                    />
-                                                </div>
-
-                                                <div>
-                                                    <div className="mb-1.5 flex items-center justify-between">
-                                                        <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                                                            WhatsApp Message Body
-                                                        </label>
-                                                        <span className={`text-[11px] font-mono ${
-                                                            (whatsappHeading.length + whatsappBody.length + 6) > 1024
-                                                                ? "text-red-500 font-bold"
-                                                                : (whatsappHeading.length + whatsappBody.length + 6) > 900
-                                                                ? "text-amber-500 font-medium"
-                                                                : "text-slate-400"
-                                                        }`}>
-                                                            WhatsApp Limit: {whatsappHeading.length + whatsappBody.length + 6} / 1024
-                                                        </span>
-                                                    </div>
-                                                    <textarea
-                                                        rows={7}
-                                                        value={whatsappBody}
-                                                        onChange={(e) => setWhatsappBody(e.target.value)}
-                                                        className="w-full resize-y rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm font-sans text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                                    />
-                                                </div>
-
-                                                {/* WhatsApp Merge Tags */}
-                                                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-stone-200 bg-stone-50/70 p-3 dark:border-slate-800 dark:bg-slate-800/40">
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">WhatsApp tags:</span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => insertWhatsappTag("{{first_name}}")}
-                                                            className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 shadow-2xs"
-                                                        >
-                                                            + {"{{first_name}}"}
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => insertWhatsappTag("{{profile_url}}")}
-                                                            className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 shadow-2xs"
-                                                        >
-                                                            + {"{{profile_url}}"}
-                                                        </button>
-                                                    </div>
-
-                                                    {(whatsappHeading.length + whatsappBody.length + 6) > 1024 && (
-                                                        <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">
-                                                            ⚠️ Exceeds 1024 limit (will trim)
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            /* WhatsApp Live Phone Bubble Preview */
-                                            <div className="flex flex-col items-center justify-center rounded-xl bg-stone-100 p-6 dark:bg-slate-950">
-                                                <div className="w-full max-w-[380px] rounded-2xl bg-[#e5ddd5] p-3 shadow-md dark:bg-slate-900 border border-[#d1d7db] dark:border-slate-800">
-                                                    <div className="mb-2 flex items-center justify-between border-b border-black/5 pb-1 text-[11px] text-slate-500">
-                                                        <span>WhatsApp Live Preview</span>
-                                                        <span className="font-semibold text-emerald-700 dark:text-emerald-400">Aganyu Verified</span>
-                                                    </div>
-                                                    <div className="rounded-xl bg-white p-3.5 text-xs text-slate-800 shadow-xs dark:bg-emerald-950/60 dark:text-slate-100 border border-black/5 dark:border-emerald-800/40">
-                                                        <p className="font-sans">
-                                                            Hello <strong className="text-emerald-700 dark:text-emerald-400">*{previewRecipients[0]?.first_name || "Seeker"}*</strong>,
-                                                        </p>
-                                                        <div className="my-2.5 space-y-1.5 whitespace-pre-wrap font-sans text-[11.5px] leading-relaxed text-slate-700 dark:text-slate-200">
-                                                            {whatsappHeading && <p className="font-bold text-slate-900 dark:text-white">*{whatsappHeading}*</p>}
-                                                            <p>{whatsappBody.replace(/{{first_name}}/gi, previewRecipients[0]?.first_name || "Seeker").replace(/{{profile_url}}/gi, "https://aganyu.com/dashboard/seeker")}</p>
-                                                        </div>
-                                                        <p className="border-t border-stone-100 pt-2 text-[10px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                                                            Best regards,<br />
-                                                            <span className="font-semibold">Aganyu Support</span>
-                                                        </p>
-                                                        
-                                                        {/* Template URL Button Mockup */}
-                                                        <div className="mt-3 border-t border-stone-100 pt-2.5 dark:border-slate-800">
-                                                            <div className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-50 py-2 text-center text-xs font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                                                                🔗 Go to Dashboard
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="mt-1 flex justify-end text-[9px] text-slate-400">
-                                                            {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
+                                <button
+                                    type="button"
+                                    onClick={resetDraft}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-stone-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-stone-50 dark:border-slate-700 dark:text-slate-300"
+                                >
+                                    <Save size={12} /> Reset
+                                </button>
                             </div>
                         </div>
 
-                        {/* Right: Unified Action & Dispatch Console */}
-                        <div className="space-y-4">
-                            {/* Send Test Box */}
-                            <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
-                                <div className="mb-3 flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <Sparkles size={16} className="text-amber-500" />
-                                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Send Test Preview</h3>
+                        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+                            {/* Editor Form */}
+                            <div className="space-y-4">
+                                {(channel === "EMAIL" || (channel === "BOTH" && activeDraftTab === "EMAIL")) && (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-bold text-slate-700 dark:text-slate-200">Email Subject Line</label>
+                                            <div className="flex items-center gap-1">
+                                                <button type="button" onClick={() => insertEmailTag("{{first_name}}")} className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 hover:bg-stone-200 dark:bg-slate-800 dark:text-slate-300">+ {"{{first_name}}"}</button>
+                                                <button type="button" onClick={() => insertEmailTag("{{profile_url}}")} className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 hover:bg-stone-200 dark:bg-slate-800 dark:text-slate-300">+ {"{{profile_url}}"}</button>
+                                            </div>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={emailSubject}
+                                            onChange={(e) => setEmailSubject(e.target.value)}
+                                            placeholder="Enter subject line..."
+                                            className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:border-[#16324f] focus:outline-hidden dark:border-slate-800 dark:bg-slate-800/80 dark:text-white"
+                                        />
+
+                                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">Email Body (Markdown / Plain Text)</label>
+                                        <textarea
+                                            rows={9}
+                                            value={emailBody}
+                                            onChange={(e) => setEmailBody(e.target.value)}
+                                            placeholder="Compose email content..."
+                                            className="w-full rounded-xl border border-stone-200 bg-stone-50 p-3.5 font-mono text-xs text-slate-900 focus:border-[#16324f] focus:outline-hidden dark:border-slate-800 dark:bg-slate-800/80 dark:text-white"
+                                        />
                                     </div>
-                                    <span className="text-[10px] text-slate-400">Test prior to bulk</span>
-                                </div>
+                                )}
 
-                                <div className="space-y-2.5">
-                                    {(channel === "EMAIL" || channel === "BOTH") && (
-                                        <div>
-                                            <input
-                                                value={testEmail}
-                                                onChange={(e) => setTestEmail(e.target.value)}
-                                                placeholder="Admin test email (e.g. hello@aganyu.com)"
-                                                className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                            />
+                                {(channel === "WHATSAPP" || (channel === "BOTH" && activeDraftTab === "WHATSAPP")) && (
+                                    <div className="space-y-3">
+                                        <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-xs text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200 flex items-center justify-between">
+                                            <span className="font-semibold">📋 WhatsApp Meta Template: <code className="font-mono text-[11px] font-bold">aganyu_broadcast_announcement</code></span>
+                                            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400">Approved</span>
                                         </div>
-                                    )}
 
-                                    {(channel === "WHATSAPP" || channel === "BOTH") && (
-                                        <div>
-                                            <input
-                                                value={testPhone}
-                                                onChange={(e) => setTestPhone(e.target.value)}
-                                                placeholder="Admin test phone (e.g. +265 999 123 456)"
-                                                className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                            />
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-bold text-slate-700 dark:text-slate-200">WhatsApp Heading</label>
+                                            <button type="button" onClick={() => insertWhatsappTag("{{first_name}}")} className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600 hover:bg-stone-200 dark:bg-slate-800 dark:text-slate-300">+ {"{{first_name}}"}</button>
                                         </div>
-                                    )}
+                                        <input
+                                            type="text"
+                                            value={whatsappHeading}
+                                            onChange={(e) => setWhatsappHeading(e.target.value)}
+                                            placeholder="Enter announcement heading..."
+                                            className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:border-[#16324f] focus:outline-hidden dark:border-slate-800 dark:bg-slate-800/80 dark:text-white"
+                                        />
 
-                                    <button
-                                        type="button"
-                                        onClick={() => void handleSend("test")}
-                                        disabled={sending}
-                                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-200 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-all"
-                                    >
-                                        <Sparkles size={13} className="text-amber-500" /> Send Test
-                                    </button>
-                                </div>
+                                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">WhatsApp Message Body</label>
+                                        <textarea
+                                            rows={8}
+                                            value={whatsappBody}
+                                            onChange={(e) => setWhatsappBody(e.target.value)}
+                                            placeholder="Compose WhatsApp body message..."
+                                            className="w-full rounded-xl border border-stone-200 bg-stone-50 p-3.5 font-mono text-xs text-slate-900 focus:border-[#16324f] focus:outline-hidden dark:border-slate-800 dark:bg-slate-800/80 dark:text-white"
+                                        />
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Dispatch Campaign Panel */}
-                            <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
-                                <div className="mb-3 flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <Send size={16} className="text-blue-500" />
-                                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Dispatch Campaign</h3>
+                            {/* Live Device Preview */}
+                            <div className="rounded-2xl border border-stone-200 bg-stone-100 p-4 dark:border-slate-800 dark:bg-slate-950/60 flex flex-col justify-between">
+                                <div>
+                                    <div className="mb-3 flex items-center justify-between border-b border-stone-200 pb-2 dark:border-slate-800">
+                                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Live Device Preview</span>
+                                        <Smartphone size={14} className="text-emerald-500" />
                                     </div>
-                                    <span className="text-[11px] font-bold text-slate-500">{targetCount} recipients</span>
+
+                                    {/* Realistic WhatsApp Chat Bubble Mockup */}
+                                    <div className="space-y-3">
+                                        <div className="rounded-2xl border border-emerald-200/80 bg-[#efeae2] p-3.5 shadow-sm dark:bg-slate-900">
+                                            <div className="rounded-xl bg-[#dcf8c6] p-3 text-xs text-slate-900 shadow-xs dark:bg-emerald-900/60 dark:text-emerald-100">
+                                                <p className="font-extrabold text-[#075e54] dark:text-emerald-300">
+                                                    Aganyu • {whatsappHeading || "Notification"}
+                                                </p>
+                                                <p className="mt-1.5 whitespace-pre-wrap leading-relaxed text-[11px]">
+                                                    Hello <span className="font-bold underline text-emerald-800 dark:text-emerald-200">User</span>,
+                                                    {"\n\n"}
+                                                    {whatsappBody || "Message preview will appear here..."}
+                                                </p>
+                                                <div className="mt-2 text-right text-[9px] font-medium text-slate-500 dark:text-emerald-300/70">
+                                                    {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • WhatsApp
+                                                </div>
+                                            </div>
+                                            <div className="mt-2 text-center">
+                                                <span className="inline-block rounded-lg bg-white px-3 py-1 text-[10px] font-bold text-emerald-700 shadow-xs dark:bg-slate-800 dark:text-emerald-300">
+                                                    🔗 Open Dashboard Profile
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-                                    Broadcast will be dispatched to <strong>{selectedAudienceMeta.label}</strong> via <strong>{channel}</strong>.
-                                </p>
+                                <div className="mt-4 rounded-xl border border-stone-200/80 bg-white p-3 text-center text-[10px] text-slate-500 dark:border-slate-800 dark:bg-slate-900">
+                                    Previews use recipient sample variables (<code className="font-mono text-emerald-600">first_name</code>, <code className="font-mono text-emerald-600">profile_url</code>) dynamically.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ── STEP 3: TEST & BULK DISPATCH PANEL ─────────────────── */}
+                    <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                        <div className="mb-4 flex items-center gap-2 border-b border-stone-100 pb-3 dark:border-slate-800">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#16324f] text-xs font-bold text-white">3</span>
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Test & Dispatch Campaign</h3>
+                        </div>
+
+                        <div className="grid gap-6 lg:grid-cols-2">
+                            {/* Test Sender */}
+                            <div className="rounded-xl border border-stone-200 bg-stone-50/60 p-4 space-y-3 dark:border-slate-800 dark:bg-slate-800/40">
+                                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                    <Smartphone size={13} className="text-blue-500" /> Send Single Test Message
+                                </h4>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                    <input
+                                        type="email"
+                                        value={testEmail}
+                                        onChange={(e) => setTestEmail(e.target.value)}
+                                        placeholder="Admin test email..."
+                                        className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={testPhone}
+                                        onChange={(e) => setTestPhone(e.target.value)}
+                                        placeholder="WhatsApp phone (+265...)"
+                                        className="rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handleSend("test")}
+                                    disabled={sending}
+                                    className="w-full rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300 disabled:opacity-50 transition-colors"
+                                >
+                                    {sending ? "Sending Test..." : "Send Test Message"}
+                                </button>
+                            </div>
+
+                            {/* Bulk Dispatch */}
+                            <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3 dark:border-emerald-900/40 dark:bg-emerald-950/20 flex flex-col justify-between">
+                                <div>
+                                    <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                        <Send size={13} className="text-emerald-500" /> Dispatch Campaign to Segment
+                                    </h4>
+                                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                                        Targeting <strong className="text-slate-900 dark:text-white">{targetCount} recipients</strong> in <strong className="text-slate-900 dark:text-white">{selectedAudienceMeta.label}</strong> via <strong className="text-slate-900 dark:text-white">{channel}</strong>.
+                                    </p>
+                                </div>
 
                                 <button
                                     type="button"
-                                    onClick={() => void handleSend("send")}
-                                    disabled={sending || targetCount <= 0}
-                                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#16324f] px-4 py-3 text-sm font-semibold text-white shadow-sm hover:opacity-95 disabled:opacity-50 transition-all"
+                                    onClick={() => handleSend("send")}
+                                    disabled={sending || targetCount === 0}
+                                    className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-emerald-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                                 >
-                                    {sending ? <Mail size={15} className="animate-pulse" /> : <Send size={15} />}
-                                    {sending ? "Broadcasting..." : `Send to ${targetCount} Recipient${targetCount === 1 ? "" : "s"}`}
+                                    <Send size={14} />
+                                    {sending ? "Dispatching Campaign..." : `Dispatch Campaign to ${targetCount} Recipients`}
                                 </button>
-
-                                {result && (
-                                    <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200">
-                                        <div className="flex items-center gap-1.5 font-semibold">
-                                            <CheckCircle2 size={13} /> Dispatch Telemetry
-                                        </div>
-                                        <div className="mt-1.5 space-y-0.5 text-[11px]">
-                                            {(channel === "EMAIL" || channel === "BOTH") && (
-                                                <p>Emails Sent: <strong>{result.sentEmail}</strong> (Failed: {result.failedEmail})</p>
-                                            )}
-                                            {(channel === "WHATSAPP" || channel === "BOTH") && (
-                                                <p>WhatsApp Sent: <strong>{result.sentWhatsApp}</strong> (Failed: {result.failedWhatsApp}, Skipped: {result.skippedWhatsApp})</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         </div>
+
+                        {/* Result Notification Banner */}
+                        {result && (
+                            <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs dark:border-emerald-900/50 dark:bg-emerald-950/40">
+                                <h4 className="font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
+                                    <CheckCircle2 size={15} /> Campaign Dispatch Summary
+                                </h4>
+                                <div className="mt-2 grid grid-cols-2 gap-2 text-slate-700 dark:text-slate-300 sm:grid-cols-4">
+                                    <span>Total: <strong>{result.total}</strong></span>
+                                    <span>Email Sent: <strong className="text-blue-600">{result.sentEmail}</strong></span>
+                                    <span>WhatsApp Sent: <strong className="text-emerald-600">{result.sentWhatsApp}</strong></span>
+                                    <span>Failures: <strong className="text-red-500">{result.failedEmail + result.failedWhatsApp}</strong></span>
+                                </div>
+                            </div>
+                        )}
                     </div>
-
-                    {/* Audience Preview Modal / Drawer */}
-                    {previewModalOpen && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
-                            <div className="w-full max-w-xl rounded-2xl border border-stone-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
-                                <div className="mb-4 flex items-center justify-between border-b border-stone-100 pb-3 dark:border-slate-800">
-                                    <div>
-                                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">Audience Preview ({selectedAudienceMeta.label})</h3>
-                                        <p className="text-xs text-slate-500">{selectedAudienceMeta.description}</p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPreviewModalOpen(false)}
-                                        className="rounded-lg p-1 text-slate-400 hover:bg-stone-100 hover:text-slate-600 dark:hover:bg-slate-800"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-
-                                <div className="max-h-[350px] space-y-2 overflow-y-auto pr-1">
-                                    {previewRecipients.length > 0 ? (
-                                        previewRecipients.map((recipient, idx) => (
-                                            <div key={idx} className="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-800/60">
-                                                <div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="font-semibold text-slate-800 dark:text-slate-100">{recipient.first_name || "User"}</span>
-                                                        {recipient.is_premium && (
-                                                            <span className="flex items-center gap-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
-                                                                <Crown size={10} /> VIP
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-slate-500 mt-0.5">{recipient.email}</p>
-                                                </div>
-                                                {recipient.phone ? (
-                                                    <span className="flex items-center gap-1 font-mono text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                                                        <Phone size={10} /> {recipient.phone}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[10px] text-slate-400">No phone</span>
-                                                )}
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <p className="py-6 text-center text-xs text-slate-400">No preview recipients available.</p>
-                                    )}
-                                </div>
-
-                                <div className="mt-4 flex justify-end">
-                                    <button
-                                        type="button"
-                                        onClick={() => setPreviewModalOpen(false)}
-                                        className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
-                                    >
-                                        Close
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
-            ) : activeTab === "HISTORY" ? (
-                /* Campaign History View */
-                <div className="rounded-2xl border border-stone-200 bg-white/90 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
-                    <div className="mb-4 flex items-center justify-between">
-                        <div>
-                            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Campaign Dispatch History</h3>
-                            <p className="text-xs text-slate-500">Track real-time delivery performance and logs for all dispatched campaigns.</p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => void fetchPreview(audience)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-stone-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                        >
-                            <RefreshCw size={13} /> Refresh
-                        </button>
-                    </div>
+            )}
 
-                    {campaignHistory.length > 0 ? (
-                        <>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
-                                    <thead className="border-b border-stone-200 bg-stone-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
-                                        <tr>
-                                            <th className="px-4 py-3">Date</th>
-                                            <th className="px-4 py-3">Audience & Channel</th>
-                                            <th className="px-4 py-3">Status</th>
-                                            <th className="px-4 py-3">Total</th>
-                                            <th className="px-4 py-3">Sent</th>
-                                            <th className="px-4 py-3">Failed</th>
-                                            <th className="px-4 py-3 text-right">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-stone-100 dark:divide-slate-800">
-                                        {paginatedCampaignHistory.map((camp) => (
-                                            <tr key={camp.id} className="hover:bg-stone-50/50 dark:hover:bg-slate-800/40">
-                                                <td className="whitespace-nowrap px-4 py-3 font-mono text-[11px]">
-                                                    {new Date(camp.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="font-semibold text-slate-900 dark:text-slate-100">{camp.audience}</div>
-                                                    <div className="text-[10px] text-slate-400">{camp.channel}</div>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold ${
-                                                        camp.status === 'COMPLETED'
-                                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                                                            : camp.status === 'PROCESSING'
-                                                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                                                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                                                    }`}>
-                                                        {camp.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3 font-semibold">{camp.total_recipients || 0}</td>
-                                                <td className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">{camp.sent_count || 0}</td>
-                                                <td className="px-4 py-3 font-semibold text-red-600 dark:text-red-400">{camp.failed_count || 0}</td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setSelectedCampaign(camp);
-                                                            void fetchCampaignRecipients(camp.id);
-                                                        }}
-                                                        className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                                                    >
-                                                        <Eye size={12} /> Details
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="p-4 border-t border-stone-200/80 dark:border-slate-800">
-                                <Pagination
-                                    currentPage={campaignPage}
-                                    totalPages={totalCampaignPages}
-                                    totalItems={campaignHistory.length}
-                                    itemsPerPage={campaignLimit}
-                                    pageSizeOptions={[5, 10, 20]}
-                                    onPageChange={(page) => setCampaignPage(page)}
-                                    onLimitChange={(newLimit) => {
-                                        setCampaignLimit(newLimit);
-                                        setCampaignPage(1);
-                                    }}
+            {/* ── TAB 2: DEDICATED FULL-HEIGHT LIVE WHATSAPP INBOX ────────────── */}
+            {activeTab === "INBOX" && (
+                <div className="rounded-2xl border border-stone-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden flex flex-col md:flex-row h-[620px]">
+                    {/* Left: Search & Conversation List */}
+                    <div className="w-full md:w-80 border-r border-stone-200 dark:border-slate-800 flex flex-col bg-stone-50/50 dark:bg-slate-900/50">
+                        <div className="p-3 border-b border-stone-200 dark:border-slate-800">
+                            <div className="relative">
+                                <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+                                <input
+                                    type="text"
+                                    value={inboxSearch}
+                                    onChange={(e) => setInboxSearch(e.target.value)}
+                                    placeholder="Search conversations..."
+                                    className="w-full rounded-xl border border-stone-200 bg-white pl-8 pr-3 py-1.5 text-xs text-slate-900 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 />
                             </div>
-                        </>
-                    ) : (
-                        <div className="py-12 text-center text-xs text-slate-400">
-                            No campaigns dispatched yet. Dispatched campaigns will record delivery logs here.
                         </div>
-                    )}
 
-                    {/* Campaign Recipient Logs Drill-Down Modal */}
-                    {selectedCampaign && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
-                            <div className="w-full max-w-2xl rounded-2xl border border-stone-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
-                                <div className="mb-4 flex items-center justify-between border-b border-stone-100 pb-3 dark:border-slate-800">
-                                    <div>
-                                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                                            Campaign Drill-Down ({selectedCampaign.audience})
-                                        </h3>
-                                        <p className="text-xs text-slate-500">
-                                            Dispatched on {new Date(selectedCampaign.created_at).toLocaleString()} via {selectedCampaign.channel}
-                                        </p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setSelectedCampaign(null);
-                                            setCampaignRecipients([]);
-                                        }}
-                                        className="rounded-lg p-1 text-slate-400 hover:bg-stone-100 hover:text-slate-600 dark:hover:bg-slate-800"
-                                    >
-                                        ✕
-                                    </button>
+                        <div className="flex-1 overflow-y-auto divide-y divide-stone-100 dark:divide-slate-800/60">
+                            {filteredConversations.length === 0 ? (
+                                <div className="p-6 text-center text-xs text-slate-400">
+                                    No active WhatsApp conversations found.
                                 </div>
-
-                                {loadingRecipients ? (
-                                    <div className="py-12 text-center text-xs text-slate-400 animate-pulse">
-                                        Loading recipient logs...
-                                    </div>
-                                ) : campaignRecipients.length > 0 ? (
-                                    <div className="max-h-[380px] space-y-2 overflow-y-auto pr-1">
-                                        {campaignRecipients.map((rec, idx) => (
-                                            <div
-                                                key={rec.id || idx}
-                                                className="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs dark:border-slate-800 dark:bg-slate-800/60"
-                                            >
-                                                <div>
-                                                    <p className="font-semibold text-slate-800 dark:text-slate-100">{rec.email || "No Email"}</p>
-                                                    <p className="font-mono text-[11px] text-slate-500">{rec.phone || "No Phone"}</p>
-                                                    {rec.error_message && (
-                                                        <p className="mt-0.5 text-[11px] font-medium text-red-600 dark:text-red-400">
-                                                            ⚠️ Error: {rec.error_message} {rec.error_code ? `(${rec.error_code})` : ""}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                <div className="text-right">
-                                                    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold ${
-                                                        rec.status === 'DELIVERED' || rec.status === 'READ'
-                                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                                                            : rec.status === 'SENT'
-                                                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                                                            : rec.status === 'FAILED'
-                                                            ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
-                                                            : 'bg-stone-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                                                    }`}>
-                                                        {rec.status}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="py-12 text-center text-xs text-slate-400">
-                                        No individual recipient logs found for this campaign.
-                                    </div>
-                                )}
-
-                                <div className="mt-4 flex justify-end">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setSelectedCampaign(null);
-                                            setCampaignRecipients([]);
-                                        }}
-                                        className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
-                                    >
-                                        Close
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            ) : (
-                /* Live 2-Way WhatsApp Inbox View */
-                <div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-                    {/* Left Conversations List */}
-                    <div className="rounded-2xl border border-stone-200 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-                        <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Seeker WhatsApp Threads</h3>
-                            <div className="flex items-center gap-1.5">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const phoneInput = window.prompt("Enter recipient WhatsApp phone number (e.g. +265888123456 or 0888123456):");
-                                        if (phoneInput && phoneInput.trim()) {
-                                            const cleanPhone = phoneInput.trim();
-                                            const existing = conversations.find(c => c.phone === cleanPhone);
-                                            if (existing) {
-                                                setSelectedPhone(cleanPhone);
-                                            } else {
-                                                const newConv = {
-                                                    phone: cleanPhone,
-                                                    first_name: "Direct Contact",
-                                                    is_premium: false,
-                                                    last_message: "Started direct thread",
-                                                    messages: []
-                                                };
-                                                setConversations(prev => [newConv, ...prev]);
-                                                setSelectedPhone(cleanPhone);
-                                            }
-                                        }
-                                    }}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                                >
-                                    + New Chat
-                                </button>
-                                <button type="button" onClick={() => void fetchPreview(audience)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                                    <RefreshCw size={14} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            {conversations.length > 0 ? (
-                                conversations.map((conv) => {
-                                    const isSelected = selectedPhone === conv.phone;
+                            ) : (
+                                filteredConversations.map((conv) => {
+                                    const isSel = conv.phone === activeConversation?.phone;
                                     return (
                                         <button
                                             key={conv.phone}
                                             type="button"
                                             onClick={() => setSelectedPhone(conv.phone)}
-                                            className={`w-full rounded-xl border p-3 text-left transition-all ${
-                                                isSelected
-                                                    ? "border-emerald-500 bg-emerald-50/60 dark:border-emerald-600 dark:bg-emerald-950/40"
-                                                    : "border-stone-200 bg-stone-50 hover:border-stone-300 dark:border-slate-800 dark:bg-slate-900"
+                                            className={`w-full p-3.5 text-left transition-all flex items-start gap-3 ${
+                                                isSel
+                                                    ? "bg-white shadow-xs dark:bg-slate-800 border-l-4 border-emerald-500"
+                                                    : "hover:bg-stone-100/60 dark:hover:bg-slate-800/40"
                                             }`}
                                         >
-                                            <div className="flex items-center justify-between">
-                                                <p className="font-semibold text-slate-900 dark:text-white">{conv.first_name || conv.phone}</p>
-                                                {conv.is_premium && (
-                                                    <Crown size={12} className="text-amber-500" />
-                                                )}
+                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                                {(conv.first_name || conv.phone || "U").slice(0, 2).toUpperCase()}
                                             </div>
-                                            <p className="mt-0.5 text-xs text-slate-500 font-mono">{conv.phone}</p>
-                                            <p className="mt-1 line-clamp-1 text-xs text-slate-600 dark:text-slate-300">{conv.last_message}</p>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center justify-between">
+                                                    <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
+                                                        {conv.first_name || "WhatsApp User"}
+                                                    </p>
+                                                    <span className="text-[10px] text-slate-400">
+                                                        {new Date(conv.updated_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                                <p className="truncate text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                                    {conv.last_message || "No messages"}
+                                                </p>
+                                                <span className="mt-1 inline-block text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                                                    {conv.phone}
+                                                </span>
+                                            </div>
                                         </button>
                                     );
                                 })
-                            ) : (
-                                <p className="p-4 text-center text-xs text-slate-400">
-                                    No incoming WhatsApp replies yet. Outbound broadcasts with user replies will appear here in real-time.
-                                </p>
                             )}
                         </div>
                     </div>
 
-                    {/* Right Active Conversation Chat Thread */}
-                    <div className="flex flex-col rounded-2xl border border-stone-200 bg-white/80 p-5 dark:border-slate-800 dark:bg-slate-900/70 min-h-[500px]">
+                    {/* Right: Active Chat Thread Workspace */}
+                    <div className="flex-1 flex flex-col h-full bg-[#efeae2]/40 dark:bg-slate-950/40">
                         {activeConversation ? (
                             <>
-                                <div className="border-b border-stone-200 pb-4 dark:border-slate-800 flex items-center justify-between">
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                                            {activeConversation.first_name || "Seeker"}
-                                        </h3>
-                                        <p className="text-xs text-slate-500 flex items-center gap-1">
-                                            <Phone size={12} className="text-emerald-500" /> {activeConversation.phone}
-                                        </p>
+                                {/* Chat Header */}
+                                <div className="p-3.5 border-b border-stone-200 bg-white dark:border-slate-800 dark:bg-slate-900 flex items-center justify-between shrink-0">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">
+                                            {(activeConversation.first_name || activeConversation.phone).slice(0, 2).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                                                {activeConversation.first_name || "WhatsApp User"}
+                                            </h4>
+                                            <p className="text-[10px] text-slate-500">{activeConversation.phone}</p>
+                                        </div>
                                     </div>
-                                    {activeConversation.is_premium && (
-                                        <Badge label="Premium Seeker" variant="yellow" />
-                                    )}
+                                    <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300">
+                                        24h Reply Window Active
+                                    </span>
                                 </div>
 
-                                {/* Chat Messages Container */}
-                                <div className="flex-1 space-y-3 overflow-y-auto py-6">
-                                    {[...(activeConversation.messages || [])].reverse().map((msg: any, i: number) => {
+                                {/* Scrollable Message Bubbles */}
+                                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                                    {(activeConversation.messages || []).map((msg: any) => {
                                         const isInbound = msg.direction === "INBOUND";
                                         return (
                                             <div
-                                                key={i}
-                                                className={`flex ${isInbound ? "justify-start" : "justify-end"}`}
+                                                key={msg.id}
+                                                className={`flex flex-col ${isInbound ? "items-start" : "items-end"}`}
                                             >
                                                 <div
-                                                    className={`max-w-[75%] rounded-2xl px-4 py-3 text-xs shadow-sm ${
+                                                    className={`max-w-[75%] rounded-2xl p-3 text-xs shadow-xs ${
                                                         isInbound
-                                                            ? "bg-stone-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200"
-                                                            : "bg-emerald-600 text-white dark:bg-emerald-700"
+                                                            ? "bg-white text-slate-900 dark:bg-slate-800 dark:text-white rounded-tl-xs"
+                                                            : "bg-[#075e54] text-white dark:bg-emerald-900 rounded-tr-xs"
                                                     }`}
                                                 >
-                                                    <p className="whitespace-pre-wrap">{msg.message_text}</p>
-                                                    <p
-                                                        className={`mt-1 text-[10px] ${
-                                                            isInbound ? "text-slate-400" : "text-emerald-100"
-                                                        }`}
-                                                    >
-                                                        {new Date(msg.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </p>
-                                                    {!isInbound && (
-                                                        <div className="mt-0.5">
-                                                            <DeliveryStatusBadge status={msg.status} />
-                                                        </div>
-                                                    )}
+                                                    <p className="whitespace-pre-wrap leading-relaxed">{msg.message_text}</p>
+                                                    <div className="mt-1 flex items-center justify-end gap-1.5 text-[9px] opacity-75">
+                                                        <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        {!isInbound && <DeliveryStatusBadge status={msg.status} />}
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
                                     })}
                                 </div>
 
-                                {/* 2-Way Reply Box */}
-                                <div className="border-t border-stone-200 pt-4 dark:border-slate-800 space-y-2">
-                                    <div className="flex gap-2">
-                                        <input
-                                            value={replyText}
-                                            onChange={(e) => setReplyText(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === "Enter" && !e.shiftKey) {
-                                                    e.preventDefault();
-                                                    void handleSendLiveReply();
-                                                }
-                                            }}
-                                            placeholder="Type direct WhatsApp message to seeker..."
-                                            className="flex-1 rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => void handleSendLiveReply()}
-                                            disabled={sendingReply || !replyText.trim()}
-                                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
-                                        >
-                                            <Send size={15} /> Send
-                                        </button>
-                                    </div>
-                                    <p className="text-[11px] text-slate-400">
-                                        💡 <span className="font-semibold">Meta Policy:</span> Direct freeform replies can only be sent within 24 hours of the user's last inbound message.
-                                    </p>
+                                {/* Reply Input Bar */}
+                                <div className="p-3 border-t border-stone-200 bg-white dark:border-slate-800 dark:bg-slate-900 flex items-center gap-2 shrink-0">
+                                    <input
+                                        type="text"
+                                        value={replyText}
+                                        onChange={(e) => setReplyText(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && handleSendLiveReply()}
+                                        placeholder="Type your WhatsApp reply..."
+                                        className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-xs text-slate-900 focus:outline-hidden dark:border-slate-800 dark:bg-slate-800 dark:text-white"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleSendLiveReply}
+                                        disabled={sendingReply || !replyText.trim()}
+                                        className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                                    >
+                                        {sendingReply ? "Sending..." : "Reply"}
+                                    </button>
                                 </div>
                             </>
                         ) : (
-                            <div className="flex h-full flex-col items-center justify-center text-center text-slate-400">
-                                <MessageCircle size={32} className="text-slate-300 dark:text-slate-700" />
-                                <p className="mt-2 text-sm">Select a conversation on the left to view messages and respond.</p>
+                            <div className="flex h-full items-center justify-center text-xs text-slate-400">
+                                Select a conversation to view chat history.
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* ── TAB 3: CAMPAIGN HISTORY ────────────────────────────────────── */}
+            {activeTab === "HISTORY" && (
+                <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Broadcast Campaign Log</h3>
+
+                    {campaignHistory.length === 0 ? (
+                        <div className="py-12 text-center text-xs text-slate-400">
+                            No past broadcast campaigns found.
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-stone-100 dark:divide-slate-800">
+                            {paginatedCampaignHistory.map((item) => (
+                                <div key={item.id} className="py-3 flex items-center justify-between text-xs">
+                                    <div>
+                                        <p className="font-bold text-slate-900 dark:text-white">
+                                            {item.email_subject || item.whatsapp_heading || "Broadcast Campaign"}
+                                        </p>
+                                        <p className="text-[11px] text-slate-500 mt-0.5">
+                                            Audience: <strong>{item.audience}</strong> • Channel: <strong>{item.channel}</strong> • {new Date(item.created_at).toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <Badge label={`Sent: ${item.total_recipients || 0}`} variant="green" />
+                                </div>
+                            ))}
+
+                            {totalCampaignPages > 1 && (
+                                <div className="pt-4">
+                                    <Pagination
+                                        currentPage={campaignPage}
+                                        totalPages={totalCampaignPages}
+                                        totalItems={campaignHistory.length}
+                                        itemsPerPage={campaignLimit}
+                                        onPageChange={(p) => setCampaignPage(p)}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Recipient List Modal */}
+            {previewModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+                    <div className="w-full max-w-lg rounded-2xl border border-stone-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900 space-y-4">
+                        <div className="flex items-center justify-between border-b border-stone-100 pb-3 dark:border-slate-800">
+                            <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                                Recipient Segment List ({selectedAudienceMeta.label})
+                            </h4>
+                            <button onClick={() => setPreviewModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+                        </div>
+                        <div className="max-h-64 overflow-y-auto space-y-2">
+                            {previewRecipients.map((r, i) => (
+                                <div key={i} className="flex items-center justify-between rounded-lg bg-stone-50 p-2.5 text-xs dark:bg-slate-800">
+                                    <div>
+                                        <p className="font-bold text-slate-900 dark:text-white">{r.first_name}</p>
+                                        <p className="text-[11px] text-slate-500">{r.email}</p>
+                                    </div>
+                                    {r.phone && <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{r.phone}</span>}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
