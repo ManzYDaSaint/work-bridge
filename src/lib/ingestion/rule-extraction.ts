@@ -100,7 +100,7 @@ const HOW_TO_APPLY_PATTERN = /(?:how\s*to\s*apply|application\s*(?:procedure|pro
 export function extractJobFields(
     rawText: string,
     contentType: string,
-    sourceDefaults?: { defaultLocation?: string }
+    sourceDefaults?: { defaultLocation?: string; sourceBaseUrl?: string }
 ): RuleExtractionResult {
     const data: Partial<StructuredJobFields> = {};
     const confidence: Partial<FieldConfidenceMap> = {};
@@ -211,6 +211,29 @@ export function extractJobFields(
         data.display_company_name = cleanText(companyMatch);
         confidence.display_company_name = 90;
     }
+
+    // Fallback 1: RSS <dc:creator> or <author> tag (common on Malawian RSS feeds)
+    if (!data.display_company_name) {
+        const creatorMatch = /<(?:dc:creator|author)>\s*(?:<!\[CDATA\[)?\s*([^<\]]{2,80}?)\s*(?:\]\]>)?\s*<\/(?:dc:creator|author)>/i.exec(text);
+        if (creatorMatch?.[1]) {
+            const creator = cleanText(creatorMatch[1]);
+            // Ignore generic author names (admin, webmaster, editor, jobs, etc.)
+            if (creator && !/^(admin|webmaster|editor|jobs?|careers?|hr|author|anonymous)$/i.test(creator)) {
+                data.display_company_name = creator;
+                confidence.display_company_name = 75;
+            }
+        }
+    }
+
+    // Fallback 2: Parse from job title string — handles "Job Title – Company", "Job Title at Company", "Job Title | Company"
+    if (!data.display_company_name && data.title) {
+        const titleCompany = extractCompanyFromTitle(data.title);
+        if (titleCompany) {
+            data.display_company_name = titleCompany;
+            confidence.display_company_name = 65;
+        }
+    }
+
     if (!data.display_company_name) {
         confidence.display_company_name = 0;
     }
@@ -293,15 +316,32 @@ export function extractJobFields(
     confidence.qualification = qualConf;
 
     // ── Skills ────────────────────────────────────────────────
-    // Strip HTML tags and entities before running skill normalization
+    // Extract the skills/requirements section specifically, so we don't pass the
+    // entire page into the normalizer and accidentally tag noise as skills.
     const cleanTextForSkills = text.replace(/<[^>]*>/g, ' ').replace(/&[a-zA-Z0-9#]+;/g, ' ');
-    const normalized = normalizeSkills(cleanTextForSkills);
-    if (normalized.length > 0) {
-        data.skills = normalized;
-        confidence.skills = 75;
+    const skillsSection = extractSkillsSection(cleanTextForSkills);
+
+    if (skillsSection) {
+        // We found a dedicated requirements/skills section — high confidence
+        const normalized = normalizeSkills(skillsSection);
+        if (normalized.length > 0) {
+            data.skills = normalized;
+            confidence.skills = 75;
+        } else {
+            data.skills = [];
+            confidence.skills = 0;
+        }
     } else {
-        data.skills = [];
-        confidence.skills = 0;
+        // No dedicated section found — scan full text but set low confidence
+        // so Gemini gets the opportunity to re-extract properly.
+        const normalized = normalizeSkills(cleanTextForSkills);
+        if (normalized.length > 0) {
+            data.skills = normalized;
+            confidence.skills = 45; // Below CRITICAL_FIELD_THRESHOLD (70) → Gemini will re-extract
+        } else {
+            data.skills = [];
+            confidence.skills = 0;
+        }
     }
 
     // must_have / nice_to_have require semantic understanding — leave for Gemini
@@ -334,13 +374,8 @@ export function extractJobFields(
     }
 
     // ── Application URL ──────────────────────────────────────
-    const urls = text.match(URL_REGEX) || [];
-    let applyUrl = urls.find(u =>
-        /apply|career|recruit|vacancy|job/i.test(u)
-    ) || urls[0] || null;
+    const applyUrl = extractBestApplyUrl(text, sourceDefaults?.sourceBaseUrl);
     if (applyUrl) {
-        // Decode HTML entities like &amp;#038; in external URL
-        applyUrl = applyUrl.replace(/&amp;#038;/g, '&').replace(/&amp;/g, '&');
         data.external_apply_url = applyUrl;
         confidence.external_apply_url = 75;
     } else {
@@ -348,9 +383,9 @@ export function extractJobFields(
     }
 
     // ── Application Email ─────────────────────────────────────
-    const emails = text.match(EMAIL_REGEX) || [];
-    if (emails.length > 0) {
-        data.apply_email = emails[0];
+    const bestEmail = extractBestApplyEmail(text);
+    if (bestEmail) {
+        data.apply_email = bestEmail;
         confidence.apply_email = 85;
     } else {
         confidence.apply_email = 0;
@@ -577,3 +612,186 @@ function cleanDescriptionBody(description: string): string {
         .trim();
 }
 
+/**
+ * Finds the skills / requirements / competencies section within a plain-text
+ * job posting and returns only that slice.
+ *
+ * Strategy:
+ *  1. Scan for a section header that signals skills (e.g. "REQUIREMENTS:", "KEY COMPETENCIES:")
+ *  2. Capture text from that header until the NEXT recognized section header (or end of text)
+ *  3. Return null if no skills section is found — caller falls back to full-text scan at low confidence
+ */
+function extractSkillsSection(plainText: string): string | null {
+    // Headers that indicate the start of a skills/requirements block
+    const SKILLS_SECTION_HEADERS =
+        /(?:^|\n)\s*(?:KEY\s+)?(?:REQUIREMENTS?|SKILLS?|COMPETENC(?:IES|Y)|QUALIFICATIONS?\s*(?:AND|&)?\s*(?:REQUIREMENTS?|SKILLS?|EXPERIENCE)?|EXPERIENCE\s+(?:AND|&)?\s*(?:SKILLS?|QUALIFICATIONS?|REQUIREMENTS?)|PERSON\s+SPECIFICATION|DESIRED\s+PROFILE|CANDIDATE\s+PROFILE|WHAT\s+WE(?:'RE|\s+ARE)\s+LOOKING\s+FOR|MINIMUM\s+REQUIREMENTS?|JOB\s+REQUIREMENTS?)\s*[:\-]?/gi;
+
+    // Headers that mark the END of the skills section (next section)
+    const NEXT_SECTION_HEADERS =
+        /(?:^|\n)\s*(?:HOW\s+TO\s+APPLY|APPLICATION\s+(?:PROCESS|INSTRUCTIONS?|METHOD|PROCEDURE)|TO\s+APPLY|CLOSING\s+DATE|DEADLINE|SALARY|REMUNERATION|COMPENSATION|BENEFITS?|WHAT\s+WE\s+OFFER|ABOUT\s+(?:US|THE\s+(?:COMPANY|ORGANISATION|ORGANIZATION))|EQUAL\s+OPPORTUNITY|DISCLAIMER|NOTE\s*:|NB\s*:|CONTACT|SUBMIT)\s*[:\-]?/gi;
+
+    // Find first matching skills section header
+    SKILLS_SECTION_HEADERS.lastIndex = 0;
+    const startMatch = SKILLS_SECTION_HEADERS.exec(plainText);
+    if (!startMatch) return null;
+
+    const sectionStart = startMatch.index + startMatch[0].length;
+
+    // Find the next section header after our skills section starts
+    NEXT_SECTION_HEADERS.lastIndex = sectionStart;
+    const endMatch = NEXT_SECTION_HEADERS.exec(plainText);
+    const sectionEnd = endMatch ? endMatch.index : plainText.length;
+
+    const section = plainText.slice(sectionStart, sectionEnd).trim();
+
+    // Sanity check — must be at least 20 chars and at most 3000 chars
+    if (section.length < 20 || section.length > 3000) return null;
+
+    return section;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Apply URL Extractor
+// ─────────────────────────────────────────────────────────────────
+
+/** Domains that are never valid external apply URLs (social sharing, CDN, analytics). */
+const BLOCKED_URL_DOMAINS = [
+    'facebook.com', 'fb.com', 'twitter.com', 'x.com', 'linkedin.com',
+    'instagram.com', 'youtube.com', 'tiktok.com', 'pinterest.com',
+    'wa.me', 'whatsapp.com', 'telegram.me', 't.me',
+    'google.com', 'googleapis.com', 'googletagmanager.com', 'gstatic.com',
+    'doubleclick.net', 'addthis.com', 'sharethis.com',
+    'gravatar.com', 'wordpress.org', 'schema.org', 'ogp.me', 'w3.org',
+];
+
+/** Signals the nearby URL is intended for applying. */
+const APPLY_INTENT_URL_KEYWORDS = /apply|application|submit|register|send\s+cv|send\s+resume|click\s+here|online\s+application/i;
+
+/**
+ * Extracts the best external apply URL from raw page text.
+ * Filters social/CDN/source-domain URLs. Scores by proximity to apply-intent keywords.
+ */
+function extractBestApplyUrl(text: string, sourceBaseUrl?: string): string | null {
+    let sourceDomain: string | null = null;
+    if (sourceBaseUrl) {
+        try { sourceDomain = new URL(sourceBaseUrl).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+    }
+
+    // Detect page's own domain from og:url or canonical
+    const ownUrlMatch = /content=["']([^"']+)["'][^>]*(?:property|name)=["']og:url["']|(?:property|name)=["']og:url["'][^>]*content=["']([^"']+)["']|<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i.exec(text);
+    let pageDomain: string | null = null;
+    if (ownUrlMatch) {
+        const rawUrl = ownUrlMatch[1] || ownUrlMatch[2] || ownUrlMatch[3];
+        if (rawUrl) {
+            try { pageDomain = new URL(rawUrl).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+        }
+    }
+
+    const urls = text.match(URL_REGEX) || [];
+    const candidates: { url: string; score: number }[] = [];
+
+    for (const rawUrl of urls) {
+        const url = rawUrl
+            .replace(/&amp;#038;/g, '&')
+            .replace(/&amp;/g, '&')
+            .replace(/['")\]>]+$/, '');
+
+        const lower = url.toLowerCase();
+
+        // Skip blocked domains and source/page own domain
+        if (BLOCKED_URL_DOMAINS.some(d => lower.includes(d))) continue;
+        if (sourceDomain && lower.includes(sourceDomain)) continue;
+        if (pageDomain && lower.includes(pageDomain)) continue;
+
+        // Skip static asset URLs
+        if (/\.(png|jpg|jpeg|gif|svg|webp|ico|css|js|woff|woff2|ttf)(\?|$)/i.test(url)) continue;
+        if (/wp-content|wp-includes|themes\/|plugins\//i.test(url)) continue;
+
+        // Score by proximity to apply-intent keyword in +-300 char window
+        const urlPos = text.indexOf(rawUrl);
+        const windowText = text.slice(Math.max(0, urlPos - 300), Math.min(text.length, urlPos + rawUrl.length + 300));
+        const hasIntent = APPLY_INTENT_URL_KEYWORDS.test(windowText);
+
+        let score = hasIntent ? 10 : 0;
+        if (/apply|form|register|application/i.test(url)) score += 5;
+        if (/career|recruit|vacancy|job/i.test(url)) score += 2;
+
+        candidates.push({ url, score });
+    }
+
+    if (candidates.length === 0) return null;
+    candidates.sort((a, b) => b.score - a.score);
+    return candidates[0].url;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Apply Email Extractor
+// ─────────────────────────────────────────────────────────────────
+
+const EMAIL_APPLY_CONTEXT = /\b(?:send|email|submit|apply|forward|applications?\s+to|cv\s+to|resume\s+to|by\s+email)\b/i;
+const GENERIC_EMAIL_PREFIXES = /^(info|contact|hello|support|admin|webmaster|noreply|no-reply|postmaster|enquir|enquiries|general)/i;
+
+/**
+ * Returns the email address most likely intended for job applications.
+ * Picks the email with the smallest character distance to an apply-intent keyword.
+ */
+function extractBestApplyEmail(text: string): string | null {
+    const plain = text.replace(/<[^>]+>/g, ' ');
+    const emailMatches = [...plain.matchAll(new RegExp(EMAIL_REGEX.source, 'g'))];
+    if (emailMatches.length === 0) return null;
+    if (emailMatches.length === 1) return emailMatches[0][0];
+
+    // Collect keyword positions
+    const kwPositions: number[] = [];
+    const kwRegex = new RegExp(EMAIL_APPLY_CONTEXT.source, 'gi');
+    let kwMatch;
+    while ((kwMatch = kwRegex.exec(plain)) !== null) {
+        kwPositions.push(kwMatch.index);
+    }
+
+    if (kwPositions.length === 0) {
+        return emailMatches.find(m => !GENERIC_EMAIL_PREFIXES.test(m[0]))?.[0] ?? emailMatches[0][0];
+    }
+
+    let bestEmail: string | null = null;
+    let bestDist = Infinity;
+    for (const match of emailMatches) {
+        const pos = match.index!;
+        const minDist = Math.min(...kwPositions.map(kp => Math.abs(pos - kp)));
+        if (minDist < bestDist) {
+            bestDist = minDist;
+            bestEmail = match[0];
+        }
+    }
+    return bestEmail;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Company-From-Title Extractor
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Attempts to extract a company name from a job title string.
+ * Handles: "Title - Company", "Title | Company", "Title at Company", "Title (Company)"
+ */
+function extractCompanyFromTitle(title: string): string | null {
+    const patterns = [
+        /(?:[\u2013\u2014]|-{2,}|\|)\s*(.{2,60})$/,
+        /\bat\s+([A-Z][a-zA-Z0-9\s&.,'-]{2,50})$/,
+        /\bfor\s+([A-Z][a-zA-Z0-9\s&.,'-]{2,50})$/,
+        /\(([A-Z][a-zA-Z0-9\s&.,'-]{2,50})\)\s*$/,
+    ];
+
+    for (const pattern of patterns) {
+        const match = pattern.exec(title);
+        if (match?.[1]) {
+            const candidate = match[1].trim();
+            const isLocation = /^(lilongwe|blantyre|mzuzu|zomba|malawi|remote|nationwide)/i.test(candidate);
+            const isDescriptor = /^(full.?time|part.?time|contract|internship|volunteer|senior|junior|lead|head|chief|officer|manager|director|coordinator)/i.test(candidate);
+            if (!isLocation && !isDescriptor && candidate.length >= 3) {
+                return candidate;
+            }
+        }
+    }
+    return null;
+}

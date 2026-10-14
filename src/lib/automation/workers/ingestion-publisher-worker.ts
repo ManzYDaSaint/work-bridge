@@ -150,7 +150,8 @@ export const JobIngestionPublisherWorker = {
             }).eq('id', item.source_id);
         }
 
-        // 6. Run Domain Classifier Agent then trigger downstream events (Buffer social post, AI candidate matching)
+        // 6. Run Domain Classifier Agent then trigger downstream events
+        // Step 1: classify job domain (awaited — ensures domain_id is set on job row before matching)
         try {
             const { classifyDomainForRecord } = await import("@/lib/agents/domain-classifier-agent");
             await classifyDomainForRecord({
@@ -158,9 +159,28 @@ export const JobIngestionPublisherWorker = {
                 recordId: publishedJob.id,
                 qualification: item.qualification,
                 title: item.title,
+                currentDomainId: null,
             });
         } catch (clsErr) {
             console.warn("[PublisherWorker] Domain classification failed (non-fatal):", clsErr);
+        }
+
+        // Step 2: run full match dispatch now that domain_id is ready (WhatsApp + Free Email)
+        try {
+            const { runMatchDispatchAgent } = await import("@/lib/agents/match-dispatch-agent");
+            await runMatchDispatchAgent({ jobId: publishedJob.id, forceImmediateEmail: true });
+        } catch (dispatchErr) {
+            console.error("[PublisherWorker] Match dispatch agent error:", dispatchErr);
+        }
+
+        // Step 3: Trigger in-app/push match notifications
+        try {
+            const { triggerMatchNotifications } = await import("@/lib/match-notification-service");
+            triggerMatchNotifications(publishedJob.id).catch((err) =>
+                console.error("[PublisherWorker] Match notification error:", err)
+            );
+        } catch (notifErr) {
+            console.error("[PublisherWorker] Match notification import failed:", notifErr);
         }
 
         await emitEvent({

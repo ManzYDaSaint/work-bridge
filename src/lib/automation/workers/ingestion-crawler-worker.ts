@@ -32,8 +32,17 @@ export const JobIngestionCrawlerWorker = {
             return;
         }
 
-        // Fetch source(s) to process
-        let query = supabase.from('job_ingestion_sources').select('*').eq('is_enabled', true);
+        // Fetch source(s) to process.
+        // Sort by reputation_score DESC so high-trust sources always crawl first.
+        // This guarantees that the authoritative version of a job is written to
+        // ingested_jobs_queue before any lower-trust source runs — enabling the
+        // duplicate detector (Tier 3 DNA hash against the queue) to correctly
+        // flag cross-source duplicates on subsequent sources in the same pass.
+        let query = supabase
+            .from('job_ingestion_sources')
+            .select('*')
+            .eq('is_enabled', true)
+            .order('reputation_score', { ascending: false });
         if (payload.sourceId) {
             query = query.eq('id', payload.sourceId);
         }

@@ -51,7 +51,7 @@ export const JobIngestionParserWorker = {
             ruleResult = await extractJobFields(
                 rawPayload.payload,
                 rawPayload.content_type,
-                { defaultLocation: source?.default_location }
+                { defaultLocation: source?.default_location, sourceBaseUrl: source?.base_url }
             );
         } catch (err: any) {
             console.error(`[ParserWorker] Failed parsing payload ${payload.rawPayloadId}:`, err.message);
