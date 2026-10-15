@@ -332,9 +332,19 @@ export default function ReviewStagedOpportunityClient({ item }: { item: any }) {
                         href={form.application_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 font-semibold text-blue-700 hover:underline dark:text-blue-300"
+                        className="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
                     >
-                        Open official webpage <ExternalLink size={12} />
+                        Open official application page <ExternalLink size={12} />
+                    </a>
+                )}
+                {item.source_page_url && (
+                    <a
+                        href={item.source_page_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 font-medium text-slate-600 hover:underline dark:text-slate-300"
+                    >
+                        View original feed article <ExternalLink size={12} />
                     </a>
                 )}
             </div>
@@ -422,12 +432,17 @@ export default function ReviewStagedOpportunityClient({ item }: { item: any }) {
                 </FormSection>
 
                 <FormSection title="Application Details">
-                    <Field label="Application URL" required>
+                    <Field 
+                        label="Application URL" 
+                        hint="Direct link to the official application form, host institution, or funder portal for Seekers." 
+                        required
+                    >
                         <input
                             type="text"
                             value={form.application_url}
                             onChange={(e) => set("application_url", e.target.value)}
                             className={inputCls}
+                            placeholder="https://..."
                             required
                             disabled={!canMutate}
                         />

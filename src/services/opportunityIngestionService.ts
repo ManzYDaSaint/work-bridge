@@ -12,7 +12,7 @@
 import crypto from "crypto";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getConnector } from "@/lib/ingestion/connectors";
-import { parseOpportunityWithGemini } from "@/lib/ingestion/gemini-opportunity-service";
+import { parseOpportunityWithGemini, extractOpportunityApplyUrlFromHtml } from "@/lib/ingestion/gemini-opportunity-service";
 import {
     createOpportunity,
     publishOpportunity,
@@ -113,6 +113,11 @@ export async function crawlOpportunitySource(sourceId: string) {
 
             const status = duplicateCheck.isDuplicate ? "DUPLICATE" : "PENDING_REVIEW";
 
+            const effectiveApplicationUrl = 
+                parsed.application_url || 
+                extractOpportunityApplyUrlFromHtml(fetched.rawContent, ref.url) || 
+                ref.url;
+
             const { error: queueErr } = await supabase.from("ingested_opportunities_queue").insert({
                 raw_payload_id: rawPayloadId,
                 source_id: source.id,
@@ -123,7 +128,7 @@ export async function crawlOpportunitySource(sourceId: string) {
                 category: parsed.category || "SCHOLARSHIP",
                 country: parsed.country || "Global",
                 location_type: (parsed.country || "").toLowerCase() === "global" ? "GLOBAL" : "IN_PERSON",
-                application_url: parsed.application_url || ref.url,
+                application_url: effectiveApplicationUrl,
                 deadline: parsed.deadline || null,
                 eligibility_requirements: parsed.eligibility_requirements || null,
                 education_requirements: parsed.education_requirements || null,
@@ -239,6 +244,18 @@ export async function getStagedOpportunityById(id: string) {
     if (error) {
         console.error("[OpportunityIngestion] Fetch staged item error:", error);
         return null;
+    }
+
+    if (data?.raw_payload_id) {
+        const { data: rawPayload } = await supabase
+            .from("ingested_opportunity_raw_payloads")
+            .select("url")
+            .eq("id", data.raw_payload_id)
+            .maybeSingle();
+
+        if (rawPayload?.url) {
+            data.source_page_url = rawPayload.url;
+        }
     }
 
     return data;
