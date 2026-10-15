@@ -288,18 +288,33 @@ export default function PublicJobBoard({
         fetchData(pageRef.current, q || undefined, selectedWorkMode, selectedType);
     }, [authUser?.id, refreshUser, selectedWorkMode, selectedType, searchParams, fetchData]);
 
-    const pushFilters = (next: { query?: string; workMode?: string; type?: string }) => {
+    useEffect(() => {
+        setPage(currentPage);
+    }, [currentPage]);
+
+    const pushFilters = (next: { query?: string; workMode?: string; type?: string; page?: number }) => {
         const qs = new URLSearchParams();
-        if (next.query) qs.set("query", next.query);
-        if (next.workMode && next.workMode !== "ALL") qs.set("workMode", next.workMode);
-        if (next.type && next.type !== "ALL") qs.set("type", next.type);
-        setPage(1);
+        const nextQuery = next.query !== undefined ? next.query : (searchParams.get("query") || "");
+        const nextWorkMode = next.workMode !== undefined ? next.workMode : (searchParams.get("workMode") || "ALL");
+        const nextType = next.type !== undefined ? next.type : (searchParams.get("type") || "ALL");
+        const nextPage = next.page !== undefined ? next.page : 1;
+
+        if (nextQuery) qs.set("query", nextQuery);
+        if (nextWorkMode && nextWorkMode !== "ALL") qs.set("workMode", nextWorkMode);
+        if (nextType && nextType !== "ALL") qs.set("type", nextType);
+        if (nextPage > 1) qs.set("page", String(nextPage));
+
+        setPage(nextPage);
         router.push(qs.toString() ? `${basePath}?${qs.toString()}` : basePath);
+    };
+
+    const handlePageChange = (newPage: number) => {
+        pushFilters({ page: newPage });
     };
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        pushFilters({ query: search.trim() || undefined, workMode: selectedWorkMode, type: selectedType });
+        pushFilters({ query: search.trim() || undefined, workMode: selectedWorkMode, type: selectedType, page: 1 });
     };
 
     const handleApply = async (jobId: string, screeningAnswers?: Record<string, ScreeningAnswer>) => {
@@ -694,7 +709,7 @@ export default function PublicJobBoard({
                     <Pagination
                         currentPage={page}
                         totalPages={totalPages}
-                        onPageChange={setPage}
+                        onPageChange={handlePageChange}
                     />
                 </div>
             )}
