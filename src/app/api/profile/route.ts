@@ -92,10 +92,10 @@ export async function PUT(request: Request) {
                 .eq("id", auth.userId)
                 .single();
 
-            if (!existing?.full_name) {
+            if (!existing?.full_name?.trim()) {
                 // Last resort fallback
                 const { data: userData } = await supabase.from("users").select("email").eq("id", auth.userId).single();
-                body.full_name = userData?.email?.split("@")[0] || "";
+                body.full_name = (userData?.email?.includes("@") ? userData.email.split("@")[0] : "") || "Job Seeker";
             } else {
                 body.full_name = existing.full_name;
             }

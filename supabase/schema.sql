@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 
 CREATE TABLE IF NOT EXISTS public.job_seekers (
   id UUID REFERENCES public.users(id) ON DELETE CASCADE PRIMARY KEY,
-  full_name TEXT NOT NULL,
+  full_name TEXT NOT NULL DEFAULT 'Job Seeker',
   bio TEXT,
   location TEXT,
   skills TEXT[] DEFAULT '{}',
@@ -391,7 +391,8 @@ CREATE TABLE IF NOT EXISTS public.opportunity_views (
     user_id         UUID REFERENCES public.users(id) ON DELETE SET NULL,
     ip_address      TEXT,
     apply_clicked   BOOLEAN NOT NULL DEFAULT false,
-    viewed_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    viewed_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS public.opportunity_matches (
@@ -441,9 +442,14 @@ BEGIN
     INSERT INTO public.job_seekers (id, full_name, location, public_slug)
     VALUES (
       NEW.id,
-      COALESCE(split_part(NEW.email, '@', 1), ''),
+      COALESCE(
+        NULLIF(TRIM(NEW.raw_user_meta_data->>'full_name'), ''),
+        NULLIF(TRIM(NEW.raw_user_meta_data->>'name'), ''),
+        NULLIF(split_part(NEW.email, '@', 1), ''),
+        'Job Seeker'
+      ),
       'To be updated',
-      lower(regexp_replace(regexp_replace(COALESCE(split_part(NEW.email, '@', 1), 'candidate'), '[^a-zA-Z0-9]+', '-', 'g'), '(^-|-$)', '', 'g')) || '-' || left(replace(NEW.id::text, '-', ''), 8)
+      lower(regexp_replace(regexp_replace(COALESCE(NULLIF(split_part(NEW.email, '@', 1), ''), 'candidate'), '[^a-zA-Z0-9]+', '-', 'g'), '(^-|-$)', '', 'g')) || '-' || left(replace(NEW.id::text, '-', ''), 8)
     )
     ON CONFLICT (id) DO NOTHING;
 

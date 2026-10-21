@@ -49,7 +49,7 @@ export const POST = withAuth(async (request, auth) => {
         if (updateError) {
             if (updateError.code === "PGRST116" || updateError.code === "23503") {
                 const { data: userData } = await supabase.from("users").select("email").eq("id", userId).single();
-                const fallbackName = userData?.email?.split("@")[0] || "";
+                const fallbackName = (userData?.email?.includes("@") ? userData.email.split("@")[0] : "") || "Job Seeker";
                 await supabase.from("job_seekers").upsert({
                     id: userId,
                     avatar_url: avatarUrl,

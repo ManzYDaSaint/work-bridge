@@ -103,7 +103,7 @@ export async function POST(request: Request) {
         const prefersRequestedRole = !!(finalRole && (!existingUser || existingUser.role === finalRole || isFreshUserRecord(authUser.created_at)));
         const effectiveRole = (prefersRequestedRole ? finalRole : (existingUser?.role || finalRole)) as "JOB_SEEKER" | "EMPLOYER";
         if (effectiveRole === "JOB_SEEKER") {
-            const fallbackName = full_name || registrationEmail.split("@")[0] || "";
+            const fallbackName = (full_name || (registrationEmail.includes("@") ? registrationEmail.split("@")[0] : "") || "Job Seeker").trim() || "Job Seeker";
             const { error: seekerError } = await supabase
                 .from("job_seekers")
                 .insert({

@@ -55,10 +55,13 @@ export async function GET(request: Request) {
                                 .eq("id", user.id)
                                 .maybeSingle();
 
-                            const safeFullName = existingSeeker?.full_name && String(existingSeeker.full_name).trim()
-                                ? existingSeeker.full_name
-                                : displayName || email.split("@")[0] || "";
-                            const safeLocation = existingSeeker?.location && String(existingSeeker.location).trim()
+                            const safeFullName = (
+                                (existingSeeker?.full_name && String(existingSeeker.full_name).trim()) ||
+                                displayName ||
+                                (email.includes("@") ? email.split("@")[0] : "") ||
+                                "Job Seeker"
+                            ).trim() || "Job Seeker";
+                            const safeLocation = existingSeeker?.location && String(existingSeeker.location).trim() && existingSeeker.location !== "To be updated"
                                 ? existingSeeker.location
                                 : "To be updated";
                             const safeAvatar = existingSeeker?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
@@ -67,15 +70,12 @@ export async function GET(request: Request) {
                                 console.error("[auth/callback] seeker lookup failed:", seekerLookupError);
                             }
 
-                            const upsertData: any = { id: user.id };
-                            
-                            if (!existingSeeker?.full_name || !String(existingSeeker.full_name).trim()) {
-                                upsertData.full_name = safeFullName;
-                            }
-                            if (!existingSeeker?.location || !String(existingSeeker.location).trim() || existingSeeker.location === 'To be updated') {
-                                upsertData.location = safeLocation;
-                            }
-                            if (!existingSeeker?.avatar_url) {
+                            const upsertData: Record<string, any> = {
+                                id: user.id,
+                                full_name: safeFullName,
+                                location: safeLocation,
+                            };
+                            if (safeAvatar) {
                                 upsertData.avatar_url = safeAvatar;
                             }
 

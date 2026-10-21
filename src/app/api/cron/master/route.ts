@@ -33,6 +33,13 @@ export async function GET(req: Request) {
         'cleanup-system'
     ];
 
+    // Monday run: Execute Growth Agent Content Planner
+    // In UTC / Africa/Blantyre, Monday corresponds to getUTCDay() === 1
+    const isMonday = new Date().getUTCDay() === 1;
+    if (isMonday) {
+        endpoints.push('growth-agent-planner');
+    }
+
     const results: any[] = [];
 
     await Promise.allSettled(

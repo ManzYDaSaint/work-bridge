@@ -35,6 +35,7 @@ const adminNavGroups: NavGroup[] = [
     {
         title: "Platform Operations",
         items: [
+            { label: "Growth & Content Agent", href: "/dashboard/admin/growth", icon: Sparkles },
             { label: "Employer Verification", href: "/dashboard/admin/employers", icon: Users },
             { label: "Employer CRM", href: "/dashboard/admin/crm", icon: ClipboardList },
             { label: "Opportunities", href: "/dashboard/admin/opportunities", icon: Sparkles },

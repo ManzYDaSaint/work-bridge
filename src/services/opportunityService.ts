@@ -247,7 +247,7 @@ export async function getOpportunityAnalytics() {
     const [totalRes, matchesRes, viewsRes] = await Promise.all([
         supabase.from("opportunities").select("status, category", { count: "exact" }),
         supabase.from("opportunity_matches").select("match_score", { count: "exact" }),
-        supabase.from("opportunity_views").select("id, apply_clicked, created_at, opportunity_id"),
+        supabase.from("opportunity_views").select("id, apply_clicked, viewed_at, opportunity_id"),
     ]);
 
     const byStatus = {
@@ -279,7 +279,7 @@ export async function getOpportunityAnalytics() {
 
     // Time window calculations (last 30 days)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const recentViews = views.filter(v => new Date(v.created_at) >= thirtyDaysAgo);
+    const recentViews = views.filter((v: any) => new Date(v.viewed_at || v.created_at) >= thirtyDaysAgo);
     const monthlyViews = recentViews.length;
     const monthlyApplyClicks = recentViews.filter(v => v.apply_clicked).length;
 
