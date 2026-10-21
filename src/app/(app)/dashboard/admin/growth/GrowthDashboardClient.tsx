@@ -19,8 +19,12 @@ import {
   RotateCcw,
   Languages,
   Save,
-  X
+  X,
+  Briefcase,
+  ExternalLink,
+  ChevronRight
 } from "lucide-react";
+import { PageHeader, StatCard, Tabs, Badge, EmptyState } from "@/components/dashboard/ui";
 
 interface DomainFrequency {
   domainId: string | null;
@@ -69,7 +73,7 @@ export default function GrowthDashboardClient() {
   const [latestRun, setLatestRun] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [market, setMarket] = useState<MarketIntelligenceSummary | null>(null);
-  const [activeTab, setActiveTab] = useState<"ALL" | "FOUNDER" | "COMPANY">("ALL");
+  const [activeTab, setActiveTab] = useState<string>("ALL");
   const [languageMode, setLanguageMode] = useState<"ENGLISH" | "BILINGUAL">("ENGLISH");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [copiedBriefId, setCopiedBriefId] = useState<string | null>(null);
@@ -215,392 +219,401 @@ export default function GrowthDashboardClient() {
     return s.target_account === activeTab;
   });
 
-  return (
-    <div className="space-y-8 p-4 md:p-8 max-w-7xl mx-auto">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-base-200 pb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-primary/10 text-primary rounded-lg">
-              <Sparkles className="w-6 h-6" />
-            </span>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Growth & Content Intelligence</h1>
-          </div>
-          <p className="text-base-content/70 text-sm mt-1">
-            Weekly editorial calendar, verified hiring trends, and offline design briefs for Founder & Company social accounts.
-          </p>
-        </div>
+  const founderCount = suggestions.filter((s) => s.target_account === "FOUNDER").length;
+  const companyCount = suggestions.filter((s) => s.target_account === "COMPANY").length;
 
-        <div className="flex items-center flex-wrap gap-3">
-          {/* Language Mode Toggle */}
-          <div className="flex items-center gap-1.5 bg-base-200/80 p-1 rounded-lg border border-base-300">
-            <Languages className="w-3.5 h-3.5 ml-1 text-base-content/70" />
+  return (
+    <div className="space-y-6">
+      {/* Page Header (Canonical Design System) */}
+      <PageHeader
+        title="Growth & Content Intelligence"
+        subtitle="Weekly editorial calendar, Malawian labor market trends, and offline Canva/Figma design briefs"
+        action={{
+          label: generating ? "Generating Strategy..." : "Generate New Plan",
+          onClick: handleGeneratePlan,
+          icon: Sparkles,
+          disabled: generating,
+        }}
+      />
+
+      {error && (
+        <div className="flex items-center gap-3 p-4 rounded-2xl border border-rose-200 bg-rose-50/80 text-rose-800 dark:border-rose-800/50 dark:bg-rose-950/20 text-sm">
+          <AlertCircle size={18} className="text-rose-600 dark:text-rose-400 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* KPI Stat Cards (Canonical Admin StatCards) */}
+      {market && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            label="Active Jobs (Platform)"
+            value={market.totalActiveJobs}
+            icon={Briefcase}
+            iconBg="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+            iconColor="text-blue-700 dark:text-blue-400"
+          />
+          <StatCard
+            label="New Jobs (Past 30 Days)"
+            value={market.newJobsInPeriod}
+            icon={TrendingUp}
+            iconBg="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+            iconColor="text-emerald-700 dark:text-emerald-400"
+          />
+          <StatCard
+            label="Verified Employers"
+            value={market.verifiedEmployersCount}
+            icon={Building2}
+            iconBg="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+            iconColor="text-amber-700 dark:text-amber-400"
+          />
+          <StatCard
+            label="Applications Tracked"
+            value={market.totalApplicationsInPeriod}
+            icon={FileText}
+            iconBg="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+            iconColor="text-indigo-700 dark:text-indigo-400"
+          />
+        </div>
+      )}
+
+      {/* Market Intelligence Insights Summary */}
+      {market && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Top In-Demand Disciplines */}
+          <div className="rounded-2xl border border-stone-200 bg-white/80 p-5 dark:border-slate-800 dark:bg-slate-900/70">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200/80 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-[#16324f] dark:text-blue-400">
+                  <Layers size={16} />
+                </div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  Top In-Demand Disciplines (30d)
+                </h4>
+              </div>
+              <span className="text-[11px] font-semibold text-slate-400">Database Ground Truth</span>
+            </div>
+            <div className="divide-y divide-stone-100 dark:divide-slate-800/60 pt-2">
+              {market.topDomains.slice(0, 4).map((d, i) => (
+                <div key={i} className="py-2 flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[240px]">
+                    {d.domainName}
+                  </span>
+                  <Badge variant="blue" className="font-mono text-[10px]">
+                    {d.jobCount} roles
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top Job Openings */}
+          <div className="rounded-2xl border border-stone-200 bg-white/80 p-5 dark:border-slate-800 dark:bg-slate-900/70">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200/80 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-700 dark:text-emerald-400">
+                  <TrendingUp size={16} />
+                </div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  Most Available Specific Job Titles
+                </h4>
+              </div>
+              <span className="text-[11px] font-semibold text-slate-400">Labor Demand</span>
+            </div>
+            <div className="divide-y divide-stone-100 dark:divide-slate-800/60 pt-2">
+              {market.topJobTitles.slice(0, 4).map((j, i) => (
+                <div key={i} className="py-2 flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[240px]" title={j.title}>
+                    {j.title}
+                  </span>
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 bg-stone-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg">
+                    {j.count} openings
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Strategic Focus Banner */}
+      {latestRun?.summary && (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-900/50 dark:bg-blue-950/20 flex items-start gap-3.5">
+          <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-[#16324f] dark:text-blue-300 shrink-0 mt-0.5">
+            <Sparkles size={16} />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#16324f] dark:text-blue-300">
+              Strategic Content Direction of the Week
+            </p>
+            <p className="text-xs font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
+              {latestRun.summary}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Controls Bar: Canonical Tabs & Language Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
+        <Tabs
+          tabs={[
+            { id: "ALL", label: `All Posts (${suggestions.length})` },
+            { id: "FOUNDER", label: `Founder Personal (${founderCount})` },
+            { id: "COMPANY", label: `Aganyu Company (${companyCount})` },
+          ]}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+        />
+
+        <div className="flex items-center gap-3">
+          {/* Language Toggle */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-stone-100 dark:bg-slate-800 border border-stone-200 dark:border-slate-700">
+            <Languages size={13} className="ml-1.5 text-slate-400" />
             <button
               onClick={() => setLanguageMode("ENGLISH")}
-              className={`btn btn-xs ${languageMode === "ENGLISH" ? "btn-primary shadow-sm" : "btn-ghost"}`}
+              className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
+                languageMode === "ENGLISH"
+                  ? "bg-white dark:bg-slate-700 text-[#16324f] dark:text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+              }`}
             >
               English
             </button>
             <button
               onClick={() => setLanguageMode("BILINGUAL")}
-              className={`btn btn-xs ${languageMode === "BILINGUAL" ? "btn-primary shadow-sm" : "btn-ghost"}`}
-              title="English with natural Chichewa phrases for local engagement"
+              className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
+                languageMode === "BILINGUAL"
+                  ? "bg-white dark:bg-slate-700 text-[#16324f] dark:text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+              }`}
+              title="English with authentic Malawian Chichewa phrases"
             >
               Bilingual (Chichewa)
             </button>
           </div>
 
-          <button
-            onClick={handleGeneratePlan}
-            disabled={generating}
-            className="btn btn-primary shadow-sm"
-          >
-            {generating ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                Analyzing Market & Formulating Plan...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                Generate New Weekly Plan
-              </>
-            )}
-          </button>
+          <div className="hidden md:flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+            <Clock size={13} />
+            <span>Africa/Blantyre</span>
+          </div>
         </div>
       </div>
 
-      {error && (
-        <div className="alert alert-error text-sm">
-          <AlertCircle className="w-5 h-5" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Market Intelligence Grid */}
-      {market && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card 1: Top Domains */}
-          <div className="card bg-base-100 border border-base-200 shadow-sm p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-primary font-semibold text-sm">
-                <Layers className="w-4 h-4" />
-                <span>Frequently Posted Domains (30d)</span>
-              </div>
-              <span className="badge badge-sm badge-ghost">{market.totalActiveJobs} active jobs</span>
-            </div>
-            <div className="space-y-2 pt-2">
-              {market.topDomains.slice(0, 5).map((d, i) => (
-                <div key={i} className="flex items-center justify-between text-xs border-b border-base-200 pb-1.5 last:border-none">
-                  <span className="font-medium truncate max-w-[180px]">{d.domainName}</span>
-                  <span className="badge badge-sm badge-neutral font-mono">{d.jobCount} jobs</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Card 2: Most Available Jobs */}
-          <div className="card bg-base-100 border border-base-200 shadow-sm p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-secondary font-semibold text-sm">
-                <TrendingUp className="w-4 h-4" />
-                <span>In-Demand Job Titles</span>
-              </div>
-              <span className="badge badge-sm badge-ghost">{market.newJobsInPeriod} recent</span>
-            </div>
-            <div className="space-y-2 pt-2">
-              {market.topJobTitles.slice(0, 5).map((j, i) => (
-                <div key={i} className="flex items-center justify-between text-xs border-b border-base-200 pb-1.5 last:border-none">
-                  <span className="font-medium truncate max-w-[180px]" title={j.title}>{j.title}</span>
-                  <span className="badge badge-sm badge-outline font-mono">{j.count} openings</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Card 3: Platform Milestones for Credibility */}
-          <div className="card bg-base-100 border border-base-200 shadow-sm p-5 space-y-3">
-            <div className="flex items-center gap-2 text-accent font-semibold text-sm">
-              <FileText className="w-4 h-4" />
-              <span>Real Platform Statistics</span>
-            </div>
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <div className="bg-base-200/50 p-3 rounded-lg text-center">
-                <div className="text-xl font-bold text-primary">{market.verifiedEmployersCount}</div>
-                <div className="text-[11px] text-base-content/70 mt-1">Verified Employers</div>
-              </div>
-              <div className="bg-base-200/50 p-3 rounded-lg text-center">
-                <div className="text-xl font-bold text-secondary">{market.totalApplicationsInPeriod}</div>
-                <div className="text-[11px] text-base-content/70 mt-1">Applications (30d)</div>
-              </div>
-            </div>
-            <p className="text-[11px] text-base-content/60 italic text-center">
-              Verified ground truths injected into Gemini prompts to eliminate hallucinated statistics.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Latest Run Strategy Summary */}
-      {latestRun?.summary && (
-        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 md:p-5 flex items-start gap-3">
-          <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <div className="text-xs uppercase tracking-wider font-semibold text-primary">Strategic Focus of the Week</div>
-            <div className="text-sm text-base-content/90 font-medium">{latestRun.summary}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Identity Filter Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-base-200 pb-2">
-        <div className="tabs tabs-boxed bg-base-200/70 p-1">
-          <button
-            onClick={() => setActiveTab("ALL")}
-            className={`tab tab-sm font-medium ${activeTab === "ALL" ? "tab-active bg-base-100 text-primary shadow-sm" : ""}`}
-          >
-            All Accounts ({suggestions.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("FOUNDER")}
-            className={`tab tab-sm font-medium ${activeTab === "FOUNDER" ? "tab-active bg-base-100 text-primary shadow-sm" : ""}`}
-          >
-            <UserCheck className="w-3.5 h-3.5 mr-1.5" />
-            Founder Brand ({suggestions.filter((s) => s.target_account === "FOUNDER").length})
-          </button>
-          <button
-            onClick={() => setActiveTab("COMPANY")}
-            className={`tab tab-sm font-medium ${activeTab === "COMPANY" ? "tab-active bg-base-100 text-primary shadow-sm" : ""}`}
-          >
-            <Building2 className="w-3.5 h-3.5 mr-1.5" />
-            Aganyu Company ({suggestions.filter((s) => s.target_account === "COMPANY").length})
-          </button>
-        </div>
-
-        <div className="text-xs text-base-content/60 flex items-center gap-1.5">
-          <Clock className="w-4 h-4" />
-          Timezone: <span className="font-semibold text-base-content/80">Africa/Blantyre (CAT)</span>
-        </div>
-      </div>
-
-      {/* Suggestions List */}
+      {/* Main Content Calendar Stream */}
       {loading ? (
-        <div className="py-20 text-center space-y-3">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto text-primary" />
-          <p className="text-sm text-base-content/70">Loading editorial schedule and market data...</p>
+        <div className="py-24 text-center space-y-3 rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
+          <RefreshCw size={28} className="animate-spin mx-auto text-[#16324f] dark:text-slate-400" />
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Loading your content calendar & labor metrics...</p>
         </div>
       ) : filteredSuggestions.length === 0 ? (
-        <div className="card bg-base-100 border border-dashed border-base-300 p-12 text-center space-y-4">
-          <Calendar className="w-12 h-12 mx-auto text-base-content/30" />
-          <div>
-            <h3 className="text-lg font-bold">No Content Suggestions in Calendar</h3>
-            <p className="text-sm text-base-content/60 max-w-md mx-auto mt-1">
-              Click &quot;Generate New Weekly Plan&quot; to inspect your latest jobs and domain data, and create tailored posts for Founder and Company accounts.
-            </p>
-          </div>
-          <button onClick={handleGeneratePlan} disabled={generating} className="btn btn-primary btn-sm mx-auto">
-            <Sparkles className="w-4 h-4" />
-            Generate First Plan
-          </button>
-        </div>
+        <EmptyState
+          icon={Calendar}
+          title="No Editorial Posts Scheduled"
+          description="Click 'Generate New Plan' above to run market intelligence on recent job domain activity and build this week's posts."
+          action={{
+            label: "Generate First Plan",
+            onClick: handleGeneratePlan,
+            disabled: generating,
+          }}
+        />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {filteredSuggestions.map((post) => (
             <div
               key={post.id}
-              className={`card bg-base-100 border shadow-sm transition-all ${
+              className={`rounded-2xl border bg-white/90 p-5 dark:bg-slate-900/80 transition-all ${
                 post.status === "POSTED"
-                  ? "border-success/40 bg-success/5"
+                  ? "border-emerald-300 dark:border-emerald-800/60 bg-emerald-50/10"
                   : post.status === "DISMISSED"
-                  ? "opacity-50 border-base-300"
-                  : "border-base-200 hover:border-primary/40"
+                  ? "border-stone-200 dark:border-slate-800 opacity-60"
+                  : "border-stone-200 dark:border-slate-800 hover:shadow-sm"
               }`}
             >
-              <div className="card-body p-6 space-y-4">
-                {/* Header: Day, Time, Identity & Pillar */}
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="badge badge-primary font-bold text-xs py-2.5">
-                      {post.scheduled_day} {post.scheduled_time}
-                    </span>
-                    <span
-                      className={`badge badge-sm font-semibold ${
-                        post.target_account === "FOUNDER"
-                          ? "badge-secondary"
-                          : "badge-accent"
-                      }`}
-                    >
-                      {post.target_account === "FOUNDER" ? "Founder Personal" : "Aganyu Company"}
-                    </span>
-                    <span className="badge badge-sm badge-ghost text-xs">{post.target_channel}</span>
-                  </div>
-
-                  <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wide">
-                    {post.content_pillar}
+              {/* Card Header: Slot, Account Tag & Pillar */}
+              <div className="flex items-center justify-between flex-wrap gap-2 pb-3.5 border-b border-stone-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#16324f] text-white dark:bg-slate-100 dark:text-slate-900">
+                    {post.scheduled_day} {post.scheduled_time}
+                  </span>
+                  <Badge
+                    variant={post.target_account === "FOUNDER" ? "blue" : "green"}
+                    className="text-[11px]"
+                  >
+                    {post.target_account === "FOUNDER" ? "Founder Personal" : "Aganyu Company"}
+                  </Badge>
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                    {post.target_channel}
                   </span>
                 </div>
 
-                {/* Hook & Message */}
-                <div className="space-y-1">
-                  <div className="text-xs font-semibold text-base-content/50 uppercase tracking-wider">Opening Hook</div>
-                  <div className="font-semibold text-base text-base-content/95 leading-snug">
-                    &ldquo;{post.opening_hook}&rdquo;
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  {post.content_pillar}
+                </span>
+              </div>
+
+              {/* Hook */}
+              <div className="mt-3.5 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Attention Hook</span>
+                <p className="text-sm font-bold text-slate-900 dark:text-white leading-snug">
+                  &ldquo;{post.opening_hook}&rdquo;
+                </p>
+              </div>
+
+              {/* Proposed Caption (With Inline Edit Mode) */}
+              <div className="mt-3.5 rounded-xl border border-stone-200 bg-stone-50/60 p-3.5 dark:border-slate-800 dark:bg-slate-800/40 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">
+                    Proposed Social Copy
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {editingId === post.id ? (
+                      <>
+                        <button
+                          onClick={() => handleSaveEdit(post.id)}
+                          disabled={savingEdit}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 flex items-center gap-1 transition-all"
+                        >
+                          <Save size={12} />
+                          <span>{savingEdit ? "Saving..." : "Save"}</span>
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                        >
+                          <X size={14} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingId(post.id);
+                            setEditCaption(post.proposed_caption);
+                          }}
+                          className="px-2 py-1 rounded-lg text-slate-600 hover:bg-stone-200/60 dark:text-slate-300 dark:hover:bg-slate-700 text-xs font-semibold flex items-center gap-1 transition-colors"
+                          title="Edit copy directly"
+                        >
+                          <Edit3 size={12} />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => copyToClipboard(post.proposed_caption, post.id, false)}
+                          className="px-2.5 py-1 rounded-lg bg-white border border-stone-200 text-slate-700 hover:bg-stone-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1 transition-all shadow-2xs"
+                        >
+                          {copiedId === post.id ? (
+                            <>
+                              <Check size={12} className="text-emerald-600" />
+                              <span className="text-emerald-600 font-bold">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy size={12} />
+                              <span>Copy Text</span>
+                            </>
+                          )}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                {/* Full Caption Box (or In-Place Edit Mode) */}
-                <div className="bg-base-200/40 border border-base-200 rounded-lg p-3.5 space-y-2">
-                  <div className="flex items-center justify-between text-xs text-base-content/60">
-                    <span className="font-semibold uppercase tracking-wider">Proposed Caption</span>
-                    <div className="flex items-center gap-1">
-                      {editingId === post.id ? (
-                        <>
-                          <button
-                            onClick={() => handleSaveEdit(post.id)}
-                            disabled={savingEdit}
-                            className="btn btn-success btn-xs gap-1 text-white"
-                          >
-                            <Save className="w-3.5 h-3.5" />
-                            {savingEdit ? "Saving..." : "Save"}
-                          </button>
-                          <button
-                            onClick={() => setEditingId(null)}
-                            className="btn btn-ghost btn-xs text-base-content/60"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => {
-                              setEditingId(post.id);
-                              setEditCaption(post.proposed_caption);
-                            }}
-                            className="btn btn-ghost btn-xs text-base-content/70 gap-1 hover:text-primary"
-                            title="Edit caption inline"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                            <span>Edit</span>
-                          </button>
-                          <button
-                            onClick={() => copyToClipboard(post.proposed_caption, post.id, false)}
-                            className="btn btn-ghost btn-xs text-primary gap-1"
-                          >
-                            {copiedId === post.id ? (
-                              <>
-                                <Check className="w-3.5 h-3.5 text-success" />
-                                <span className="text-success font-medium">Copied!</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3.5 h-3.5" />
-                                <span>Copy Caption</span>
-                              </>
-                            )}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {editingId === post.id ? (
-                    <textarea
-                      value={editCaption}
-                      onChange={(e) => setEditCaption(e.target.value)}
-                      rows={6}
-                      className="textarea textarea-bordered w-full text-xs font-sans leading-relaxed focus:outline-primary"
-                    />
-                  ) : (
-                    <p className="text-xs text-base-content/85 whitespace-pre-line leading-relaxed max-h-48 overflow-y-auto pr-1">
-                      {post.proposed_caption}
-                    </p>
-                  )}
-
-                  {post.hashtags?.length > 0 && (
-                    <div className="text-[11px] text-primary/80 pt-1">
-                      {post.hashtags.join(" ")}
-                    </div>
-                  )}
-                </div>
-
-                {/* Offline Creative Brief (For Canva / Graphic Design) */}
-                <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3.5 space-y-2">
-                  <div className="flex items-center justify-between text-xs text-amber-700 dark:text-amber-400">
-                    <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider">
-                      <Palette className="w-4 h-4" />
-                      <span>Creative Brief (Design Off-Platform)</span>
-                    </div>
-                    <button
-                      onClick={() => copyToClipboard(post.creative_brief, post.id, true)}
-                      className="btn btn-ghost btn-xs text-amber-700 dark:text-amber-400 gap-1"
-                    >
-                      {copiedBriefId === post.id ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-success" />
-                          <span className="text-success font-medium">Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>Copy Brief</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <p className="text-xs text-base-content/80 leading-relaxed italic">
-                    {post.creative_brief}
+                {editingId === post.id ? (
+                  <textarea
+                    value={editCaption}
+                    onChange={(e) => setEditCaption(e.target.value)}
+                    rows={6}
+                    className="w-full text-xs font-sans leading-relaxed rounded-lg border border-stone-300 bg-white p-2.5 text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#16324f] dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                  />
+                ) : (
+                  <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed max-h-48 overflow-y-auto pr-1">
+                    {post.proposed_caption}
                   </p>
+                )}
+
+                {post.hashtags?.length > 0 && (
+                  <div className="text-[11px] font-semibold text-[#16324f] dark:text-blue-400 pt-1">
+                    {post.hashtags.join(" ")}
+                  </div>
+                )}
+              </div>
+
+              {/* Creative Brief (For Canva / Figma Design) */}
+              <div className="mt-3 rounded-xl border border-amber-200/90 bg-amber-50/50 p-3.5 dark:border-amber-900/40 dark:bg-amber-950/20 space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
+                  <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px]">
+                    <Palette size={13} />
+                    <span>Creative Brief (Canva / Figma)</span>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(post.creative_brief, post.id, true)}
+                    className="text-amber-800 dark:text-amber-300 hover:underline text-[11px] font-bold flex items-center gap-1"
+                  >
+                    {copiedBriefId === post.id ? (
+                      <>
+                        <Check size={11} className="text-emerald-600" />
+                        <span className="text-emerald-600">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={11} />
+                        <span>Copy Brief</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic">
+                  {post.creative_brief}
+                </p>
+              </div>
+
+              {/* Card Footer: Status & Actions */}
+              <div className="mt-4 pt-3.5 border-t border-stone-100 dark:border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-slate-400 font-medium">Status:</span>
+                  <span
+                    className={`font-bold ${
+                      post.status === "POSTED"
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : post.status === "DISMISSED"
+                        ? "text-slate-400"
+                        : "text-amber-600 dark:text-amber-400"
+                    }`}
+                  >
+                    {post.status}
+                  </span>
                 </div>
 
-                {/* Footer Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-base-200">
-                  <div className="text-xs">
-                    Status:{" "}
-                    <span
-                      className={`font-semibold ${
-                        post.status === "POSTED"
-                          ? "text-success"
-                          : post.status === "DISMISSED"
-                          ? "text-base-content/40"
-                          : "text-warning"
-                      }`}
-                    >
-                      {post.status}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setRegenModalId(post.id);
+                      setRegenInstruction("");
+                    }}
+                    className="h-8 px-2.5 rounded-xl border border-stone-200 text-slate-700 hover:bg-stone-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                    title="Regenerate this specific slot"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Regenerate</span>
+                  </button>
 
-                  <div className="flex items-center gap-2">
+                  {post.status !== "POSTED" && (
                     <button
-                      onClick={() => {
-                        setRegenModalId(post.id);
-                        setRegenInstruction("");
-                      }}
-                      className="btn btn-ghost btn-xs text-primary gap-1"
-                      title="Regenerate this specific post with an optional custom prompt"
+                      onClick={() => handleStatusUpdate(post.id, "POSTED")}
+                      className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Regenerate</span>
+                      <Check size={13} strokeWidth={2.5} />
+                      <span>Mark Posted</span>
                     </button>
+                  )}
 
-                    {post.status !== "POSTED" && (
-                      <button
-                        onClick={() => handleStatusUpdate(post.id, "POSTED")}
-                        className="btn btn-success btn-xs gap-1 text-white"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        Mark as Posted
-                      </button>
-                    )}
-                    {post.status !== "DISMISSED" && (
-                      <button
-                        onClick={() => handleStatusUpdate(post.id, "DISMISSED")}
-                        className="btn btn-ghost btn-xs text-base-content/60"
-                      >
-                        Dismiss
-                      </button>
-                    )}
-                  </div>
+                  {post.status !== "DISMISSED" && (
+                    <button
+                      onClick={() => handleStatusUpdate(post.id, "DISMISSED")}
+                      className="h-8 px-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-semibold transition-colors"
+                    >
+                      Dismiss
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -610,45 +623,54 @@ export default function GrowthDashboardClient() {
 
       {/* Single Post Regeneration Modal */}
       {regenModalId && (
-        <div className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="font-bold text-base flex items-center gap-2">
-              <RotateCcw className="w-4 h-4 text-primary" />
-              Regenerate This Post
-            </h3>
-            <p className="py-2 text-xs text-base-content/70">
-              Give optional custom instructions (e.g., &quot;Make it shorter&quot;, &quot;Focus on NGO job seekers&quot;, or &quot;Add more personal startup reflection&quot;).
-            </p>
-            <div className="form-control mt-2">
-              <textarea
-                value={regenInstruction}
-                onChange={(e) => setRegenInstruction(e.target.value)}
-                placeholder="Custom instruction for this slot (optional)..."
-                rows={3}
-                className="textarea textarea-bordered text-xs"
-              />
-            </div>
-            <div className="modal-action flex justify-end gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200 dark:border-slate-800">
+              <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-sm">
+                <RotateCcw size={16} className="text-[#16324f] dark:text-blue-400" />
+                <span>Regenerate This Slot</span>
+              </div>
               <button
                 onClick={() => setRegenModalId(null)}
-                className="btn btn-ghost btn-sm"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Give optional custom instructions to tailor this specific post (e.g., &quot;Make it more reflective&quot;, &quot;Focus on NGO Finance roles&quot;, or &quot;Emphasize remote opportunities in Malawi&quot;).
+            </p>
+
+            <textarea
+              value={regenInstruction}
+              onChange={(e) => setRegenInstruction(e.target.value)}
+              placeholder="Custom instructions (optional)..."
+              rows={3}
+              className="w-full rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#16324f] dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+            />
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setRegenModalId(null)}
+                className="h-9 px-4 rounded-xl border border-stone-200 text-xs font-semibold text-slate-600 hover:bg-stone-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleSingleRegenerate(regenModalId)}
                 disabled={regeneratingSingle}
-                className="btn btn-primary btn-sm gap-1"
+                className="h-9 px-4 rounded-xl bg-[#16324f] text-xs font-bold text-white hover:opacity-90 dark:bg-slate-100 dark:text-slate-900 flex items-center gap-2"
               >
                 {regeneratingSingle ? (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    Regenerating...
+                    <RefreshCw size={13} className="animate-spin" />
+                    <span>Regenerating...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Regenerate Slot
+                    <Sparkles size={13} />
+                    <span>Regenerate Slot</span>
                   </>
                 )}
               </button>
