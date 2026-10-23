@@ -65,7 +65,7 @@ interface Suggestion {
   call_to_action: string;
   status: "SUGGESTED" | "APPROVED" | "DISMISSED" | "POSTED";
   created_at: string;
-}
+} 
 
 export default function GrowthDashboardClient() {
   const [loading, setLoading] = useState(true);

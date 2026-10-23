@@ -68,7 +68,7 @@ export async function runGrowthAgentPlanner(
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-3.1-flash-lite",
       generationConfig: {
         responseMimeType: "application/json",
       },
@@ -236,7 +236,7 @@ export async function regenerateSinglePostSlot(
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: "gemini-3.1-flash-lite",
     generationConfig: {
       responseMimeType: "application/json",
     },
