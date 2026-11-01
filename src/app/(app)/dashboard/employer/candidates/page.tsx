@@ -18,9 +18,17 @@ export default async function CandidatesPage({
         page
     );
 
+    const supabase = await createSupabaseServerClient();
+
+    // Fetch employer's default scheduling link
+    const { data: employerData } = await supabase
+        .from("employers")
+        .select("default_scheduling_link, company_name")
+        .eq("id", user.id)
+        .maybeSingle();
+
     // AI Applicant Ranking (Phase 3)
     if (params.jobId && applications && applications.length > 0) {
-        const supabase = await createSupabaseServerClient();
         const { data: rankings } = await supabase.rpc("rank_applicants", {
             p_job_id: params.jobId
         });
@@ -41,6 +49,8 @@ export default async function CandidatesPage({
         <CandidatesClient 
             initialApplications={applications} 
             plan={user.plan}
+            schedulingLink={employerData?.default_scheduling_link || undefined}
+            companyName={employerData?.company_name || undefined}
         />
     );
 }

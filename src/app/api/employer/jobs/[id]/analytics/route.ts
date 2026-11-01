@@ -26,11 +26,38 @@ export const GET = withAuth(async (request, auth, context: { params: Promise<{ i
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
-        // 2. Get total applications
-        const { count: totalApplications } = await supabase
+        // 2. Get applications breakdown
+        const { data: apps, error: appsError } = await supabase
             .from("applications")
-            .select("*", { count: "exact", head: true })
+            .select("id, status, is_guest_application, rejection_reason, created_at, viewed_at")
             .eq("job_id", jobId);
+
+        if (appsError) throw appsError;
+
+        const totalApplications = apps?.length || 0;
+
+        // Stage Funnel Breakdown (Workable/Greenhouse ATS Funnel)
+        const stageCounts = {
+            applied: totalApplications,
+            shortlisted: apps?.filter(a => a.status === "SHORTLISTED" || a.status === "INTERVIEWING" || a.status === "ACCEPTED").length || 0,
+            interviewing: apps?.filter(a => a.status === "INTERVIEWING" || a.status === "ACCEPTED").length || 0,
+            hired: apps?.filter(a => a.status === "ACCEPTED").length || 0,
+            rejected: apps?.filter(a => a.status === "REJECTED").length || 0,
+        };
+
+        // Rejection reasons aggregation
+        const rejectionMap: Record<string, number> = {};
+        apps?.filter(a => a.status === "REJECTED" && a.rejection_reason).forEach(a => {
+            const reason = a.rejection_reason;
+            rejectionMap[reason] = (rejectionMap[reason] || 0) + 1;
+        });
+
+        const rejectionReasons = Object.entries(rejectionMap).map(([reason, count]) => ({
+            reason,
+            count
+        })).sort((a, b) => b.count - a.count);
+
+        const guestApplicationsCount = apps?.filter(a => a.is_guest_application).length || 0;
 
         // 3. Get total views
         const { count: totalViews } = await supabase
@@ -39,7 +66,6 @@ export const GET = withAuth(async (request, auth, context: { params: Promise<{ i
             .eq("job_id", jobId);
 
         // 4. Get chart data (Views per day for the last 14 days)
-        // Using PostgreSQL date_trunc to group by day
         const fourteenDaysAgo = new Date();
         fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
@@ -54,15 +80,13 @@ export const GET = withAuth(async (request, auth, context: { params: Promise<{ i
         // Process data into a daily map
         const dailyViews: Record<string, number> = {};
         
-        // Initialize last 14 days with 0
         for (let i = 13; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
-            const dateStr = d.toISOString().split("T")[0]; // YYYY-MM-DD
+            const dateStr = d.toISOString().split("T")[0];
             dailyViews[dateStr] = 0;
         }
 
-        // Count views per day
         if (rawViews) {
             rawViews.forEach((view) => {
                 const dateStr = new Date(view.created_at).toISOString().split("T")[0];
@@ -72,7 +96,6 @@ export const GET = withAuth(async (request, auth, context: { params: Promise<{ i
             });
         }
 
-        // Convert to array format suitable for Recharts or similar charting libraries
         const chartData = Object.keys(dailyViews).map(date => ({
             date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             views: dailyViews[date],
@@ -81,8 +104,11 @@ export const GET = withAuth(async (request, auth, context: { params: Promise<{ i
         return NextResponse.json({
             jobId,
             totalViews: totalViews || 0,
-            totalApplications: totalApplications || 0,
-            conversionRate: totalViews ? Math.round(((totalApplications || 0) / totalViews) * 100) : 0,
+            totalApplications,
+            guestApplicationsCount,
+            conversionRate: totalViews ? Math.round((totalApplications / totalViews) * 100) : 0,
+            stageCounts,
+            rejectionReasons,
             chartData,
         });
 

@@ -8,6 +8,7 @@ export const employerProfileSchema = z.object({
     description: z.string().min(10, "Description must be at least 10 characters").optional(),
     applicationAlerts: z.boolean().optional(),
     logoUrl: z.string().url("Invalid logo URL").optional().or(z.literal("")),
+    defaultSchedulingLink: z.string().url("Invalid calendar URL (must start with https://)").optional().or(z.literal("")),
 });
 
 export type EmployerProfileValues = z.infer<typeof employerProfileSchema>;

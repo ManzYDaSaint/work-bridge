@@ -68,6 +68,11 @@ export const ApplicationService = {
                 meets_required_criteria,
                 screening_summary,
                 screening_breakdown,
+                is_guest_application,
+                guest_full_name,
+                guest_email,
+                guest_phone,
+                resume_url,
                 user:users (
                     id,
                     email,
@@ -92,10 +97,19 @@ export const ApplicationService = {
                 meetsRequiredCriteria: app.meets_required_criteria,
                 screeningSummary: app.screening_summary,
                 screeningBreakdown: app.screening_breakdown,
-                user: {
+                isGuestApplication: app.is_guest_application || false,
+                resumeUrl: app.resume_url || null,
+                user: app.user ? {
                     id: app.user.id,
                     email: app.user.email,
                     jobSeeker: app.user.jobSeeker,
+                } : {
+                    id: `guest-${app.id}`,
+                    email: app.guest_email || "guest@applicant",
+                    jobSeeker: {
+                        full_name: app.guest_full_name || "Guest Applicant",
+                        phone: app.guest_phone || undefined,
+                    },
                 },
                 job: {
                     title: app.job?.title || "Role",

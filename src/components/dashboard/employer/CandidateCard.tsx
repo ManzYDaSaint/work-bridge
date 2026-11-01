@@ -27,6 +27,8 @@ interface ApplicationData {
     screeningSummary?: string;
     matchedSkills?: string[];
     missingSkills?: string[];
+    isGuestApplication?: boolean;
+    resumeUrl?: string | null;
     user: {
         email: string;
         jobSeeker: JobSeekerProfile;
@@ -39,21 +41,46 @@ interface CandidateCardProps {
     onViewProfile: () => void;
     onStatusUpdate: (status: "SHORTLISTED" | "REJECTED" | "INTERVIEWING" | "ACCEPTED", interviewLink?: string) => void;
     updating?: boolean;
+    isDraggable?: boolean;
+    onDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
+    onDragEnd?: (e: React.DragEvent<HTMLDivElement>) => void;
 }
 
-export default function CandidateCard({ application, onViewProfile, onStatusUpdate, updating }: CandidateCardProps) {
+export default function CandidateCard({ 
+    application, 
+    onViewProfile, 
+    onStatusUpdate, 
+    updating,
+    isDraggable = false,
+    onDragStart,
+    onDragEnd
+}: CandidateCardProps) {
     const app = application;
     const seeker = app.user?.jobSeeker;
 
     return (
-        <div className="group rounded-3xl border border-stone-200/80 bg-white p-5 shadow-xs transition-all duration-200 hover:border-stone-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 space-y-3.5">
+        <div 
+            draggable={isDraggable && !updating}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            className={`group rounded-3xl border border-stone-200/80 bg-white p-5 shadow-xs transition-all duration-200 hover:border-stone-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 space-y-3.5 ${
+                isDraggable ? "cursor-grab active:cursor-grabbing hover:shadow-md" : ""
+            }`}
+        >
             <div className="flex items-start justify-between gap-3">
                 <button type="button" onClick={onViewProfile} className="flex min-w-0 flex-1 items-start gap-3 text-left">
                     <CompanyAvatar logoUrl={null} name={seeker?.full_name || "?"} size="sm" />
                     <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#16324f] dark:group-hover:text-amber-400 transition-colors">
-                            {seeker?.full_name || "Anonymous Seeker"}
-                        </p>
+                        <div className="flex items-center gap-2">
+                            <p className="truncate text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#16324f] dark:group-hover:text-amber-400 transition-colors">
+                                {seeker?.full_name || "Anonymous Seeker"}
+                            </p>
+                            {app.isGuestApplication && (
+                                <span className="rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                    Guest Applicant
+                                </span>
+                            )}
+                        </div>
                         <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 truncate">
                             <Mail size={11} className="shrink-0" />
                             <span className="truncate">{app.user?.email}</span>
@@ -71,6 +98,17 @@ export default function CandidateCard({ application, onViewProfile, onStatusUpda
 
             <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 <Badge label={app.job?.title || "Role"} variant="outline" />
+                {app.resumeUrl && (
+                    <a
+                        href={app.resumeUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-stone-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                    >
+                        📄 Download CV
+                    </a>
+                )}
                 {app.similarity !== undefined ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-900/40">
                         <Sparkles size={11} /> {Math.round(app.similarity * 100)}% Match

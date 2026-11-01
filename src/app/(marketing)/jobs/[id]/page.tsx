@@ -6,6 +6,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { formatJobType, formatWorkMode } from "@/lib/utils";
 import ShareJobButton from "@/components/jobs/ShareJobButton";
 import ApplyActionButton from "@/components/jobs/ApplyActionButton";
+import ApplyGuestForm from "@/components/jobs/ApplyGuestForm";
 import { RecommendationService } from "@/services/recommendation.service";
 
 // Revalidate every 10 minutes — much better than force-dynamic for crawlers
@@ -40,6 +41,7 @@ type PublicJob = {
     posting_type: string | null;
     display_company_name: string | null;
     job_source: string | null;
+    screening_questions: Array<{ id: string; question: string; required?: boolean }> | null;
 };
 
 type PublicEmployer = {
@@ -63,7 +65,7 @@ async function getPublicJob(slugOrId: string) {
 
     const { data } = await supabase
         .from("jobs")
-        .select("id, employer_id, title, description, location, type, work_mode, skills, must_have_skills, nice_to_have_skills, minimum_years_experience, qualification, salary_range, deadline, status, public_slug, created_at, application_method, external_apply_url, apply_email, apply_whatsapp, apply_phone, application_instructions, allow_one_tap_apply, posting_type, display_company_name, job_source")
+        .select("id, employer_id, title, description, location, type, work_mode, skills, must_have_skills, nice_to_have_skills, minimum_years_experience, qualification, salary_range, deadline, status, public_slug, created_at, application_method, external_apply_url, apply_email, apply_whatsapp, apply_phone, application_instructions, allow_one_tap_apply, posting_type, display_company_name, job_source, screening_questions")
         .eq(looksLikeUuid(slugOrId) ? "id" : "public_slug", slugOrId)
         .maybeSingle();
 
@@ -142,7 +144,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
     const company = job.display_company_name || employer?.company_name || "Aganyu employer";
     const isAgencyPosting = job.posting_type === "AGENCY" || job.posting_type === "AGANYU";
     const skills = uniqueList([...(job.must_have_skills || []), ...(job.skills || []), ...(job.nice_to_have_skills || [])]);
-    const applyHref = `/jobs?job=${job.id}`;
+    const applyHref = "#apply-now";
     const siteUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://aganyu.com").replace(/\/$/, "");
     const sharePath = `${siteUrl}/jobs/${job.public_slug || job.id}`;
 
@@ -254,6 +256,16 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
                                 <span key={skill} className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">{skill}</span>
                             )) : <p className="text-sm text-slate-500">No skills listed yet.</p>}
                         </div>
+                    </section>
+
+                    {/* Workable/Greenhouse Style: Single-Page Application Form for Guest Candidates */}
+                    <section id="apply-now" className="rounded-3xl border border-stone-200/90 bg-white p-6 sm:p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900 scroll-mt-8">
+                        <ApplyGuestForm
+                            jobId={job.id}
+                            jobTitle={job.title}
+                            companyName={company}
+                            screeningQuestions={job.screening_questions as any}
+                        />
                     </section>
                 </div>
 

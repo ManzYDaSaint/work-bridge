@@ -156,6 +156,17 @@ export default function SettingsClient({
                                     <input {...register("website")} placeholder="Website" className={inputClass} />
                                     {errors.website && <p className="mt-1 text-xs text-red-600">{errors.website.message}</p>}
                                 </div>
+                                <div className="md:col-span-2">
+                                    <input 
+                                        {...register("defaultSchedulingLink")} 
+                                        placeholder="Default Interview Scheduling Link (e.g. https://cal.com/your-name or https://calendly.com/...)" 
+                                        className={inputClass} 
+                                    />
+                                    {errors.defaultSchedulingLink && <p className="mt-1 text-xs text-red-600">{errors.defaultSchedulingLink.message}</p>}
+                                    <p className="mt-1 text-[11px] text-slate-400">
+                                        Used to prefill interview invitations sent to candidates via Email & WhatsApp.
+                                    </p>
+                                </div>
                             </div>
                             <div>
                                 <textarea {...register("description")} rows={5} placeholder="What does your company do?" className={`${inputClass} resize-y`} />

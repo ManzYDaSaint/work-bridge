@@ -1,43 +1,63 @@
 /**
- * Embedding Service using Self Hosted Hetzner VPS
- * Model: sentence-transformers/all-MiniLM-L6-v2 (384 dimensions)
+ * Embedding Service using in-process ONNX pipeline (@xenova/transformers)
+ * Model: Xenova/all-MiniLM-L6-v2 (384 dimensions)
+ * 100% compatible with sentence-transformers/all-MiniLM-L6-v2 and existing pgvector storage.
  */
 
-// const EMBED_URL = process.env.EMBEDDING_URL;
+// Global singleton pipeline reference to avoid reloading model on every request
+let pipelinePromise: Promise<any> | null = null;
+
+async function getEmbeddingPipeline() {
+    if (!pipelinePromise) {
+        pipelinePromise = (async () => {
+            const { pipeline, env } = await import("@xenova/transformers");
+            // Allow remote downloads when cache is missing
+            env.allowRemoteModels = true;
+            return pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+        })();
+    }
+    return pipelinePromise;
+}
 
 export async function generateEmbedding(text: string): Promise<number[]> {
     try {
-        const response = await fetch('https://ai.aganyu.com/embed', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                inputs: text
-            }),
+        const extractor = await getEmbeddingPipeline();
+        const output = await extractor(text, {
+            pooling: "mean",
+            normalize: true,
         });
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `HF API error: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        // The feature-extraction pipeline returns a flat array or a nested array for single inputs
-        if (!Array.isArray(result)) {
-            throw new Error("Invalid response format from HuggingFace API.");
-        }
-
-        // Handle nested array response [[...]]
-        const embedding = Array.isArray(result[0]) ? result[0] : result;
-
+        // output.data is a Float32Array of 384 numbers
+        const embedding = Array.from(output.data) as number[];
         return embedding;
-    } catch (error) {
-        console.error("[EmbeddingService] Error generating embedding:", error);
-        throw new Error("Failed to generate semantic embedding via HuggingFace.");
+    } catch (localError) {
+        console.warn("[EmbeddingService] Local inference failed, checking fallback:", localError);
+
+        // Fallback: If EMBEDDING_URL is defined, attempt remote VPS call
+        const fallbackUrl = process.env.EMBEDDING_URL;
+        if (fallbackUrl) {
+            try {
+                const response = await fetch(fallbackUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ inputs: text }),
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (Array.isArray(result)) {
+                        return Array.isArray(result[0]) ? result[0] : result;
+                    }
+                }
+            } catch (vpsError) {
+                console.error("[EmbeddingService] Remote fallback also failed:", vpsError);
+            }
+        }
+
+        throw new Error("Failed to generate semantic embedding.");
     }
 }
+
 
 import { normalizeSkills, extractMinimumExperienceYears } from "./skill-normalizer";
 

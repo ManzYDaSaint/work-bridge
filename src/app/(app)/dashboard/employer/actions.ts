@@ -177,8 +177,9 @@ export async function closeJob(jobId: string) {
  */
 export async function updateApplicationStatus(
     applicationId: string, 
-    status: "SHORTLISTED" | "REJECTED" | "INTERVIEWING" | "ACCEPTED", 
-    interviewLink?: string
+    status: "PENDING" | "SHORTLISTED" | "REJECTED" | "INTERVIEWING" | "ACCEPTED", 
+    interviewLink?: string,
+    rejectionReason?: string
 ) {
     const auth = await validateAuth(["EMPLOYER"], false, true);
     if (auth.error || !auth.user) {
@@ -191,6 +192,9 @@ export async function updateApplicationStatus(
         const updateData: any = { status };
         if (status === "INTERVIEWING" && interviewLink) {
             updateData.interview_link = interviewLink;
+        }
+        if (status === "REJECTED" && rejectionReason) {
+            updateData.rejection_reason = rejectionReason;
         }
 
         const { error } = await supabase
@@ -374,6 +378,7 @@ export async function updateEmployerProfile(values: any) {
                 description: values.description,
                 logo_url: values.logoUrl,
                 application_alerts: values.applicationAlerts,
+                default_scheduling_link: values.defaultSchedulingLink,
             })
             .eq("id", auth.user.id);
 
