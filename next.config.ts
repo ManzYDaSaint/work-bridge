@@ -55,8 +55,19 @@ const nextConfig: NextConfig = {
   },
   turbopack: {
     root: rootDir,
+    resolveAlias: {
+      "onnxruntime-node": "onnxruntime-web",
+    },
   },
-  serverExternalPackages: ["@xenova/transformers"],
+  webpack: (config) => {
+    config.resolve = config.resolve || {};
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      "onnxruntime-node": "onnxruntime-web",
+    };
+    return config;
+  },
+  serverExternalPackages: ["@xenova/transformers", "onnxruntime-web"],
   experimental: {
     optimizePackageImports: ["lucide-react", "framer-motion", "sonner"],
   },
