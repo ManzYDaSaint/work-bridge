@@ -54,7 +54,8 @@ export async function generateEmbedding(text: string): Promise<number[]> {
             }
         }
 
-        throw new Error("Failed to generate semantic embedding.");
+        const rootCause = localError instanceof Error ? localError.message : String(localError);
+        throw new Error(`Failed to generate semantic embedding: ${rootCause}`);
     }
 }
 

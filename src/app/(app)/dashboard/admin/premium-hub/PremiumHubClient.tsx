@@ -70,11 +70,12 @@ export default function MatchAnalyticsClient() {
                 toast.success(result.message || "Embeddings generated!");
                 fetchAll();
             } else {
-                toast.error("Failed to generate embeddings.");
+                const errData = await res.json().catch(() => ({}));
+                toast.error(errData.message || errData.error || "Failed to generate embeddings.");
             }
-        } catch {
+        } catch (err: any) {
             toast.dismiss();
-            toast.error("Failed to generate embeddings.");
+            toast.error(err?.message || "Failed to generate embeddings.");
         } finally {
             setForceEmbeddingLoading(false);
         }
