@@ -56,7 +56,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: rootDir,
   },
-  serverExternalPackages: ["@xenova/transformers", "onnxruntime-node"],
+  serverExternalPackages: ["@xenova/transformers"],
   experimental: {
     optimizePackageImports: ["lucide-react", "framer-motion", "sonner"],
   },

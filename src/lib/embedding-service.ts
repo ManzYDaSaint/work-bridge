@@ -11,8 +11,14 @@ async function getEmbeddingPipeline() {
     if (!pipelinePromise) {
         pipelinePromise = (async () => {
             const { pipeline, env } = await import("@xenova/transformers");
-            // Allow remote downloads when cache is missing
+            // Allow remote model downloads when cache is cold
             env.allowRemoteModels = true;
+            // Force pure WASM backend — disables native onnxruntime-node
+            // which requires a .so binary not available in Vercel serverless environments
+            env.backends.onnx.wasm.numThreads = 1;
+            env.backends.onnx.wasm.simd = true;
+            // @ts-ignore — disable native Node.js ONNX runtime
+            env.backends.onnx.node = { disabled: true };
             return pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
         })();
     }
