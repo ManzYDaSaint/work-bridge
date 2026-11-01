@@ -1,6 +1,17 @@
 import crypto from "crypto";
+import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { generateEmbedding, constructSeekerDNA, constructJobDNA } from "./embedding-service";
+
+/**
+ * Helper to get the best available database client:
+ * Prefers Supabase Admin client (service role) to bypass RLS, falling back to server client.
+ */
+async function getDbClient() {
+    const admin = getSupabaseAdminClient();
+    if (admin) return admin;
+    return await createSupabaseServerClient();
+}
 
 /**
  * Generates a SHA-256 hash for the given string
@@ -15,20 +26,19 @@ function generateHash(text: string): string {
  */
 export async function syncSeekerEmbedding(userId: string, profile: any) {
     try {
-        const supabase = await createSupabaseServerClient();
+        const supabase = await getDbClient();
         const dna = constructSeekerDNA(profile);
         const newHash = generateHash(dna);
 
-        // 1. Fetch current hash
+        // 1. Fetch current hash and embedding
         const { data: currentData } = await supabase
             .from("job_seekers")
-            .select("dna_hash")
+            .select("dna_hash, embedding")
             .eq("id", userId)
             .single();
 
-        // 2. If it matches, skip VPS generation
-        if (currentData?.dna_hash === newHash) {
-            // console.log(`[SyncEmbeddings] No changes detected. Skipping VPS call for seeker: ${userId}`);
+        // 2. If hash matches AND embedding is present, skip generation
+        if (currentData?.dna_hash === newHash && currentData?.embedding) {
             return;
         }
 
@@ -41,10 +51,9 @@ export async function syncSeekerEmbedding(userId: string, profile: any) {
             .eq("id", userId);
 
         if (error) throw error;
-        // console.log(`[SyncEmbeddings] Successfully updated embedding for seeker: ${userId}`);
     } catch (error) {
         console.error(`[SyncEmbeddings] Error syncing seeker ${userId}:`, error);
-        // We don't throw here to avoid blocking the profile save process
+        throw error;
     }
 }
 
@@ -54,20 +63,19 @@ export async function syncSeekerEmbedding(userId: string, profile: any) {
  */
 export async function syncJobEmbedding(jobId: string, job: any) {
     try {
-        const supabase = await createSupabaseServerClient();
+        const supabase = await getDbClient();
         const dna = constructJobDNA(job);
         const newHash = generateHash(dna);
 
-        // 1. Fetch current hash
+        // 1. Fetch current hash and embedding
         const { data: currentData } = await supabase
             .from("jobs")
-            .select("dna_hash")
+            .select("dna_hash, embedding")
             .eq("id", jobId)
             .single();
 
-        // 2. If it matches, skip VPS generation
-        if (currentData?.dna_hash === newHash) {
-            // console.log(`[SyncEmbeddings] No changes detected. Skipping VPS call for job: ${jobId}`);
+        // 2. If hash matches AND embedding is present, skip generation
+        if (currentData?.dna_hash === newHash && currentData?.embedding) {
             return;
         }
 
@@ -80,8 +88,9 @@ export async function syncJobEmbedding(jobId: string, job: any) {
             .eq("id", jobId);
 
         if (error) throw error;
-        // console.log(`[SyncEmbeddings] Successfully updated embedding for job: ${jobId}`);
     } catch (error) {
         console.error(`[SyncEmbeddings] Error syncing job ${jobId}:`, error);
+        throw error;
     }
 }
+

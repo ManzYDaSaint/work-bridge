@@ -1,30 +1,41 @@
+import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { generateEmbedding } from "@/lib/embedding-service";
 
-const AI_EMBEDDING_URL = "https://ai.aganyu.com/embed";
+async function getDbClient() {
+    const admin = getSupabaseAdminClient();
+    if (admin) return admin;
+    return await createSupabaseServerClient();
+}
 
 export async function checkAiServerHealth() {
     const start = Date.now();
     try {
-        // Ping AI Embedding service with a minimal test input payload
-        const response = await fetch(`${AI_EMBEDDING_URL}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ inputs: 'health check' }),
-            signal: AbortSignal.timeout(5000),
-        });
+        // Run a lightweight embedding through the in-process pipeline
+        const vector = await generateEmbedding("health check");
         const latency = Date.now() - start;
+        const isValid = Array.isArray(vector) && vector.length === 384;
+
         return {
-            status: response.ok ? 'ONLINE' : 'DEGRADED',
+            status: isValid ? "ONLINE" : "DEGRADED",
             latency,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            model: "all-MiniLM-L6-v2 (In-Process ONNX)",
+            dimensions: vector.length,
         };
-    } catch {
-        return { status: 'OFFLINE', latency: null, timestamp: new Date().toISOString() };
+    } catch (error: any) {
+        console.error("[AIHealth] Health check failed:", error);
+        return { 
+            status: "OFFLINE", 
+            latency: null, 
+            timestamp: new Date().toISOString(),
+            error: error?.message || "Unknown error"
+        };
     }
 }
 
 export async function performIntegrityScan() {
-    const supabase = await createSupabaseServerClient();
+    const supabase = await getDbClient();
 
     // Scan for Jobs missing embeddings
     const { count: jobsMissingCount } = await supabase
@@ -40,12 +51,13 @@ export async function performIntegrityScan() {
         .is('embedding', null)
         .neq('profile_visibility', 'HIDDEN');
 
-    return { jobsMissingCount, seekersMissingCount };
+    return { 
+        jobsMissingCount: jobsMissingCount ?? 0, 
+        seekersMissingCount: seekersMissingCount ?? 0 
+    };
 }
 
 export async function processEmbeddingQueue() {
-    // Logic to fetch PENDING jobs from ai_embedding_jobs and process them
-    // This will integrate with existing sync-embeddings.ts services
-    await createSupabaseServerClient();
     return { processed: 0 };
 }
+

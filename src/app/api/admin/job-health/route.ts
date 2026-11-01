@@ -103,11 +103,20 @@ export async function POST(request: Request) {
             }
         }
 
+        if (jobs && jobs.length > 0 && syncedCount === 0 && errors.length > 0) {
+            return NextResponse.json({
+                success: false,
+                syncedCount: 0,
+                errors,
+                message: `Failed to generate embeddings: ${errors[0]}`
+            }, { status: 500 });
+        }
+
         return NextResponse.json({
             success: true,
             syncedCount,
             errors,
-            message: `Successfully generated embeddings for ${syncedCount} job(s).`
+            message: `Successfully generated embeddings for ${syncedCount} job(s).${errors.length > 0 ? ` (${errors.length} failed)` : ''}`
         });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
