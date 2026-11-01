@@ -4,6 +4,27 @@
  * 100% compatible with sentence-transformers/all-MiniLM-L6-v2 and existing pgvector storage.
  */
 
+// Intercept Node module loading: redirect onnxruntime-node to onnxruntime-web
+// This prevents Node from looking for libonnxruntime.so.1.14.0 in serverless environments
+if (typeof process !== "undefined" && process?.versions?.node) {
+    try {
+        const Module: any = await import("module");
+        const modPrototype = Module.default?.prototype || Module.prototype;
+        if (modPrototype && !(modPrototype as any).__onnx_hooked) {
+            const origRequire = modPrototype.require;
+            modPrototype.require = function (id: string, ...args: any[]) {
+                if (id === "onnxruntime-node") {
+                    return origRequire.call(this, "onnxruntime-web");
+                }
+                return origRequire.apply(this, [id, ...args]);
+            };
+            (modPrototype as any).__onnx_hooked = true;
+        }
+    } catch {
+        // Ignore in environments where module interception is not supported
+    }
+}
+
 // Global singleton pipeline reference to avoid reloading model on every request
 let pipelinePromise: Promise<any> | null = null;
 
@@ -14,7 +35,6 @@ async function getEmbeddingPipeline() {
             // Allow remote model downloads when cache is cold
             env.allowRemoteModels = true;
             // Force pure WASM backend — disables native onnxruntime-node
-            // which requires a .so binary not available in Vercel serverless environments
             env.backends.onnx.wasm.numThreads = 1;
             env.backends.onnx.wasm.simd = true;
             // @ts-ignore — disable native Node.js ONNX runtime
