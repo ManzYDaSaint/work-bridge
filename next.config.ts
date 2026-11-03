@@ -55,19 +55,11 @@ const nextConfig: NextConfig = {
   },
   turbopack: {
     root: rootDir,
-    resolveAlias: {
-      "onnxruntime-node": "onnxruntime-web",
-    },
   },
-  webpack: (config) => {
-    config.resolve = config.resolve || {};
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      "onnxruntime-node": "onnxruntime-web",
-    };
-    return config;
+  serverExternalPackages: ["@xenova/transformers", "onnxruntime-node"],
+  outputFileTracingIncludes: {
+    "/**": ["./node_modules/onnxruntime-node/bin/napi-v3/linux/x64/**"],
   },
-  serverExternalPackages: ["@xenova/transformers", "onnxruntime-web"],
   experimental: {
     optimizePackageImports: ["lucide-react", "framer-motion", "sonner"],
   },
