@@ -7,7 +7,8 @@ import { EmployerService } from "@/services/employer.service";
 
 export default async function EmployerOverviewPage() {
     const { profile: user } = await requireDashboardProfile("EMPLOYER");
-    const stats = await EmployerService.getEmployerStats(user.id);
+    const targetEmployerId = user.employer?.id || user.id;
+    const stats = await EmployerService.getEmployerStats(targetEmployerId);
 
     const isApproved = user.employer?.status === "APPROVED";
 

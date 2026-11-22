@@ -15,7 +15,7 @@ export default async function EmployerSettingsPage() {
     const { data: profile, error } = await supabase
         .from("employers")
         .select("*")
-        .eq("id", auth.user.id)
+        .or(`user_id.eq.${auth.user.id},id.eq.${auth.user.id}`)
         .single();
 
     if (error) {
