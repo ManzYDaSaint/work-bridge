@@ -53,6 +53,7 @@ type PublicEmployer = {
     description: string | null;
     logo_url: string | null;
     recruiter_verified: boolean | null;
+    account_type: string | null;
 };
 
 function looksLikeUuid(value: string) {
@@ -74,7 +75,7 @@ async function getPublicJob(slugOrId: string) {
 
     const { data: employerData } = await supabase
         .from("employers")
-        .select("id, company_name, industry, location, website, description, logo_url, recruiter_verified")
+        .select("id, company_name, industry, location, website, description, logo_url, recruiter_verified, account_type")
         .eq("id", job.employer_id)
         .maybeSingle();
 
@@ -203,6 +204,11 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
                                         <ShieldCheck size={13} /> Verified recruiter
                                     </span>
                                 )}
+                                {(employer?.account_type === "LEAD" || job.posting_type === "AGANYU") && !employer?.recruiter_verified && (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
+                                        <Sparkles size={13} /> Verified Sourced Vacancy
+                                    </span>
+                                )}
                             </div>
                             <h1 className="mt-5 text-4xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-5xl">{job.title}</h1>
                             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600 dark:text-slate-300">
@@ -288,6 +294,24 @@ export default async function PublicJobPage({ params }: { params: Promise<{ id: 
                             <a href={employer.website} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#16324f] hover:underline dark:text-slate-100">
                                 Visit website <ExternalLink size={14} />
                             </a>
+                        )}
+
+                        {/* Self-serve Claim Hook: Shown when this employer is a LEAD (unclaimed) */}
+                        {employer?.account_type === "LEAD" && (
+                            <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 dark:border-amber-900/50 dark:bg-amber-950/30">
+                                <p className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                                    <Building2 size={13} className="text-amber-700 dark:text-amber-400" /> Are you from {company}?
+                                </p>
+                                <p className="mt-1 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
+                                    Claim this verified company profile to manage your job listings, review applicant profiles, and post roles directly.
+                                </p>
+                                <Link
+                                    href={`/register?role=employer&company=${encodeURIComponent(company)}`}
+                                    className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#16324f] py-1.5 px-3 text-xs font-semibold text-white shadow-xs transition hover:bg-[#16324f]/90"
+                                >
+                                    Claim this company profile
+                                </Link>
+                            </div>
                         )}
 
                         {/* Recruitment Partner section for Agency / Aganyu postings */}

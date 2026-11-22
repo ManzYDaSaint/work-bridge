@@ -10,6 +10,7 @@ import { useEffect } from "react";
 import { signOutAndRedirect } from "@/lib/auth-utils";
 import { PendingBanner } from "@/components/dashboard/employer/PendingBanner";
 import QuotaStatusBar from "@/components/dashboard/employer/QuotaStatusBar";
+import { ClaimWelcomeBanner } from "@/components/dashboard/employer/ClaimWelcomeBanner";
 
 const employerNavGroups: NavGroup[] = [
     {
@@ -108,6 +109,7 @@ function EmployerLayoutInner({ children }: { children: React.ReactNode }) {
                 </>
             }
         >
+            <ClaimWelcomeBanner companyName={companyName} />
             {!isApproved && <PendingBanner />}
             {children}
         </DashboardLayout>

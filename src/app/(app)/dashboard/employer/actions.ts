@@ -380,7 +380,7 @@ export async function updateEmployerProfile(values: any) {
                 application_alerts: values.applicationAlerts,
                 default_scheduling_link: values.defaultSchedulingLink,
             })
-            .eq("id", auth.user.id);
+            .or(`user_id.eq.${auth.user.id},id.eq.${auth.user.id}`);
 
         if (error) throw error;
 

@@ -59,21 +59,42 @@ export async function PATCH(request: Request) {
             return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
         }
 
-        // 1. Update employer status
+        // 1. Update employer status (and sync account_type when approved)
+        const updatePayload: Record<string, string> = { status };
+        if (status === 'APPROVED') {
+            updatePayload.account_type = 'ACTIVE';
+        } else if (status === 'REJECTED') {
+            updatePayload.account_type = 'INACTIVE';
+        }
+
         const { data: updatedEmployer, error } = await supabase
             .from("employers")
-            .update({ status })
+            .update(updatePayload)
             .eq("id", employerId)
-            .select("company_name")
+            .select("company_name, user_id")
             .single();
 
         if (error) throw error;
 
-        // 2. Fetch employer's registered email
+        // Sync CRM profile status
+        try {
+            const { CRMService } = await import("@/lib/crm/crm-service");
+            if (status === 'APPROVED') {
+                await CRMService.updateStatus(employerId, 'ACTIVE');
+                await CRMService.updateScore(employerId, 50);
+            } else if (status === 'REJECTED') {
+                await CRMService.updateStatus(employerId, 'INACTIVE');
+            }
+        } catch (crmErr) {
+            console.error('[Admin Employers] CRM sync error:', crmErr);
+        }
+
+        // 2. Fetch employer's registered email via user_id (new schema) or id (legacy)
+        const lookupId = updatedEmployer?.user_id || employerId;
         const { data: employerUser } = await supabase
             .from("users")
             .select("email")
-            .eq("id", employerId)
+            .eq("id", lookupId)
             .single();
 
         // 3. Send email notification (APPROVED or REJECTED only — not for PENDING revokes)
@@ -85,8 +106,9 @@ export async function PATCH(request: Request) {
             });
 
             // Trigger Real-time notification for the employer
+            const notifyUserId = updatedEmployer?.user_id || employerId;
             await NotificationService.createNotification({
-                userId: employerId,
+                userId: notifyUserId,
                 title: status === 'APPROVED' ? "Employer Verified" : "Verification Declined",
                 message: status === 'APPROVED'
                     ? `Congratulations! ${updatedEmployer?.company_name} has been approved. You can now post jobs.`

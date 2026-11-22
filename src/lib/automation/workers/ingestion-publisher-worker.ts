@@ -27,13 +27,64 @@ export const JobIngestionPublisherWorker = {
             throw new Error(`[PublisherWorker] Queue item not found: ${payload.queueItemId}`);
         }
 
-        // 2. Locate existing employer profile or create System Recruiter entry
-        let { data: employerProfile } = await supabase
-            .from('employers')
-            .select('id')
-            .or('company_name.ilike.%Aganyu%,company_name.ilike.%System Recruiter%')
-            .limit(1)
-            .maybeSingle();
+        // 2. Locate actual employer profile by display_company_name or create LEAD employer
+        let employerProfile: { id: string } | null = null;
+        const targetCompanyName = item.display_company_name?.trim();
+
+        if (targetCompanyName) {
+            // First check if an employer with this company name already exists
+            const { data: matchedEmployer } = await supabase
+                .from('employers')
+                .select('id, company_name')
+                .ilike('company_name', targetCompanyName)
+                .limit(1)
+                .maybeSingle();
+
+            if (matchedEmployer) {
+                employerProfile = matchedEmployer;
+            } else {
+                // Auto-create a LEAD employer for this company
+                const newLeadId = crypto.randomUUID();
+                const now = new Date().toISOString();
+                const { data: newLead } = await supabase
+                    .from('employers')
+                    .insert({
+                        id: newLeadId,
+                        company_name: targetCompanyName,
+                        industry: item.industry_category || 'To be updated',
+                        location: item.location || 'Malawi',
+                        website: item.external_apply_url ? (() => {
+                            try { return new URL(item.external_apply_url).origin; } catch { return null; }
+                        })() : null,
+                        recruitment_email: item.apply_email || null,
+                        recruitment_url: item.external_apply_url || null,
+                        account_type: 'LEAD',
+                        status: 'PENDING',
+                        recruiter_verified: false,
+                        sourced_at: now,
+                        created_at: now,
+                    })
+                    .select('id')
+                    .maybeSingle();
+
+                if (newLead) {
+                    employerProfile = newLead;
+                    const { CRMService } = await import("@/lib/crm/crm-service");
+                    await CRMService.createLeadProfile(newLead.id, 10);
+                }
+            }
+        }
+
+        // Fallback: Locate Aganyu/System Recruiter entry if no employer was matched or created
+        if (!employerProfile) {
+            const { data: fallbackEmp } = await supabase
+                .from('employers')
+                .select('id')
+                .or('company_name.ilike.%Aganyu%,company_name.ilike.%System Recruiter%')
+                .limit(1)
+                .maybeSingle();
+            employerProfile = fallbackEmp;
+        }
 
         if (!employerProfile) {
             const { data: systemUser } = await supabase

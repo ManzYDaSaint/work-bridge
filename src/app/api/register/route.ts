@@ -117,25 +117,132 @@ export async function POST(request: Request) {
                 // Profile already exists from the auth trigger; avoid public rewrites.
             } else if (seekerError) throw seekerError;
         } else if (effectiveRole === "EMPLOYER") {
-            const { data: existingEmployer } = await supabase
-                .from("employers")
-                .select("id")
-                .eq("id", authUser.id)
-                .maybeSingle();
+            const claimToken = typeof body.claimToken === "string" ? body.claimToken.trim() : null;
+            let claimedEmployerId: string | null = null;
 
-            if (!existingEmployer) {
-                const fallbackCompany = companyName || "New Company";
-                const { error: employerError } = await supabase
+            if (claimToken) {
+                const crypto = await import("crypto");
+                const tokenHash = crypto.createHash("sha256").update(claimToken).digest("hex");
+                const now = new Date().toISOString();
+
+                // Look up matching LEAD employer with valid token
+                const { data: leadEmployer } = await supabase
                     .from("employers")
-                    .insert({
-                        id: authUser.id,
-                        company_name: fallbackCompany,
-                        industry: industry || "To be updated",
-                        location: location || "To be updated",
-                        status: "PENDING",
-                        recruiter_verified: !isFreeEmailDomain(registrationEmail),
-                    });
-                if (employerError) throw employerError;
+                    .select("id, company_name, account_type, user_id, claim_token_expires_at")
+                    .eq("claim_token_hash", tokenHash)
+                    .maybeSingle();
+
+                if (leadEmployer && (!leadEmployer.claim_token_expires_at || leadEmployer.claim_token_expires_at > now)) {
+                    claimedEmployerId = leadEmployer.id;
+
+                    // Link this user account to the existing employer lead
+                    const { error: claimUpdateError } = await supabase
+                        .from("employers")
+                        .update({
+                            user_id: authUser.id,
+                            account_type: "REGISTERED",
+                            status: "PENDING",
+                            claimed_at: now,
+                            claimed_by_user_id: authUser.id,
+                            claim_token_hash: null, // single-use: invalidate token
+                        })
+                        .eq("id", leadEmployer.id);
+
+                    if (claimUpdateError) {
+                        console.error("[register] Failed to link claimed employer lead:", claimUpdateError);
+                    } else {
+                        // Update CRM status to REGISTERED
+                        const { CRMService } = await import("@/lib/crm/crm-service");
+                        await CRMService.updateStatus(leadEmployer.id, "REGISTERED");
+                        await CRMService.updateScore(leadEmployer.id, 20);
+                    }
+                }
+            }
+
+            // If no claimToken was passed, check for automatic corporate domain or exact company name match
+            if (!claimedEmployerId) {
+                const now = new Date().toISOString();
+                const domain = registrationEmail.includes("@") ? registrationEmail.split("@")[1]?.toLowerCase() : "";
+                const isCorporate = domain && !isFreeEmailDomain(registrationEmail);
+
+                let matchedLead: { id: string; company_name: string } | null = null;
+
+                // 1. Try matching corporate domain against LEAD employer recruitment_email or website
+                if (isCorporate) {
+                    const { data: domainLead } = await supabase
+                        .from("employers")
+                        .select("id, company_name")
+                        .eq("account_type", "LEAD")
+                        .is("user_id", null)
+                        .or(`recruitment_email.ilike.%@${domain},website.ilike.%${domain}%`)
+                        .limit(1)
+                        .maybeSingle();
+
+                    if (domainLead) {
+                        matchedLead = domainLead;
+                    }
+                }
+
+                // 2. Try matching exact company name if specified
+                if (!matchedLead && companyName?.trim()) {
+                    const { data: nameLead } = await supabase
+                        .from("employers")
+                        .select("id, company_name")
+                        .eq("account_type", "LEAD")
+                        .is("user_id", null)
+                        .ilike("company_name", companyName.trim())
+                        .limit(1)
+                        .maybeSingle();
+
+                    if (nameLead) {
+                        matchedLead = nameLead;
+                    }
+                }
+
+                if (matchedLead) {
+                    claimedEmployerId = matchedLead.id;
+                    await supabase
+                        .from("employers")
+                        .update({
+                            user_id: authUser.id,
+                            account_type: "REGISTERED",
+                            status: "PENDING",
+                            claimed_at: now,
+                            claimed_by_user_id: authUser.id,
+                            claim_token_hash: null,
+                        })
+                        .eq("id", matchedLead.id);
+
+                    const { CRMService } = await import("@/lib/crm/crm-service");
+                    await CRMService.updateStatus(matchedLead.id, "REGISTERED");
+                    await CRMService.updateScore(matchedLead.id, 25);
+                }
+            }
+
+            // Only insert new employer row if not linked to an existing lead
+            if (!claimedEmployerId) {
+                const { data: existingEmployer } = await supabase
+                    .from("employers")
+                    .select("id")
+                    .or(`id.eq.${authUser.id},user_id.eq.${authUser.id}`)
+                    .maybeSingle();
+
+                if (!existingEmployer) {
+                    const fallbackCompany = companyName || "New Company";
+                    const { error: employerError } = await supabase
+                        .from("employers")
+                        .insert({
+                            id: authUser.id,
+                            user_id: authUser.id,
+                            company_name: fallbackCompany,
+                            industry: industry || "To be updated",
+                            location: location || "To be updated",
+                            status: "PENDING",
+                            account_type: "REGISTERED",
+                            recruiter_verified: !isFreeEmailDomain(registrationEmail),
+                        });
+                    if (employerError) throw employerError;
+                }
             }
         }
 

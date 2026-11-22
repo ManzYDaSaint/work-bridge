@@ -112,24 +112,60 @@ export async function GET(request: Request) {
                                 }
                             }
                         } else if (effectiveRole === "EMPLOYER") {
-                            const { data: existingEmployer } = await adminClient
-                                .from("employers")
-                                .select("id, company_name, industry, location, status, recruiter_verified")
-                                .eq("id", user.id)
-                                .maybeSingle();
+                            const claimToken = searchParams.get("claim_token") || (user.user_metadata?.claim_token as string | undefined);
+                            let claimed = false;
 
-                            await adminClient.from("employers").upsert({
-                                id: user.id,
-                                company_name: existingEmployer?.company_name || user.user_metadata?.company_name || null,
-                                industry: existingEmployer?.industry || null,
-                                location: existingEmployer?.location || null,
-                                status: existingEmployer?.status || "PENDING",
-                                recruiter_verified: existingEmployer?.recruiter_verified ?? (email ? !isFreeEmailDomain(email) : false),
-                            });
+                            if (claimToken) {
+                                const crypto = await import("crypto");
+                                const tokenHash = crypto.createHash("sha256").update(claimToken).digest("hex");
+                                const now = new Date().toISOString();
 
-                            if (effectiveRole === "EMPLOYER") {
-                                await adminClient.from("job_seekers").delete().eq("id", user.id);
+                                const { data: leadEmployer } = await adminClient
+                                    .from("employers")
+                                    .select("id, claim_token_expires_at")
+                                    .eq("claim_token_hash", tokenHash)
+                                    .maybeSingle();
+
+                                if (leadEmployer && (!leadEmployer.claim_token_expires_at || leadEmployer.claim_token_expires_at > now)) {
+                                    await adminClient
+                                        .from("employers")
+                                        .update({
+                                            user_id: user.id,
+                                            account_type: "REGISTERED",
+                                            status: "PENDING",
+                                            claimed_at: now,
+                                            claimed_by_user_id: user.id,
+                                            claim_token_hash: null,
+                                        })
+                                        .eq("id", leadEmployer.id);
+
+                                    const { CRMService } = await import("@/lib/crm/crm-service");
+                                    await CRMService.updateStatus(leadEmployer.id, "REGISTERED");
+                                    await CRMService.updateScore(leadEmployer.id, 20);
+                                    claimed = true;
+                                }
                             }
+
+                            if (!claimed) {
+                                const { data: existingEmployer } = await adminClient
+                                    .from("employers")
+                                    .select("id, company_name, industry, location, status, recruiter_verified")
+                                    .or(`id.eq.${user.id},user_id.eq.${user.id}`)
+                                    .maybeSingle();
+
+                                await adminClient.from("employers").upsert({
+                                    id: existingEmployer?.id || user.id,
+                                    user_id: user.id,
+                                    company_name: existingEmployer?.company_name || user.user_metadata?.company_name || null,
+                                    industry: existingEmployer?.industry || null,
+                                    location: existingEmployer?.location || null,
+                                    status: existingEmployer?.status || "PENDING",
+                                    account_type: "REGISTERED",
+                                    recruiter_verified: existingEmployer?.recruiter_verified ?? (email ? !isFreeEmailDomain(email) : false),
+                                });
+                            }
+
+                            await adminClient.from("job_seekers").delete().eq("id", user.id);
                         }
 
                         // Send welcome email only on their very first successful login/verification

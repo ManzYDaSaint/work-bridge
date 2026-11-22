@@ -34,11 +34,19 @@ const getPasswordStrength = (password: string) => {
 
 function RegisterForm() {
     const searchParams = useSearchParams();
+    const claimToken = searchParams.get("claim_token") || "";
     const [role, setRole] = useState<Role>("JOB_SEEKER");
     const [formData, setFormData] = useState({
         email: "",
         password: "",
     });
+    const [claimedCompany, setClaimedCompany] = useState<{
+        companyName: string;
+        email: string;
+        industry?: string;
+        location?: string;
+    } | null>(null);
+    const [validatingClaim, setValidatingClaim] = useState(false);
     const [turnstileToken, setTurnstileToken] = useState<string>("");
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
@@ -50,6 +58,42 @@ function RegisterForm() {
             setRole("EMPLOYER");
         }
     }, [searchParams]);
+
+    // Handle claim token verification
+    useEffect(() => {
+        if (!claimToken) return;
+
+        setValidatingClaim(true);
+        setRole("EMPLOYER");
+
+        fetch(`/api/claim/verify?token=${encodeURIComponent(claimToken)}`)
+            .then(async (res) => {
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.valid) {
+                        setClaimedCompany({
+                            companyName: data.companyName,
+                            email: data.email || "",
+                            industry: data.industry,
+                            location: data.location,
+                        });
+                        if (data.email) {
+                            setFormData((prev) => ({ ...prev, email: data.email }));
+                        }
+                        toast.success(`Claiming profile for ${data.companyName}`);
+                    }
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    toast.error(err.error || "Invalid or expired invitation token.");
+                }
+            })
+            .catch(() => {
+                toast.error("Could not verify claim link.");
+            })
+            .finally(() => {
+                setValidatingClaim(false);
+            });
+    }, [claimToken]);
 
     useEffect(() => {
         fetch("/api/metrics/track", {
@@ -99,10 +143,12 @@ function RegisterForm() {
             email,
             password: formData.password,
             options: {
-                emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback`,
+                emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback${claimToken ? `?claim_token=${encodeURIComponent(claimToken)}` : ""}`,
                 data: {
                     role,
                     referral_code: referralCode,
+                    claim_token: claimToken || undefined,
+                    company_name: claimedCompany?.companyName || undefined,
                 },
             },
         });
@@ -127,7 +173,9 @@ function RegisterForm() {
                         password: formData.password, 
                         role, 
                         userId: signUpData.user?.id,
-                        turnstileToken 
+                        turnstileToken,
+                        claimToken: claimToken || undefined,
+                        companyName: claimedCompany?.companyName || undefined,
                     }),
                 });
                 if (!regRes.ok) {
@@ -179,54 +227,85 @@ function RegisterForm() {
                 </div>
 
                 <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/80 sm:p-7">
-                    <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/80">
-                        <button
-                            type="button"
-                            onClick={() => setRole("JOB_SEEKER")}
-                            className={cn(
-                                "inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition",
-                                role === "JOB_SEEKER"
-                                    ? "bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100"
-                                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
-                            )}
-                        >
-                            <User size={14} />
-                            Candidate
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setRole("EMPLOYER")}
-                            className={cn(
-                                "inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition",
-                                role === "EMPLOYER"
-                                    ? "bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100"
-                                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
-                            )}
-                        >
-                            <Briefcase size={14} />
-                            Employer
-                        </button>
-                    </div>
+                    {claimedCompany && (
+                        <div className="mb-5 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-900/50 dark:bg-blue-950/40">
+                            <div className="flex items-center gap-2">
+                                <Briefcase className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                <span className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                                    Claiming Company Profile
+                                </span>
+                            </div>
+                            <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                                {claimedCompany.companyName}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                {[claimedCompany.industry, claimedCompany.location].filter(Boolean).join(" • ") || "Malawi"}
+                            </p>
+                            <p className="mt-2 text-[11px] text-blue-800 dark:text-blue-300">
+                                Your account will be connected to all existing jobs published for {claimedCompany.companyName}.
+                            </p>
+                        </div>
+                    )}
 
-                    <GoogleAuthButtons mode="register" role={role} />
+                    {!claimedCompany && (
+                        <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/80">
+                            <button
+                                type="button"
+                                onClick={() => setRole("JOB_SEEKER")}
+                                className={cn(
+                                    "inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition",
+                                    role === "JOB_SEEKER"
+                                        ? "bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100"
+                                        : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
+                                )}
+                            >
+                                <User size={14} />
+                                Candidate
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setRole("EMPLOYER")}
+                                className={cn(
+                                    "inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition",
+                                    role === "EMPLOYER"
+                                        ? "bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100"
+                                        : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
+                                )}
+                            >
+                                <Briefcase size={14} />
+                                Employer
+                            </button>
+                        </div>
+                    )}
 
-                    <div className="my-5 flex items-center gap-3">
-                        <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-                        <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">or email</span>
-                        <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-                    </div>
+                    {!claimedCompany && <GoogleAuthButtons mode="register" role={role} />}
+
+                    {!claimedCompany && (
+                        <div className="my-5 flex items-center gap-3">
+                            <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                            <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">or email</span>
+                            <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                        </div>
+                    )}
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-1.5">
-                            <label htmlFor="email" className="text-xs font-medium text-slate-600 dark:text-slate-300">Email</label>
+                            <label htmlFor="email" className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                                Email {claimedCompany && <span className="text-slate-400 font-normal">(locked to invitation)</span>}
+                            </label>
                             <input
                                 id="email"
                                 type="email"
                                 name="email"
                                 placeholder="you@example.com"
+                                value={formData.email}
+                                readOnly={!!claimedCompany?.email}
                                 required
                                 onChange={handleInputChange}
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-500"
+                                className={cn(
+                                    "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-slate-500",
+                                    claimedCompany?.email && "bg-slate-50 text-slate-600 dark:bg-slate-900 dark:text-slate-300 cursor-not-allowed"
+                                )}
                             />
                         </div>
 

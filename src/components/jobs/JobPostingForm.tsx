@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { EmployerPicker } from "@/components/admin/EmployerPicker";
 
 interface JobPostingFormProps {
     defaultValues?: Partial<JobQuickFormValues>;
@@ -56,6 +57,7 @@ export function JobPostingForm({
         register,
         handleSubmit,
         watch,
+        setValue,
         formState: { errors },
     } = useForm<JobQuickFormValues>({
         resolver: zodResolver(jobQuickFormSchema) as any,
@@ -345,9 +347,46 @@ export function JobPostingForm({
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Hiring Company Name (Optional)</label>
-                                        <input {...register("displayCompanyName")} placeholder={`Overrides: ${companyNamePlaceholder}`} className={inputClass} />
-                                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Use this if you are recruiting on behalf of a client.</p>
+                                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Hiring Company (Employer CRM Lead)</label>
+                                        <EmployerPicker
+                                            companyName={watch("displayCompanyName")}
+                                            onChange={(selectedEmp) => {
+                                                if (selectedEmp) {
+                                                    setValue("displayCompanyName", selectedEmp.company_name);
+                                                    
+                                                    // 1. Auto-fill Location if empty or default
+                                                    if (selectedEmp.location && selectedEmp.location !== "To be updated") {
+                                                        const curLocation = watch("location");
+                                                        if (!curLocation || curLocation === "Remote or City, Country") {
+                                                            setValue("location", selectedEmp.location);
+                                                        }
+                                                    }
+
+                                                    // 2. Auto-fill Recruitment Email
+                                                    if (selectedEmp.recruitment_email) {
+                                                        setValue("applyEmail", selectedEmp.recruitment_email);
+                                                    }
+
+                                                    // 3. Auto-fill Careers Portal or Website
+                                                    const targetUrl = selectedEmp.recruitment_url || selectedEmp.website;
+                                                    if (targetUrl) {
+                                                        setValue("externalApplyUrl", targetUrl);
+                                                    }
+
+                                                    // 4. Auto-select application method if still default
+                                                    const currentMethod = watch("applicationMethod");
+                                                    if (currentMethod === "one_tap") {
+                                                        if (selectedEmp.recruitment_url) {
+                                                            setValue("applicationMethod", "external_url");
+                                                        } else if (selectedEmp.recruitment_email) {
+                                                            setValue("applicationMethod", "email");
+                                                        }
+                                                    }
+                                                }
+                                            }}
+                                            inputClass={inputClass}
+                                        />
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Search existing employers or instantly create a new CRM lead.</p>
                                     </div>
                                 </div>
                             </div>

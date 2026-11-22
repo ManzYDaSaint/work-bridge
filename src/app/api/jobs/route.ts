@@ -115,11 +115,15 @@ export async function POST(request: Request) {
             .map((e) => e.trim().toLowerCase());
         const isSystemRecruiter = !!auth.email && systemRecruiterEmails.includes(auth.email.toLowerCase());
 
+        // Resolve the real employer UUID (supports both legacy id = userId and claimed user_id)
+        const { getEmployerIdForUser } = await import("@/lib/employer-utils");
+        const resolvedEmployerId = (await getEmployerIdForUser(auth.userId)) || auth.userId;
+
         if (!isSystemRecruiter) {
             const { count: activeJobCount } = await supabase
                 .from("jobs")
                 .select("id", { count: "exact", head: true })
-                .eq("employer_id", auth.userId)
+                .eq("employer_id", resolvedEmployerId)
                 .eq("status", "ACTIVE");
 
             if ((activeJobCount || 0) >= 2) {
@@ -133,7 +137,7 @@ export async function POST(request: Request) {
         const { data: existingJob } = await supabase
             .from("jobs")
             .select("id")
-            .eq("employer_id", auth.userId)
+            .eq("employer_id", resolvedEmployerId)
             .eq("title", body.title)
             .eq("location", body.location)
             .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
@@ -174,7 +178,7 @@ export async function POST(request: Request) {
         const { data: createdJob, error: insertError } = await supabase
             .from("jobs")
             .insert({
-                employer_id: auth.userId,
+                employer_id: resolvedEmployerId,
                 title: body.title,
                 description: body.description,
                 location: body.location,

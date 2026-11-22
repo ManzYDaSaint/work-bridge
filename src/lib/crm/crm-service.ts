@@ -5,6 +5,36 @@ import { getSupabaseAdminClient } from "@/lib/supabase-admin";
  */
 export const CRMService = {
     /**
+     * Initializes a CRM profile for a newly created LEAD employer.
+     */
+    async createLeadProfile(employerId: string, initialScore: number = 10) {
+        const supabase = getSupabaseAdminClient();
+        if (!supabase) return;
+
+        const priority = initialScore >= 100 ? "HIGH" : initialScore >= 40 ? "MEDIUM" : "LOW";
+        const now = new Date().toISOString();
+
+        const { error } = await supabase
+            .from("employer_crm_profiles")
+            .upsert(
+                {
+                    employer_id: employerId,
+                    status: "LEAD",
+                    engagement_score: initialScore,
+                    priority,
+                    last_activity_at: now,
+                    updated_at: now,
+                },
+                { onConflict: "employer_id" }
+            );
+
+        if (error) {
+            console.error("[CRMService] Error creating lead profile:", error);
+            throw error;
+        }
+    },
+
+    /**
      * Updates an employer's CRM score based on activity.
      */
     async updateScore(employerId: string, scoreDelta: number) {
@@ -13,7 +43,7 @@ export const CRMService = {
 
         const { data: existing, error: fetchError } = await supabase
             .from("employer_crm_profiles")
-            .select("id, engagement_score")
+            .select("id, engagement_score, status")
             .eq("employer_id", employerId)
             .maybeSingle();
 
@@ -60,9 +90,9 @@ export const CRMService = {
         if (!supabase) return;
 
         const { error } = await supabase
-            .from('employer_crm_profiles')
+            .from("employer_crm_profiles")
             .update({ status, updated_at: new Date().toISOString() })
-            .eq('employer_id', employerId);
+            .eq("employer_id", employerId);
 
         if (error) throw error;
     }

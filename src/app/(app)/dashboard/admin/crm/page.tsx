@@ -19,7 +19,7 @@ export default async function EmployerCRMPage() {
             .from("employer_crm_profiles")
             .select(`
                 *,
-                employer:employers(company_name, industry, location)
+                employer:employers(id, company_name, industry, location, website, recruitment_email, account_type)
             `)
             .order("updated_at", { ascending: false });
 

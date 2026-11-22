@@ -15,8 +15,9 @@ export default async function EmployerJobsPage({
     const status = params.status || params.tab || "all";
     const page = parseInt(params.page || "1");
     const limit = 20;
+    const targetEmployerId = user.employer?.id || user.id;
     const { jobs, totalPages } = await jobService.getEmployerJobs(
-        user.id,
+        targetEmployerId,
         status,
         page,
         limit
