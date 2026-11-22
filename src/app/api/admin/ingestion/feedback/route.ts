@@ -39,7 +39,7 @@ export async function GET(req: Request) {
         // Fetch accuracy telemetry directly from ingested_jobs_queue to display live source status
         const { data: queueItems } = await supabase
             .from("ingested_jobs_queue")
-            .select("raw_payload, overall_confidence, created_at")
+            .select("overall_confidence, created_at")
             .gte("created_at", dateLimit)
             .limit(100);
 
