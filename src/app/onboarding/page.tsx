@@ -29,7 +29,7 @@ export default async function OnboardingPage() {
         const { data: empByUserId } = await supabase
             .from("employers")
             .select("*")
-            .eq("user_id", auth.user.id)
+            .or(`user_id.eq.${auth.user.id},id.eq.${auth.user.id}`)
             .maybeSingle();
         if (empByUserId) {
             resolvedEmployer = empByUserId;

@@ -26,7 +26,7 @@ export async function buildMeProfile(
         return { profile: null, error: "not_found" };
     }
 
-    // Fallback: If userData.employer is null (e.g. decoupled user_id on claimed employer), fetch by user_id
+    // Fallback: If userData.employer is null (e.g. decoupled user_id on claimed employer or dropped FK), fetch by user_id or id
     let resolvedEmployer = userData.employer;
     if (!resolvedEmployer && userData.role === "EMPLOYER") {
         const { data: empByUserId } = await supabase
@@ -35,7 +35,7 @@ export async function buildMeProfile(
                 *,
                 jobs(id)
             `)
-            .eq("user_id", userId)
+            .or(`user_id.eq.${userId},id.eq.${userId}`)
             .maybeSingle();
 
         if (empByUserId) {

@@ -29,7 +29,7 @@ export const UserService = {
             return { profile: null, error: "not_found" };
         }
 
-        // Fallback: If userData.employer is null (e.g. decoupled user_id on claimed employer lead), fetch by user_id
+        // Fallback: If userData.employer is null (e.g. decoupled user_id on claimed employer lead or dropped FK), fetch by user_id or id
         let resolvedEmployer = userData.employer;
         if (!resolvedEmployer && userData.role === "EMPLOYER") {
             const { data: empByUserId } = await supabase
@@ -38,7 +38,7 @@ export const UserService = {
                     *,
                     jobs(id)
                 `)
-                .eq("user_id", userId)
+                .or(`user_id.eq.${userId},id.eq.${userId}`)
                 .maybeSingle();
 
             if (empByUserId) {

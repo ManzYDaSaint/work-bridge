@@ -16,27 +16,26 @@ export default async function EmployerSettingsPage() {
         .from("employers")
         .select("*")
         .or(`user_id.eq.${auth.user.id},id.eq.${auth.user.id}`)
-        .single();
+        .maybeSingle();
 
     if (error) {
         console.error("[EmployerSettingsPage] Error fetching profile:", error);
-        throw new Error("Failed to load company profile.");
     }
 
     return (
         <SettingsClient 
             profile={{
-                companyName: profile.company_name ?? "",
-                industry: profile.industry ?? "",
-                location: profile.location ?? "",
-                website: profile.website ?? "",
-                description: profile.description ?? "",
-                logoUrl: profile.logo_url ?? "",
-                applicationAlerts: profile.application_alerts ?? true,
+                companyName: profile?.company_name ?? "",
+                industry: profile?.industry ?? "",
+                location: profile?.location ?? "",
+                website: profile?.website ?? "",
+                description: profile?.description ?? "",
+                logoUrl: profile?.logo_url ?? "",
+                applicationAlerts: profile?.application_alerts ?? true,
             }}
-            status={profile.status ?? "PENDING"}
-            recruiterVerified={profile.recruiter_verified ?? false}
-            plan={profile.plan ?? "FREE"}
+            status={profile?.status ?? "PENDING"}
+            recruiterVerified={profile?.recruiter_verified ?? false}
+            plan={profile?.plan ?? "FREE"}
         />
     );
 }

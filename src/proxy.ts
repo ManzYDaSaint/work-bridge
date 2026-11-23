@@ -136,7 +136,7 @@ export async function proxy(request: NextRequest) {
                     const { data: empByUserId } = await supabase
                         .from("employers")
                         .select("company_name, industry, location")
-                        .eq("user_id", user.id)
+                        .or(`user_id.eq.${user.id},id.eq.${user.id}`)
                         .maybeSingle();
                     if (empByUserId) {
                         resolvedEmp = empByUserId;
