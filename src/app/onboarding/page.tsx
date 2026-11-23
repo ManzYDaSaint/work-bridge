@@ -24,10 +24,22 @@ export default async function OnboardingPage() {
 
     if (!userData) redirect("/login");
 
+    let resolvedEmployer = userData.employer;
+    if (!resolvedEmployer && userData.role === "EMPLOYER") {
+        const { data: empByUserId } = await supabase
+            .from("employers")
+            .select("*")
+            .eq("user_id", auth.user.id)
+            .maybeSingle();
+        if (empByUserId) {
+            resolvedEmployer = empByUserId;
+        }
+    }
+
     const complete = isOnboardingComplete({
         role: userData.role,
         seeker: userData.jobSeeker || null,
-        employer: userData.employer || null,
+        employer: resolvedEmployer || null,
         completedAt: userData.onboarding_completed_at,
     });
     if (complete) redirect("/dashboard");
@@ -48,11 +60,11 @@ export default async function OnboardingPage() {
                 experience: userData.jobSeeker.experience ?? [],
             }
             : undefined,
-        employer: userData.employer
+        employer: resolvedEmployer
             ? {
-                companyName: userData.employer.company_name ?? undefined,
-                industry: userData.employer.industry ?? undefined,
-                location: userData.employer.location ?? undefined,
+                companyName: resolvedEmployer.company_name ?? undefined,
+                industry: resolvedEmployer.industry ?? undefined,
+                location: resolvedEmployer.location ?? undefined,
             }
             : undefined,
     };

@@ -131,10 +131,22 @@ export async function proxy(request: NextRequest) {
                 .single();
 
             if (!accountError) {
+                let resolvedEmp = (account as any)?.employer;
+                if (!resolvedEmp && account?.role === "EMPLOYER") {
+                    const { data: empByUserId } = await supabase
+                        .from("employers")
+                        .select("company_name, industry, location")
+                        .eq("user_id", user.id)
+                        .maybeSingle();
+                    if (empByUserId) {
+                        resolvedEmp = empByUserId;
+                    }
+                }
+
                 const complete = isOnboardingComplete({
                     role: account?.role || "JOB_SEEKER",
                     seeker: (account as any)?.seeker || null,
-                    employer: (account as any)?.employer || null,
+                    employer: resolvedEmp || null,
                     completedAt: account?.onboarding_completed_at || null,
                 });
 

@@ -121,8 +121,8 @@ export async function validateAuth(
         const { data: employer, error: employerError } = await supabase
             .from("employers")
             .select("status")
-            .eq("id", user.id)
-            .single();
+            .or(`user_id.eq.${user.id},id.eq.${user.id}`)
+            .maybeSingle();
 
         if (employerError || employer?.status !== 'APPROVED') {
             return {

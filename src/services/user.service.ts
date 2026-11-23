@@ -29,6 +29,23 @@ export const UserService = {
             return { profile: null, error: "not_found" };
         }
 
+        // Fallback: If userData.employer is null (e.g. decoupled user_id on claimed employer lead), fetch by user_id
+        let resolvedEmployer = userData.employer;
+        if (!resolvedEmployer && userData.role === "EMPLOYER") {
+            const { data: empByUserId } = await supabase
+                .from("employers")
+                .select(`
+                    *,
+                    jobs(id)
+                `)
+                .eq("user_id", userId)
+                .maybeSingle();
+
+            if (empByUserId) {
+                resolvedEmployer = empByUserId;
+            }
+        }
+
         const profile: User = {
             id: userData.id,
             email: userData.email,
@@ -66,22 +83,22 @@ export const UserService = {
                       publicSlug: userData.jobSeeker.public_slug ?? null,
                   }
                 : undefined,
-            employer: userData.employer
+            employer: resolvedEmployer
                 ? {
-                      id: userData.employer.id,
-                      company_name: userData.employer.company_name,
-                      companyName: userData.employer.company_name,
-                      industry: userData.employer.industry,
-                      location: userData.employer.location,
-                      website: userData.employer.website,
-                      description: userData.employer.description,
-                      status: userData.employer.status,
-                      logo_url: userData.employer.logo_url,
-                      logoUrl: userData.employer.logo_url,
-                      profile_views: userData.employer.profile_views ?? 0,
-                      recruiterVerified: userData.employer.recruiter_verified ?? false,
+                      id: resolvedEmployer.id,
+                      company_name: resolvedEmployer.company_name,
+                      companyName: resolvedEmployer.company_name,
+                      industry: resolvedEmployer.industry,
+                      location: resolvedEmployer.location,
+                      website: resolvedEmployer.website,
+                      description: resolvedEmployer.description,
+                      status: resolvedEmployer.status,
+                      logo_url: resolvedEmployer.logo_url,
+                      logoUrl: resolvedEmployer.logo_url,
+                      profile_views: resolvedEmployer.profile_views ?? 0,
+                      recruiterVerified: resolvedEmployer.recruiter_verified ?? false,
                       _count: {
-                          jobs: userData.employer.jobs?.length || 0,
+                          jobs: resolvedEmployer.jobs?.length || 0,
                       },
                   }
                 : undefined,
@@ -120,7 +137,7 @@ export const UserService = {
         profile.onboardingComplete = isOnboardingComplete({
             role: profile.role,
             seeker: userData.jobSeeker || null,
-            employer: userData.employer || null,
+            employer: resolvedEmployer || null,
             completedAt: userData.onboarding_completed_at,
         });
 
