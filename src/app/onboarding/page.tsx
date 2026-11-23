@@ -24,7 +24,8 @@ export default async function OnboardingPage() {
 
     if (!userData) redirect("/login");
 
-    let resolvedEmployer = userData.employer;
+    const rawEmployer = Array.isArray(userData.employer) ? userData.employer[0] : userData.employer;
+    let resolvedEmployer = rawEmployer;
     if (!resolvedEmployer && userData.role === "EMPLOYER") {
         const { data: empByUserId } = await supabase
             .from("employers")

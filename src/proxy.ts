@@ -131,7 +131,8 @@ export async function proxy(request: NextRequest) {
                 .single();
 
             if (!accountError) {
-                let resolvedEmp = (account as any)?.employer;
+                const rawEmp = (account as any)?.employer;
+                let resolvedEmp = Array.isArray(rawEmp) ? rawEmp[0] : rawEmp;
                 if (!resolvedEmp && account?.role === "EMPLOYER") {
                     const { data: empByUserId, error: empErr } = await supabase
                         .from("employers")

@@ -29,8 +29,11 @@ export const UserService = {
             return { profile: null, error: "not_found" };
         }
 
+        // PostgREST 1-to-many embedding returns an array or null
+        const rawEmployer = Array.isArray(userData.employer) ? userData.employer[0] : userData.employer;
+        let resolvedEmployer = rawEmployer;
+
         // Fallback: If userData.employer is null (e.g. decoupled user_id on claimed employer lead or dropped FK), fetch by user_id or id
-        let resolvedEmployer = userData.employer;
         if (!resolvedEmployer && userData.role === "EMPLOYER") {
             const { data: empByUserId } = await supabase
                 .from("employers")
