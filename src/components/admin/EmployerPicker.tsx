@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Search, Building2, Plus, Check, Loader2, Globe, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -32,6 +33,7 @@ export function EmployerPicker({ value, companyName, onChange, inputClass }: Emp
     const [open, setOpen] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [creating, setCreating] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
     // Create lead form state
     const [createForm, setCreateForm] = useState({
@@ -51,6 +53,9 @@ export function EmployerPicker({ value, companyName, onChange, inputClass }: Emp
             setQuery(companyName);
         }
     }, [companyName, selectedEmployer]);
+
+    // Set mounted=true after client-side hydration so createPortal can access document.body
+    useEffect(() => { setMounted(true); }, []);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -103,6 +108,7 @@ export function EmployerPicker({ value, companyName, onChange, inputClass }: Emp
 
     const handleCreateLead = async (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation(); // Prevent event from bubbling to the outer job form
         const trimmedName = createForm.companyName.trim() || query.trim();
         if (!trimmedName) {
             toast.error("Company name is required");
@@ -256,8 +262,8 @@ export function EmployerPicker({ value, companyName, onChange, inputClass }: Emp
                 </div>
             )}
 
-            {/* Create Lead Modal */}
-            {showCreateModal && (
+            {/* Create Lead Modal – rendered via portal to avoid nesting inside the outer <form> */}
+            {showCreateModal && mounted && createPortal(
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
                     <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-4">
                         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -362,7 +368,8 @@ export function EmployerPicker({ value, companyName, onChange, inputClass }: Emp
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
