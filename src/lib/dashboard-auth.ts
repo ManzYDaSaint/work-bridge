@@ -20,8 +20,6 @@ export async function requireDashboardProfile(expectedRole: UserRole): Promise<{
         redirect("/login");
     }
 
-
-
     if (profile.role !== expectedRole) {
         redirect("/dashboard");
     }

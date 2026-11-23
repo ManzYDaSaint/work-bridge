@@ -15,7 +15,7 @@ export const UserService = {
             .select(`
                 *,
                 jobSeeker:job_seekers(*),
-                employer:employers(
+                employer:employers!employers_user_id_fkey(
                     *,
                     jobs(id)
                 )

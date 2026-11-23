@@ -125,7 +125,7 @@ export async function proxy(request: NextRequest) {
                     role,
                     onboarding_completed_at,
                     seeker:job_seekers(full_name, location, bio, qualification, skills),
-                    employer:employers(company_name, industry, location)
+                    employer:employers!employers_user_id_fkey(company_name, industry, location)
                 `)
                 .eq("id", user.id)
                 .single();
@@ -133,13 +133,16 @@ export async function proxy(request: NextRequest) {
             if (!accountError) {
                 let resolvedEmp = (account as any)?.employer;
                 if (!resolvedEmp && account?.role === "EMPLOYER") {
-                    const { data: empByUserId } = await supabase
+                    const { data: empByUserId, error: empErr } = await supabase
                         .from("employers")
                         .select("company_name, industry, location")
                         .or(`user_id.eq.${user.id},id.eq.${user.id}`)
                         .maybeSingle();
                     if (empByUserId) {
                         resolvedEmp = empByUserId;
+                    }
+                    if (empErr) {
+                        console.error("[middleware] empByUserId error:", empErr);
                     }
                 }
 
@@ -172,6 +175,8 @@ export async function proxy(request: NextRequest) {
                     const rolePath = account?.role === "ADMIN" ? "admin" : account?.role === "EMPLOYER" ? "employer" : "seeker";
                     return withCookies(NextResponse.redirect(new URL(`/dashboard/${rolePath}`, request.url)), response);
                 }
+            } else {
+                console.error(`[middleware] accountError for user ${user.id}:`, accountError);
             }
         }
     }

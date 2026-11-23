@@ -11,6 +11,9 @@ export const GET = withAuth(async (request, auth) => {
     const limit = parseInt(searchParams.get("limit") || "10");
     const offset = (page - 1) * limit;
 
+    const { getEmployerIdForUser } = await import("@/lib/employer-utils");
+    const targetEmployerId = (await getEmployerIdForUser(userId)) || userId;
+
     let query = supabase
         .from("jobs")
         .select(`
@@ -18,7 +21,7 @@ export const GET = withAuth(async (request, auth) => {
             employer:employers(company_name, id, description),
             applications(count)
         `, { count: 'exact' })
-        .eq("employer_id", userId);
+        .eq("employer_id", targetEmployerId);
 
     if (status && status !== "all") {
         query = query.eq("status", status);

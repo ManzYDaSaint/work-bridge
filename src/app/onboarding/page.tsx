@@ -17,7 +17,7 @@ export default async function OnboardingPage() {
         .select(`
             *,
             jobSeeker:job_seekers(*),
-            employer:employers(*)
+            employer:employers!employers_user_id_fkey(*)
         `)
         .eq("id", auth.user.id)
         .single();

@@ -245,7 +245,7 @@ export async function POST(
         // Notify Employer
         const { data: employerUser } = await adminSupabase
             .from("users")
-            .select("email, employers(company_name)")
+            .select("email, employers:employers!employers_user_id_fkey(company_name)")
             .eq("id", job.employer_id)
             .maybeSingle();
 
