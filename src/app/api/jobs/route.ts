@@ -241,12 +241,6 @@ export async function POST(request: Request) {
 
         if (error) throw error;
 
-        // Sync semantic embedding for intelligent matchmaking (fire-and-forget — must not block the response)
-        syncJobEmbedding(data.id, data).catch((err) =>
-            console.error("[jobs/POST] Background embedding sync failed:", err)
-        );
-
-
         // Fire-and-forget Buffer social share
         import("@/lib/buffer").then(async ({ postJobToBuffer }) => {
             const { data: employer } = await supabase
@@ -267,13 +261,18 @@ export async function POST(request: Request) {
             }).catch((err) => console.error("Immediate Buffer job post failed:", err));
         }).catch((err) => console.error("Failed to import Buffer lib:", err));
 
-        // --- Domain Classification → Match Dispatch (sequenced, fire-and-forget) ---
-        // Domain classifier MUST run first so job.domain_id is written before matching
-        // evaluates candidate domain scores. Both run in the background without
-        // blocking the HTTP response.
+        // --- Embedding → Domain Classification → Match Dispatch (sequenced, fire-and-forget) ---
+        // Each step awaits the previous one without blocking the HTTP response.
         (async () => {
             try {
-                // Step 1: classify job domain (awaited — ensures domain_id is set on job row)
+                // Step A: sync semantic embedding so vector-based candidate lookup works
+                await syncJobEmbedding(data.id, data);
+            } catch (err) {
+                console.error("[jobs/POST] Step A — Background embedding sync failed (non-fatal, continuing):", err);
+            }
+
+            try {
+                // Step B: classify job domain (awaited — ensures domain_id is set on job row)
                 const { classifyDomainForRecord } = await import("@/lib/agents/domain-classifier-agent");
                 await classifyDomainForRecord({
                     target: "JOB",
@@ -283,15 +282,15 @@ export async function POST(request: Request) {
                     currentDomainId: data.domain_id ?? null,
                 });
             } catch (err) {
-                console.error("[DomainAgent/Job] Classification failed:", err);
+                console.error("[DomainAgent/Job] Step B — Classification failed (non-fatal, continuing):", err);
             }
 
             try {
-                // Step 2: run full match dispatch now that domain_id is ready
+                // Step C: run full match dispatch now that embedding and domain_id are ready
                 const { runMatchDispatchAgent } = await import("@/lib/agents/match-dispatch-agent");
                 await runMatchDispatchAgent({ jobId: data.id, forceImmediateEmail: true });
             } catch (err) {
-                console.error("[MatchDispatchAgent] Background execution failed:", err);
+                console.error("[MatchDispatchAgent] Step C — Background execution failed (non-fatal):", err);
             }
         })();
 

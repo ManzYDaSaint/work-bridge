@@ -25,6 +25,7 @@ export default async function EmployerVerificationPage({
                 const { data, error } = await supabase
                     .from("employers")
                     .select("*")
+                    .or("account_type.neq.LEAD,account_type.is.null")
                     .order('company_name', { ascending: true });
                 if (error) throw error;
                 return (data || []).map(e => ({

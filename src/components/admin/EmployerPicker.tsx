@@ -34,6 +34,7 @@ export function EmployerPicker({ value, companyName, onChange, inputClass }: Emp
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [creating, setCreating] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [activeIndex, setActiveIndex] = useState(-1);
 
     // Create lead form state
     const [createForm, setCreateForm] = useState({
@@ -112,6 +113,11 @@ export function EmployerPicker({ value, companyName, onChange, inputClass }: Emp
         const trimmedName = createForm.companyName.trim() || query.trim();
         if (!trimmedName) {
             toast.error("Company name is required");
+            return;
+        }
+        const trimmedEmail = createForm.recruitmentEmail.trim();
+        if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+            toast.error("Please enter a valid recruitment email address");
             return;
         }
 
@@ -202,24 +208,39 @@ export function EmployerPicker({ value, companyName, onChange, inputClass }: Emp
 
             {/* Autocomplete Dropdown */}
             {open && (
-                <div className="absolute z-50 left-0 right-0 mt-1 max-h-64 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl py-1">
-                    {results.length > 0 ? (
-                        <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {results.map((emp) => (
+                <div className="absolute z-50 left-0 right-0 mt-1.5 max-h-72 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl ring-1 ring-black/5 py-1">
+                    {searching ? (
+                        <div className="flex items-center justify-center gap-2 py-4 text-xs text-slate-500 dark:text-slate-400">
+                            <Loader2 size={14} className="animate-spin text-blue-500" />
+                            Searching employers...
+                        </div>
+                    ) : query.trim().length < 2 ? (
+                        <div className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 text-center">
+                            Type at least 2 characters to search existing employers...
+                        </div>
+                    ) : results.length > 0 ? (
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                            {results.map((emp, idx) => (
                                 <button
                                     key={emp.id}
                                     type="button"
+                                    onMouseEnter={() => setActiveIndex(idx)}
                                     onClick={() => handleSelect(emp)}
-                                    className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 flex items-center justify-between transition text-xs"
+                                    className={cn(
+                                        "w-full text-left px-4 py-2.5 flex items-center justify-between gap-3 transition text-xs",
+                                        activeIndex === idx
+                                            ? "bg-blue-50/80 dark:bg-blue-950/40"
+                                            : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                                    )}
                                 >
-                                    <div className="space-y-0.5">
+                                    <div className="min-w-0 flex-1 space-y-0.5">
                                         <div className="flex items-center gap-2">
-                                            <Building2 size={13} className="text-slate-400" />
-                                            <span className="font-semibold text-slate-900 dark:text-slate-100">
+                                            <Building2 size={13} className="shrink-0 text-slate-400" />
+                                            <span className="font-semibold text-slate-900 dark:text-slate-100 truncate">
                                                 {emp.company_name}
                                             </span>
                                             <span className={cn(
-                                                "text-[9px] font-bold px-1.5 py-0.2 rounded",
+                                                "shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider",
                                                 emp.account_type === "LEAD"
                                                     ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
                                                     : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
@@ -227,26 +248,24 @@ export function EmployerPicker({ value, companyName, onChange, inputClass }: Emp
                                                 {emp.account_type === "LEAD" ? "LEAD" : "REGISTERED"}
                                             </span>
                                         </div>
-                                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                            {[emp.industry, emp.location, emp.recruitment_email].filter(Boolean).join(" • ")}
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate pl-5">
+                                            {[emp.industry, emp.location, emp.recruitment_email].filter(Boolean).join(" • ") || "No additional details"}
                                         </p>
                                     </div>
                                     {selectedEmployer?.id === emp.id && (
-                                        <Check size={14} className="text-blue-600 dark:text-blue-400" />
+                                        <Check size={14} className="shrink-0 text-blue-600 dark:text-blue-400" />
                                     )}
                                 </button>
                             ))}
                         </div>
                     ) : (
-                        query.trim().length >= 2 && !searching && (
-                            <div className="p-3 text-center text-xs text-slate-500">
-                                No existing employer found matching &ldquo;{query}&rdquo;.
-                            </div>
-                        )
+                        <div className="p-3 text-center text-xs text-slate-500">
+                            No existing employer found matching &ldquo;{query}&rdquo;.
+                        </div>
                     )}
 
                     {/* Quick Add Lead Button */}
-                    <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                    <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70">
                         <button
                             type="button"
                             onClick={() => {

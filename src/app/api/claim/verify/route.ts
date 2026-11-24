@@ -31,7 +31,7 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: "Invalid or expired invitation token." }, { status: 404 });
         }
 
-        if (employer.user_id && employer.account_type === "ACTIVE") {
+        if (employer.user_id || (employer.account_type && employer.account_type !== "LEAD")) {
             return NextResponse.json({ error: "This company profile has already been claimed." }, { status: 400 });
         }
 

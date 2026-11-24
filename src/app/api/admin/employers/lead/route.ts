@@ -24,11 +24,17 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Company name is required." }, { status: 400 });
         }
 
+        const trimmedEmail = recruitmentEmail ? String(recruitmentEmail).trim().toLowerCase() : null;
+        if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+            return NextResponse.json({ error: "Please provide a valid recruitment email address." }, { status: 400 });
+        }
+
         // Check if an employer with exact name already exists
         const { data: existing } = await supabase
             .from("employers")
             .select("id, company_name, account_type, recruitment_email, recruitment_url")
             .ilike("company_name", trimmedName)
+            .limit(1)
             .maybeSingle();
 
         if (existing) {
@@ -37,6 +43,23 @@ export async function POST(request: Request) {
                 message: "Employer already exists",
                 alreadyExisted: true,
             });
+        }
+
+        if (trimmedEmail) {
+            const { data: existingByEmail } = await supabase
+                .from("employers")
+                .select("id, company_name, account_type, recruitment_email, recruitment_url")
+                .ilike("recruitment_email", trimmedEmail)
+                .limit(1)
+                .maybeSingle();
+
+            if (existingByEmail) {
+                return NextResponse.json({
+                    employer: existingByEmail,
+                    message: `An employer (${existingByEmail.company_name}) with this recruitment email already exists.`,
+                    alreadyExisted: true,
+                });
+            }
         }
 
         const now = new Date().toISOString();

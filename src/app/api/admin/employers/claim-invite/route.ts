@@ -37,7 +37,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Employer record not found." }, { status: 404 });
         }
 
-        if (employer.user_id && employer.account_type === "ACTIVE") {
+        if (employer.user_id || (employer.account_type && employer.account_type !== "LEAD")) {
             return NextResponse.json({ error: "This employer has already registered and is active." }, { status: 400 });
         }
 
@@ -136,10 +136,11 @@ export async function POST(request: Request) {
             </div>
         `;
 
+        const emailSubject = `Action Required: Claim your official employer profile for ${employer.company_name}`;
         const { error: emailError } = await resend.emails.send({
             from: emailFrom,
             to: [emailToUse],
-            subject: `Action Required: Claim your official employer profile for ${employer.company_name}`,
+            subject: emailSubject,
             html: emailHtml,
         });
 
@@ -148,8 +149,39 @@ export async function POST(request: Request) {
             throw new Error(`Email delivery failed: ${emailError.message}`);
         }
 
-        // 5. Update CRM status to CONTACTED (or keep track of outreach)
-        await CRMService.updateStatus(employer.id, "REGISTERED"); // or keep as LEAD with note
+        // 4.5. Log to Mail Box (campaign_broadcasts + broadcast_recipients) so it appears in Sent Messages
+        try {
+            const { data: bRecord } = await supabase
+                .from("campaign_broadcasts")
+                .insert({
+                    created_by: auth.user.id,
+                    audience: "EMPLOYERS",
+                    channel: "EMAIL",
+                    template_name: "EMPLOYER_CLAIM_INVITATION",
+                    email_subject: emailSubject,
+                    email_body: emailHtml,
+                    status: "COMPLETED",
+                    total_recipients: 1,
+                    sent_email: 1,
+                    failed_email: 0,
+                })
+                .select("id")
+                .single();
+
+            if (bRecord?.id) {
+                await supabase.from("broadcast_recipients").insert({
+                    broadcast_id: bRecord.id,
+                    user_id: null,
+                    email: emailToUse,
+                    channel: "EMAIL",
+                    status: "SENT",
+                });
+            }
+        } catch (logErr) {
+            console.warn("[Claim Invite] Failed to log email to Mail Box:", logErr);
+        }
+
+        // 5. Keep CRM status as LEAD until the employer actually registers, just bump engagement score
         await CRMService.updateScore(employer.id, 15);
 
         // 6. Mission Control Event
