@@ -92,3 +92,95 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: err.message || "Failed to create employer lead" }, { status: 500 });
     }
 }
+
+export async function PATCH(request: Request) {
+    const auth = await validateAuth(["ADMIN"], false);
+    if (auth.error) return auth.error;
+
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) {
+        return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
+    }
+
+    try {
+        const body = await request.json();
+        const { employerId, companyName, industry, location, website, recruitmentEmail, recruitmentUrl, description, priority, engagementScore } = body;
+
+        if (!employerId) {
+            return NextResponse.json({ error: "Employer ID is required." }, { status: 400 });
+        }
+
+        const trimmedName = String(companyName || "").trim();
+        if (!trimmedName) {
+            return NextResponse.json({ error: "Company name cannot be empty." }, { status: 400 });
+        }
+
+        const now = new Date().toISOString();
+
+        // 1. Update employer details
+        const updateEmployerData: Record<string, any> = {
+            company_name: trimmedName,
+            industry: industry?.trim() || null,
+            location: location?.trim() || null,
+            website: website?.trim() || null,
+            recruitment_email: recruitmentEmail?.trim()?.toLowerCase() || null,
+            recruitment_url: recruitmentUrl?.trim() || null,
+            description: description?.trim() || null,
+            updated_at: now,
+        };
+
+        const { data: updatedEmployer, error: employerError } = await supabase
+            .from("employers")
+            .update(updateEmployerData)
+            .eq("id", employerId)
+            .select()
+            .single();
+
+        if (employerError) throw employerError;
+
+        // 2. Optionally update CRM profile priority & score if provided
+        const crmUpdate: Record<string, any> = { updated_at: now };
+        if (priority && ["LOW", "MEDIUM", "HIGH"].includes(priority)) {
+            crmUpdate.priority = priority;
+        }
+        if (typeof engagementScore === "number") {
+            crmUpdate.engagement_score = Math.max(0, engagementScore);
+        }
+
+        const { data: updatedCRM, error: crmError } = await supabase
+            .from("employer_crm_profiles")
+            .update(crmUpdate)
+            .eq("employer_id", employerId)
+            .select()
+            .maybeSingle();
+
+        if (crmError) {
+            console.warn("[Admin Update Employer Lead] CRM Profile update warning:", crmError);
+        }
+
+        // 3. Emit Mission Control Audit Event
+        await emitSystemEvent({
+            category: "EMPLOYER",
+            severity: "INFO",
+            event: "EMPLOYER_LEAD_UPDATED",
+            message: `Employer lead details updated for "${trimmedName}"`,
+            actorId: auth.user.id,
+            metadata: {
+                employerId,
+                companyName: trimmedName,
+                recruitmentEmail: updatedEmployer.recruitment_email,
+            },
+        });
+
+        return NextResponse.json({
+            success: true,
+            employer: updatedEmployer,
+            crmProfile: updatedCRM,
+            message: "Employer details updated successfully.",
+        });
+    } catch (err: any) {
+        console.error("[Admin Update Employer Lead] Error:", err);
+        return NextResponse.json({ error: err.message || "Failed to update employer lead" }, { status: 500 });
+    }
+}
+

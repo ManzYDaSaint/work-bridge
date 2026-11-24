@@ -1,9 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { apiFetch } from "@/lib/api";
 import { Badge, PageHeader } from "@/components/dashboard/ui";
-import { Send, Mail, Building2, Check, Loader2, ExternalLink, MessageCircle, Copy } from "lucide-react";
+import {
+    Send, Mail, Building2, Loader2, MessageCircle, Pencil,
+    X, Globe, MapPin, Briefcase, Link2, FileText, BarChart2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 type CRMProfile = {
@@ -18,11 +21,26 @@ type CRMProfile = {
         location?: string | null;
         website?: string | null;
         recruitment_email?: string | null;
+        recruitment_url?: string | null;
+        description?: string | null;
         account_type?: string | null;
     } | null;
 };
 
+type EditForm = {
+    companyName: string;
+    industry: string;
+    location: string;
+    website: string;
+    recruitmentEmail: string;
+    recruitmentUrl: string;
+    description: string;
+    priority: "LOW" | "MEDIUM" | "HIGH";
+    engagementScore: number;
+};
+
 const STATUSES = ["LEAD", "REGISTERED", "VERIFICATION_PENDING", "VERIFIED", "ACTIVE", "INACTIVE", "CHURNED"];
+const PRIORITIES = ["LOW", "MEDIUM", "HIGH"] as const;
 
 function statusLabel(status: string) {
     return status.replaceAll("_", " ");
@@ -34,8 +52,325 @@ function priorityVariant(priority: string) {
     return "yellow";
 }
 
+const inputClass =
+    "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder-slate-500";
+const labelClass = "block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1";
+
+/** Slide-over drawer for editing a CRM lead's details */
+function EditLeadDrawer({
+    profile,
+    onClose,
+    onSaved,
+}: {
+    profile: CRMProfile;
+    onClose: () => void;
+    onSaved: (profileId: string, patch: Partial<CRMProfile>) => void;
+}) {
+    const [saving, setSaving] = useState(false);
+    const firstInputRef = useRef<HTMLInputElement>(null);
+
+    const [form, setForm] = useState<EditForm>({
+        companyName: profile.employer?.company_name || "",
+        industry: profile.employer?.industry || "",
+        location: profile.employer?.location || "",
+        website: profile.employer?.website || "",
+        recruitmentEmail: profile.employer?.recruitment_email || "",
+        recruitmentUrl: profile.employer?.recruitment_url || "",
+        description: profile.employer?.description || "",
+        priority: (profile.priority as "LOW" | "MEDIUM" | "HIGH") || "LOW",
+        engagementScore: profile.engagement_score ?? 0,
+    });
+
+    // Focus first field when drawer opens
+    useEffect(() => {
+        const id = setTimeout(() => firstInputRef.current?.focus(), 80);
+        return () => clearTimeout(id);
+    }, []);
+
+    // Close on Escape key
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+        document.addEventListener("keydown", handler);
+        return () => document.removeEventListener("keydown", handler);
+    }, [onClose]);
+
+    const set = (field: keyof EditForm) => (
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!profile.employer?.id) {
+            toast.error("No employer ID on this profile.");
+            return;
+        }
+        if (!form.companyName.trim()) {
+            toast.error("Company name is required.");
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const res = await apiFetch("/api/admin/employers/lead", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    employerId: profile.employer.id,
+                    companyName: form.companyName,
+                    industry: form.industry,
+                    location: form.location,
+                    website: form.website,
+                    recruitmentEmail: form.recruitmentEmail,
+                    recruitmentUrl: form.recruitmentUrl,
+                    description: form.description,
+                    priority: form.priority,
+                    engagementScore: Number(form.engagementScore),
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed to save");
+
+            toast.success(data.message || "Details saved!");
+
+            // Bubble updated data back to parent
+            onSaved(profile.id, {
+                priority: form.priority,
+                engagement_score: Number(form.engagementScore),
+                employer: {
+                    ...profile.employer,
+                    company_name: form.companyName,
+                    industry: form.industry,
+                    location: form.location,
+                    website: form.website,
+                    recruitment_email: form.recruitmentEmail,
+                    recruitment_url: form.recruitmentUrl,
+                    description: form.description,
+                },
+            });
+            onClose();
+        } catch (err: any) {
+            toast.error(err.message || "Failed to save changes");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <>
+            {/* Backdrop */}
+            <div
+                className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+                onClick={onClose}
+                aria-hidden="true"
+            />
+
+            {/* Drawer panel */}
+            <aside
+                className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-white shadow-2xl dark:bg-slate-900 overflow-hidden"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Edit Employer Lead"
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 px-5 py-4">
+                    <div className="flex items-center gap-2">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-950/50">
+                            <Pencil size={15} className="text-indigo-600 dark:text-indigo-400" />
+                        </span>
+                        <div>
+                            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Edit Lead Details</h2>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs">
+                                {profile.employer?.company_name || "Employer"}
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 transition"
+                        aria-label="Close drawer"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+
+                {/* Scrollable form body */}
+                <form
+                    onSubmit={handleSave}
+                    className="flex flex-1 flex-col overflow-y-auto"
+                >
+                    <div className="space-y-5 px-5 py-5">
+                        {/* Company Name */}
+                        <div>
+                            <label className={labelClass}>
+                                <Briefcase size={11} className="inline mr-1" />Company Name *
+                            </label>
+                            <input
+                                ref={firstInputRef}
+                                type="text"
+                                className={inputClass}
+                                value={form.companyName}
+                                onChange={set("companyName")}
+                                placeholder="e.g. Airtel Malawi"
+                                required
+                            />
+                        </div>
+
+                        {/* Industry */}
+                        <div>
+                            <label className={labelClass}>
+                                <Briefcase size={11} className="inline mr-1" />Industry
+                            </label>
+                            <input
+                                type="text"
+                                className={inputClass}
+                                value={form.industry}
+                                onChange={set("industry")}
+                                placeholder="e.g. Telecommunications"
+                            />
+                        </div>
+
+                        {/* Location */}
+                        <div>
+                            <label className={labelClass}>
+                                <MapPin size={11} className="inline mr-1" />Location
+                            </label>
+                            <input
+                                type="text"
+                                className={inputClass}
+                                value={form.location}
+                                onChange={set("location")}
+                                placeholder="e.g. Blantyre, Malawi"
+                            />
+                        </div>
+
+                        {/* Website */}
+                        <div>
+                            <label className={labelClass}>
+                                <Globe size={11} className="inline mr-1" />Company Website
+                            </label>
+                            <input
+                                type="url"
+                                className={inputClass}
+                                value={form.website}
+                                onChange={set("website")}
+                                placeholder="https://example.com"
+                            />
+                        </div>
+
+                        <hr className="border-slate-100 dark:border-slate-800" />
+
+                        {/* Recruitment Email */}
+                        <div>
+                            <label className={labelClass}>
+                                <Mail size={11} className="inline mr-1" />Recruitment / HR Email
+                            </label>
+                            <input
+                                type="email"
+                                className={inputClass}
+                                value={form.recruitmentEmail}
+                                onChange={set("recruitmentEmail")}
+                                placeholder="hr@example.com"
+                            />
+                            <p className="mt-1 text-[11px] text-slate-400">
+                                Used when sending the claim invitation email.
+                            </p>
+                        </div>
+
+                        {/* Recruitment / Career Portal URL */}
+                        <div>
+                            <label className={labelClass}>
+                                <Link2 size={11} className="inline mr-1" />Career Portal / Job Board URL
+                            </label>
+                            <input
+                                type="url"
+                                className={inputClass}
+                                value={form.recruitmentUrl}
+                                onChange={set("recruitmentUrl")}
+                                placeholder="https://careers.example.com"
+                            />
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                            <label className={labelClass}>
+                                <FileText size={11} className="inline mr-1" />Company Description
+                            </label>
+                            <textarea
+                                rows={4}
+                                className={`${inputClass} resize-none`}
+                                value={form.description}
+                                onChange={set("description")}
+                                placeholder="Brief description of the employer..."
+                            />
+                        </div>
+
+                        <hr className="border-slate-100 dark:border-slate-800" />
+
+                        {/* CRM Priority + Score */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className={labelClass}>
+                                    <BarChart2 size={11} className="inline mr-1" />Priority
+                                </label>
+                                <select
+                                    className={inputClass}
+                                    value={form.priority}
+                                    onChange={set("priority")}
+                                >
+                                    {PRIORITIES.map((p) => (
+                                        <option key={p} value={p}>{p}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClass}>
+                                    <BarChart2 size={11} className="inline mr-1" />Engagement Score
+                                </label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={999}
+                                    className={inputClass}
+                                    value={form.engagementScore}
+                                    onChange={set("engagementScore")}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Footer actions — always visible at bottom */}
+                    <div className="mt-auto border-t border-slate-200 dark:border-slate-700 px-5 py-4 flex gap-3">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={saving}
+                            className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60 transition"
+                        >
+                            {saving ? (
+                                <><Loader2 size={14} className="animate-spin" /> Saving...</>
+                            ) : (
+                                "Save Changes"
+                            )}
+                        </button>
+                    </div>
+                </form>
+            </aside>
+        </>
+    );
+}
+
 export default function EmployerCRMClient({ initialProfiles }: { initialProfiles: CRMProfile[] }) {
     const [profiles, setProfiles] = useState(initialProfiles);
+    const [editingProfile, setEditingProfile] = useState<CRMProfile | null>(null);
+
     const profilesByStatus = useMemo(
         () => STATUSES.map((status) => ({
             status,
@@ -69,6 +404,20 @@ export default function EmployerCRMClient({ initialProfiles }: { initialProfiles
         }
     };
 
+    const handleEditSaved = (profileId: string, patch: Partial<CRMProfile>) => {
+        setProfiles((prev) =>
+            prev.map((item) =>
+                item.id === profileId
+                    ? {
+                          ...item,
+                          ...patch,
+                          employer: { ...item.employer, ...patch.employer },
+                      }
+                    : item
+            )
+        );
+    };
+
     const [sendingInviteId, setSendingInviteId] = useState<string | null>(null);
 
     const sendClaimInvite = async (profile: CRMProfile) => {
@@ -100,7 +449,6 @@ export default function EmployerCRMClient({ initialProfiles }: { initialProfiles
             if (!res.ok) throw new Error(data.error || "Failed to send claim invitation");
 
             toast.success(data.message || `Invitation sent to ${promptEmail}`);
-            // Optimistically move to REGISTERED or bump score
             setProfiles((prev) =>
                 prev.map((item) =>
                     item.id === profile.id
@@ -124,7 +472,6 @@ export default function EmployerCRMClient({ initialProfiles }: { initialProfiles
     const copyWhatsAppMessage = (profile: CRMProfile) => {
         const company = profile.employer?.company_name || "your organization";
         const message = `Hello ${company} Team,\n\nWe are from Aganyu (https://aganyu.com), Malawi's talent platform. We noticed your open vacancies and featured them to connect you with qualified Malawian professionals.\n\nYou can claim your official company profile to review applicants and manage listings directly here:\nhttps://aganyu.com/register?role=employer&company=${encodeURIComponent(company)}\n\nLooking forward to supporting your hiring!`;
-
         navigator.clipboard.writeText(message);
         toast.success("WhatsApp outreach template copied to clipboard!");
     };
@@ -163,16 +510,27 @@ export default function EmployerCRMClient({ initialProfiles }: { initialProfiles
                                         onDragStart={(e) => onDragStart(e, profile.id)}
                                         className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 space-y-2"
                                     >
-                                        {/* Company Name + Account Type Badge */}
+                                        {/* Company Name + badges + edit button */}
                                         <div className="flex items-start justify-between gap-2">
                                             <p className="text-sm font-semibold text-slate-900 dark:text-white leading-tight">
                                                 {profile.employer?.company_name || "Unknown employer"}
                                             </p>
-                                            {profile.employer?.account_type === "LEAD" && (
-                                                <span className="shrink-0 inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                                                    <Building2 size={9} /> Lead
-                                                </span>
-                                            )}
+                                            <div className="flex shrink-0 items-center gap-1">
+                                                {profile.employer?.account_type === "LEAD" && (
+                                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                                                        <Building2 size={9} /> Lead
+                                                    </span>
+                                                )}
+                                                {/* Edit button — available on all profiles */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditingProfile(profile)}
+                                                    title="Edit lead details"
+                                                    className="flex items-center justify-center rounded p-1 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-400 transition"
+                                                >
+                                                    <Pencil size={12} />
+                                                </button>
+                                            </div>
                                         </div>
 
                                         {/* Industry · Location */}
@@ -180,7 +538,7 @@ export default function EmployerCRMClient({ initialProfiles }: { initialProfiles
                                             {[profile.employer?.industry, profile.employer?.location].filter(Boolean).join(" • ") || "No company details"}
                                         </p>
 
-                                        {/* Recruitment email if present */}
+                                        {/* Recruitment email */}
                                         {profile.employer?.recruitment_email && (
                                             <p className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500 truncate">
                                                 <Mail size={10} /> {profile.employer.recruitment_email}
@@ -243,6 +601,15 @@ export default function EmployerCRMClient({ initialProfiles }: { initialProfiles
                     </section>
                 ))}
             </div>
+
+            {/* Edit Lead Drawer */}
+            {editingProfile && (
+                <EditLeadDrawer
+                    profile={editingProfile}
+                    onClose={() => setEditingProfile(null)}
+                    onSaved={handleEditSaved}
+                />
+            )}
         </div>
     );
 }
