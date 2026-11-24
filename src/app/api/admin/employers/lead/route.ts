@@ -126,7 +126,7 @@ export async function PATCH(request: Request) {
             recruitment_email: recruitmentEmail?.trim()?.toLowerCase() || null,
             recruitment_url: recruitmentUrl?.trim() || null,
             description: description?.trim() || null,
-            updated_at: now,
+            // Note: employers table does not have updated_at — only employer_crm_profiles does
         };
 
         const { data: updatedEmployer, error: employerError } = await supabase
