@@ -30,8 +30,8 @@ export async function POST(
         const sessionHash = crypto.createHash("sha256").update(`${ip}-${jobId}-${dateStr}`).digest("hex");
 
         // Try to get authenticated user if they exist (don't fail if they aren't)
-        const { data: { session } } = await supabase.auth.getSession();
-        const viewerId = session?.user?.id || null;
+        const { data: { user } } = await supabase.auth.getUser();
+        const viewerId = user?.id || null;
 
         // Check if this exact session hash already recorded a view for this job today
         const { count } = await adminClient

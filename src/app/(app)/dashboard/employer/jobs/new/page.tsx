@@ -85,6 +85,16 @@ export default function NewJobPage() {
             />
 
             <JobPostingForm
+                defaultValues={{
+                    displayCompanyName: profile?.companyName || "",
+                    location: (profile?.location && profile.location !== "To be updated") ? profile.location : "",
+                    applyEmail: profile?.recruitmentEmail || profile?.recruitment_email || "",
+                    externalApplyUrl: profile?.recruitmentUrl || profile?.recruitment_url || "",
+                    applicationMethod: (profile?.defaultApplicationMethod || profile?.default_application_method || "one_tap") as any,
+                    applyPhone: profile?.defaultApplyPhone || profile?.default_apply_phone || "",
+                    applyWhatsapp: profile?.defaultApplyWhatsapp || profile?.default_apply_whatsapp || "",
+                    postingType: "DIRECT",
+                }}
                 onSubmit={onSubmit}
                 saving={saving}
                 submitLabel="Publish job"
@@ -93,6 +103,7 @@ export default function NewJobPage() {
                 submitDisabledTitle="Available after company approval"
                 showApprovalBanner
                 isApproved={isApproved}
+                showSourcingOptions={false}
                 onCancel={() => router.back()}
             />
         </div>

@@ -368,19 +368,39 @@ export async function updateEmployerProfile(values: any) {
     const supabase = await createSupabaseServerClient();
 
     try {
-        const { error } = await supabase
+        const updatePayload: Record<string, any> = {
+            company_name: values.companyName,
+            industry: values.industry,
+            location: values.location,
+            website: values.website,
+            description: values.description,
+            logo_url: values.logoUrl,
+            recruitment_email: values.recruitmentEmail?.trim()?.toLowerCase() || null,
+            recruitment_url: values.recruitmentUrl?.trim() || null,
+            default_application_method: values.defaultApplicationMethod || "one_tap",
+            default_apply_phone: values.defaultApplyPhone?.trim() || null,
+            default_apply_whatsapp: values.defaultApplyWhatsapp?.trim() || null,
+            application_alerts: values.applicationAlerts,
+        };
+
+        if (values.defaultSchedulingLink !== undefined) {
+            updatePayload.default_scheduling_link = values.defaultSchedulingLink || null;
+        }
+
+        let { error } = await supabase
             .from("employers")
-            .update({
-                company_name: values.companyName,
-                industry: values.industry,
-                location: values.location,
-                website: values.website,
-                description: values.description,
-                logo_url: values.logoUrl,
-                application_alerts: values.applicationAlerts,
-                default_scheduling_link: values.defaultSchedulingLink,
-            })
+            .update(updatePayload)
             .or(`user_id.eq.${auth.user.id},id.eq.${auth.user.id}`);
+
+        // If the database has not yet run the migration adding default_scheduling_link, retry without it
+        if (error && error.message?.includes("default_scheduling_link")) {
+            delete updatePayload.default_scheduling_link;
+            const retry = await supabase
+                .from("employers")
+                .update(updatePayload)
+                .or(`user_id.eq.${auth.user.id},id.eq.${auth.user.id}`);
+            error = retry.error;
+        }
 
         if (error) throw error;
 

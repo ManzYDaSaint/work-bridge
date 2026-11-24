@@ -8,6 +8,11 @@ export const employerProfileSchema = z.object({
     description: z.string().min(10, "Description must be at least 10 characters").optional(),
     applicationAlerts: z.boolean().optional(),
     logoUrl: z.string().url("Invalid logo URL").optional().or(z.literal("")),
+    recruitmentEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
+    recruitmentUrl: z.string().url("Invalid recruitment URL (must start with https://)").optional().or(z.literal("")),
+    defaultApplicationMethod: z.enum(["one_tap", "external_url", "email", "whatsapp", "phone"]).optional(),
+    defaultApplyPhone: z.string().optional(),
+    defaultApplyWhatsapp: z.string().optional(),
     defaultSchedulingLink: z.string().url("Invalid calendar URL (must start with https://)").optional().or(z.literal("")),
 });
 

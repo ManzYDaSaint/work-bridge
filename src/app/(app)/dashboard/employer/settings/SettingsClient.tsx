@@ -168,6 +168,61 @@ export default function SettingsClient({
                                     </p>
                                 </div>
                             </div>
+
+                            <div className="rounded-2xl border border-stone-200 bg-stone-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/40 space-y-4">
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                        Recruitment & Application Defaults
+                                    </h4>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                        Configure these once to automatically prefill application details whenever you publish a new job.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    <div>
+                                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Default Recruitment Email</label>
+                                        <input 
+                                            {...register("recruitmentEmail")} 
+                                            type="email"
+                                            placeholder="careers@company.com" 
+                                            className={inputClass} 
+                                        />
+                                        {errors.recruitmentEmail && <p className="mt-1 text-xs text-red-600">{errors.recruitmentEmail.message}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Default Careers / ATS URL</label>
+                                        <input 
+                                            {...register("recruitmentUrl")} 
+                                            placeholder="https://company.com/careers" 
+                                            className={inputClass} 
+                                        />
+                                        {errors.recruitmentUrl && <p className="mt-1 text-xs text-red-600">{errors.recruitmentUrl.message}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Default Application Method</label>
+                                        <select 
+                                            {...register("defaultApplicationMethod")} 
+                                            className={inputClass}
+                                        >
+                                            <option value="one_tap">One-Tap Apply (Aganyu Profile)</option>
+                                            <option value="external_url">External ATS / Careers Link</option>
+                                            <option value="email">Email Submission</option>
+                                            <option value="whatsapp">WhatsApp Application</option>
+                                            <option value="phone">Phone Contact</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Default Application WhatsApp</label>
+                                        <input 
+                                            {...register("defaultApplyWhatsapp")} 
+                                            placeholder="+265 888 123 456" 
+                                            className={inputClass} 
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
                             <div>
                                 <textarea {...register("description")} rows={5} placeholder="What does your company do?" className={`${inputClass} resize-y`} />
                                 {errors.description && <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>}

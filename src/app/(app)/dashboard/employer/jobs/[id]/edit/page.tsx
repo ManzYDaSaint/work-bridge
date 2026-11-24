@@ -215,7 +215,7 @@ export default function EditJobPage() {
                             <select {...register("workMode")} className={cn(inputClass, "appearance-none")}>
                                 <option value="REMOTE">Remote</option>
                                 <option value="HYBRID">Hybrid</option>
-                                <option value="ON_SITE">On-site</option>
+                                <option value="ON_SITE" defaultValue={"ON_SITE"}>On-site</option>
                             </select>
                             {errors.workMode && (
                                 <p className="text-xs text-red-600 dark:text-red-400">{errors.workMode.message}</p>
@@ -420,29 +420,32 @@ export default function EditJobPage() {
                                 )}
                             </div>
 
-                            <div className="h-px bg-slate-200 dark:bg-slate-800" />
-
-                            {/* Posting Type & Display Details */}
-                            <div className="space-y-4">
-                                <label className="text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                                    Display Settings
-                                </label>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Posting Type</label>
-                                        <select {...register("postingType")} className={cn(inputClass, "appearance-none")}>
-                                            <option value="DIRECT">Direct Employer</option>
-                                            <option value="AGENCY">Recruitment Agency</option>
-                                            <option value="AGANYU">Aganyu Sourced</option>
-                                        </select>
+                            {/* Posting Type & Display Details - only shown if job is sourced or was created on behalf of a client */}
+                            {(watch("displayCompanyName") || watch("postingType") === "AGANYU" || watch("postingType") === "AGENCY") && (
+                                <>
+                                    <div className="h-px bg-slate-200 dark:bg-slate-800" />
+                                    <div className="space-y-4">
+                                        <label className="text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                                            Display Settings
+                                        </label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Posting Type</label>
+                                                <select {...register("postingType")} className={cn(inputClass, "appearance-none")}>
+                                                    <option value="DIRECT">Direct Employer</option>
+                                                    <option value="AGENCY">Recruitment Agency</option>
+                                                    <option value="AGANYU">Aganyu Sourced</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Hiring Company Name</label>
+                                                <input {...register("displayCompanyName")} placeholder="Hiring company name" className={inputClass} />
+                                                <p className="text-[11px] text-slate-500 dark:text-slate-400">Company displayed on the public vacancy card.</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Hiring Company Name (Optional)</label>
-                                        <input {...register("displayCompanyName")} placeholder="Overrides your company name" className={inputClass} />
-                                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Use this if you are recruiting on behalf of a client.</p>
-                                    </div>
-                                </div>
-                            </div>
+                                </>
+                            )}
                         </div>
                     )}
                 </div>

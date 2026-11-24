@@ -31,6 +31,12 @@ export default async function EmployerSettingsPage() {
                 website: profile?.website ?? "",
                 description: profile?.description ?? "",
                 logoUrl: profile?.logo_url ?? "",
+                recruitmentEmail: profile?.recruitment_email ?? "",
+                recruitmentUrl: profile?.recruitment_url ?? "",
+                defaultApplicationMethod: profile?.default_application_method ?? "one_tap",
+                defaultApplyPhone: profile?.default_apply_phone ?? "",
+                defaultApplyWhatsapp: profile?.default_apply_whatsapp ?? "",
+                defaultSchedulingLink: profile?.default_scheduling_link ?? "",
                 applicationAlerts: profile?.application_alerts ?? true,
             }}
             status={profile?.status ?? "PENDING"}

@@ -185,5 +185,132 @@ export const DELETE = withAudit(async (request: Request) => {
     }
 }, "ADMIN_JOB_DELETION");
 
+export const POST = withAudit(async (request: Request) => {
+    const auth = await validateAuth(['ADMIN'], false);
+    if (auth.error) return auth.error;
+
+    const supabase = getSupabaseAdminClient();
+    if (!supabase) {
+        return NextResponse.json({ error: "Database client unavailable" }, { status: 500 });
+    }
+
+    try {
+        const body = await request.json();
+
+        // 1. Resolve jobs@aganyu.com employer ID
+        const { getSystemRecruiterEmployerId } = await import("@/lib/employer-utils");
+        const assignedEmployerId = await getSystemRecruiterEmployerId();
+        if (!assignedEmployerId) {
+            return NextResponse.json(
+                { error: "No system recruiter (jobs@aganyu.com) or admin employer profile found to assign job to." },
+                { status: 400 }
+            );
+        }
+
+        const deadlineRaw = body.deadline != null && String(body.deadline).trim() !== "" ? String(body.deadline).trim() : null;
+        const deadline =
+            deadlineRaw ||
+            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+        // 2. Resolve Domain
+        const { getQualificationDomains } = await import("@/lib/matching-helpers");
+        const jobQualText = `${body.qualification || ""} ${body.title || ""}`.trim();
+        const resolvedJobDomains = getQualificationDomains(jobQualText);
+        let domain_id: string | null = null;
+        let domain_classified_at: string | null = null;
+        let domain_source: string | null = null;
+
+        if (resolvedJobDomains.length > 0) {
+            const { data: matchedDomain } = await supabase
+                .from("qualification_domains")
+                .select("id")
+                .ilike("name", resolvedJobDomains[0])
+                .maybeSingle();
+
+            if (matchedDomain?.id) {
+                domain_id = matchedDomain.id;
+                domain_classified_at = new Date().toISOString();
+                domain_source = "keyword_match";
+            }
+        }
+
+        // 3. Insert Job under jobs@aganyu.com employer_id with display settings
+        const { data: createdJob, error: insertError } = await supabase
+            .from("jobs")
+            .insert({
+                employer_id: assignedEmployerId,
+                title: body.title,
+                description: body.description,
+                location: body.location || "Remote",
+                type: body.type || "FULL_TIME",
+                work_mode: body.workMode || "REMOTE",
+                skills: body.skills || [],
+                must_have_skills: body.mustHaveSkills || body.skills || [],
+                nice_to_have_skills: body.niceToHaveSkills || [],
+                minimum_years_experience: body.minimumYearsExperience || 0,
+                qualification: body.qualification || null,
+                screening_questions: body.screeningQuestions || [],
+                salary_range: body.salaryRange || null,
+                deadline,
+                status: "ACTIVE",
+                application_method: body.applicationMethod || "external_url",
+                external_apply_url: body.externalApplyUrl || null,
+                apply_email: body.applyEmail || null,
+                apply_whatsapp: body.applyWhatsapp || null,
+                apply_phone: body.applyPhone || null,
+                application_instructions: body.applicationInstructions || null,
+                allow_one_tap_apply: body.allowOneTapApply !== false,
+                posting_type: body.postingType || "AGANYU",
+                display_company_name: body.displayCompanyName || null,
+                job_source: body.jobSource || "Admin Sourced",
+                domain_id,
+                domain_classified_at,
+                domain_source,
+            })
+            .select()
+            .single();
+
+        if (insertError) throw insertError;
+
+        // 4. Generate public slug
+        const { buildPublicJobSlug } = await import("@/lib/public-slugs");
+        const publicSlug = buildPublicJobSlug(createdJob.title, createdJob.id);
+        const { data: finalJob, error: slugError } = await supabase
+            .from("jobs")
+            .update({ public_slug: publicSlug })
+            .eq("id", createdJob.id)
+            .select()
+            .single();
+
+        if (slugError) throw slugError;
+
+        // 5. Fire background embedding
+        const { syncJobEmbedding } = await import("@/lib/sync-embeddings");
+        syncJobEmbedding(finalJob.id, finalJob).catch((err: any) =>
+            console.error("[Admin Job POST] Embedding sync failed:", err)
+        );
+
+        // 6. Audit & Mission Control
+        await emitSystemEvent({
+            category: "JOB",
+            severity: "SUCCESS",
+            event: "ADMIN_SOURCED_JOB_CREATED",
+            message: `Admin created sourced job "${finalJob.title}" assigned to jobs@aganyu.com (${assignedEmployerId})`,
+            actorId: auth.user.id,
+            metadata: {
+                jobId: finalJob.id,
+                assignedEmployerId,
+                displayCompanyName: finalJob.display_company_name,
+                postingType: finalJob.posting_type,
+            },
+        });
+
+        return NextResponse.json({ success: true, job: finalJob });
+    } catch (error: any) {
+        console.error("[Admin Job POST] Error:", error);
+        return NextResponse.json({ error: error.message || "Failed to create job" }, { status: 500 });
+    }
+}, "ADMIN_JOB_CREATION");
+
 
 export const dynamic = "force-dynamic";

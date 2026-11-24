@@ -96,24 +96,55 @@ export default function JobListTable({
         });
     };
 
-    return (
-        <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
-            <div className="grid grid-cols-1 gap-2 border-b border-stone-200/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:border-slate-800 sm:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_auto]">
-                <span>Role</span>
-                <span>Status</span>
-                <span className="sm:text-right">Actions</span>
-            </div>
+    const [searchQuery, setSearchQuery] = useState("");
 
-            {jobs.length === 0 ? (
-                <div className="py-12 text-center text-sm text-slate-500">
-                    No roles found for this filter.
+    const filteredJobs = jobs.filter((job) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        const titleMatch = job.title?.toLowerCase().includes(q);
+        const companyMatch = job.display_company_name?.toLowerCase().includes(q);
+        const locationMatch = job.location?.toLowerCase().includes(q);
+        return titleMatch || companyMatch || locationMatch;
+    });
+
+    return (
+        <div className="space-y-4">
+            {jobs.length > 3 && (
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search roles or hiring companies..."
+                        className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500"
+                    />
                 </div>
-            ) : (
-                <>
-                    {jobs.map((job) => (
+            )}
+
+            <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70">
+                <div className="grid grid-cols-1 gap-2 border-b border-stone-200/70 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:border-slate-800 sm:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_auto]">
+                    <span>Role</span>
+                    <span>Status</span>
+                    <span className="sm:text-right">Actions</span>
+                </div>
+
+                {filteredJobs.length === 0 ? (
+                    <div className="py-12 text-center text-sm text-slate-500">
+                        {searchQuery ? `No roles matching "${searchQuery}".` : "No roles found for this filter."}
+                    </div>
+                ) : (
+                    <>
+                        {filteredJobs.map((job) => (
                         <div key={job.id} className="grid grid-cols-1 gap-4 border-b border-stone-200/70 px-4 py-4 last:border-b-0 dark:border-slate-800 sm:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_auto] sm:items-center">
                             <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{job.title}</p>
+                                <div className="flex items-center gap-2">
+                                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{job.title}</p>
+                                    {job.display_company_name && (
+                                        <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                                            {job.display_company_name}
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                                     {job.location} · {job.type.replace(/_/g, " ")}
                                     {job.work_mode ? ` · ${job.work_mode.replace(/_/g, " ")}` : ""}
@@ -199,6 +230,7 @@ export default function JobListTable({
                     loading={reposting === repostJobId}
                 />
             )}
+            </div>
         </div>
     );
 }

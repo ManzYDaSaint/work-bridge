@@ -666,6 +666,7 @@ export default function IngestionAdminClient() {
                                         saving={!!actionLoading}
                                         submitLabel="Save & Publish Job"
                                         companyNamePlaceholder={editedItem.display_company_name || "hiring company"}
+                                        showSourcingOptions={true}
                                     />
                                 )}
                             </div>

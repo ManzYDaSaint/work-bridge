@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/api";
 import { PageHeader, Pagination, SearchInput } from "@/components/dashboard/ui";
 import { Briefcase, CheckCircle, XCircle, Trash2, Eye, RefreshCw, Clock, AlertTriangle, FileText, Download, CalendarX } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import JobDetailModal from "@/components/jobs/JobDetailModal";
 
@@ -155,13 +156,22 @@ export default function AdminJobsClient({
                     title="Market Moderation"
                     subtitle="Moderate and manage all job listings across the marketplace."
                 />
-                <button 
-                    onClick={handleRefresh} 
-                    className="rounded-xl border border-stone-200 p-2 text-slate-400 hover:text-slate-700 dark:border-slate-700 dark:hover:text-slate-200"
-                    title="Refresh jobs"
-                >
-                    <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-                </button>
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={handleRefresh} 
+                        className="rounded-xl border border-stone-200 p-2.5 text-slate-400 hover:text-slate-700 dark:border-slate-700 dark:hover:text-slate-200"
+                        title="Refresh jobs"
+                    >
+                        <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                    </button>
+                    <Link
+                        href="/dashboard/admin/jobs/new"
+                        className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs"
+                    >
+                        <Briefcase size={16} />
+                        Create Sourced Job
+                    </Link>
+                </div>
             </div>
 
             {/* Stat Cards */}
@@ -268,7 +278,18 @@ export default function AdminJobsClient({
                         {initialJobs.map((job) => (
                             <div key={job.id} className="grid grid-cols-1 gap-4 px-5 py-3.5 text-sm sm:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_auto] sm:items-center">
                                 <div className="min-w-0">
-                                    <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{job.title}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{job.title}</p>
+                                        {(job.posting_type === "AGANYU" || job.display_company_name) && (
+                                            <Link
+                                                href={`/dashboard/admin/crm?search=${encodeURIComponent(job.display_company_name || job.companyName || "")}`}
+                                                className="inline-flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-300"
+                                                title="View Employer CRM Lead"
+                                            >
+                                                CRM Lead
+                                            </Link>
+                                        )}
+                                    </div>
                                     <p className="mt-0.5 text-[11px] text-slate-400">
                                         {job.companyName} · {job.location || "Location unlisted"}
                                         {job.deadline && (

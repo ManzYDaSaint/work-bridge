@@ -33,6 +33,7 @@ interface JobPostingFormProps {
     submitDisabledTitle?: string;
     showApprovalBanner?: boolean;
     isApproved?: boolean;
+    showSourcingOptions?: boolean;
     onCancel?: () => void;
     cancelLabel?: string;
 }
@@ -47,6 +48,7 @@ export function JobPostingForm({
     submitDisabledTitle,
     showApprovalBanner = false,
     isApproved = true,
+    showSourcingOptions = false,
     onCancel,
     cancelLabel = "Cancel",
 }: JobPostingFormProps) {
@@ -328,68 +330,72 @@ export function JobPostingForm({
                                             <p className="text-xs text-slate-500 dark:text-slate-400">If checked, candidates can still apply instantly using their Aganyu profile instead of following the external link.</p>
                                         </div>
                                     </label>
-                                )}
+                                 )}
                             </div>
 
-                            <div className="h-px bg-slate-200 dark:bg-slate-800" />
+                            {showSourcingOptions && (
+                                <>
+                                    <div className="h-px bg-slate-200 dark:bg-slate-800" />
 
-                            <div className="space-y-4">
-                                <label className="text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                                    Display Settings
-                                </label>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Posting Type</label>
-                                        <select {...register("postingType")} className={cn(inputClass, "appearance-none")}>
-                                            <option value="DIRECT">Direct Employer</option>
-                                            <option value="AGENCY">Recruitment Agency</option>
-                                            <option value="AGANYU">Aganyu Sourced</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Hiring Company (Employer CRM Lead)</label>
-                                        <EmployerPicker
-                                            companyName={watch("displayCompanyName")}
-                                            onChange={(selectedEmp) => {
-                                                if (selectedEmp) {
-                                                    setValue("displayCompanyName", selectedEmp.company_name);
-                                                    
-                                                    // 1. Auto-fill Location if empty or default
-                                                    if (selectedEmp.location && selectedEmp.location !== "To be updated") {
-                                                        const curLocation = watch("location");
-                                                        if (!curLocation || curLocation === "Remote or City, Country") {
-                                                            setValue("location", selectedEmp.location);
+                                    <div className="space-y-4">
+                                        <label className="text-xs font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                                            Display Settings
+                                        </label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Posting Type</label>
+                                                <select {...register("postingType")} className={cn(inputClass, "appearance-none")}>
+                                                    <option value="DIRECT">Direct Employer</option>
+                                                    <option value="AGENCY">Recruitment Agency</option>
+                                                    <option value="AGANYU">Aganyu Sourced</option>
+                                                </select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Hiring Company (Employer CRM Lead)</label>
+                                                <EmployerPicker
+                                                    companyName={watch("displayCompanyName")}
+                                                    onChange={(selectedEmp) => {
+                                                        if (selectedEmp) {
+                                                            setValue("displayCompanyName", selectedEmp.company_name);
+                                                            
+                                                            // 1. Auto-fill Location if empty or default
+                                                            if (selectedEmp.location && selectedEmp.location !== "To be updated") {
+                                                                const curLocation = watch("location");
+                                                                if (!curLocation || curLocation === "Remote or City, Country") {
+                                                                    setValue("location", selectedEmp.location);
+                                                                }
+                                                            }
+
+                                                            // 2. Auto-fill Recruitment Email
+                                                            if (selectedEmp.recruitment_email) {
+                                                                setValue("applyEmail", selectedEmp.recruitment_email);
+                                                            }
+
+                                                            // 3. Auto-fill Careers Portal or Website
+                                                            const targetUrl = selectedEmp.recruitment_url || selectedEmp.website;
+                                                            if (targetUrl) {
+                                                                setValue("externalApplyUrl", targetUrl);
+                                                            }
+
+                                                            // 4. Auto-select application method if still default
+                                                            const currentMethod = watch("applicationMethod");
+                                                            if (currentMethod === "one_tap") {
+                                                                if (selectedEmp.recruitment_url) {
+                                                                    setValue("applicationMethod", "external_url");
+                                                                } else if (selectedEmp.recruitment_email) {
+                                                                    setValue("applicationMethod", "email");
+                                                                }
+                                                            }
                                                         }
-                                                    }
-
-                                                    // 2. Auto-fill Recruitment Email
-                                                    if (selectedEmp.recruitment_email) {
-                                                        setValue("applyEmail", selectedEmp.recruitment_email);
-                                                    }
-
-                                                    // 3. Auto-fill Careers Portal or Website
-                                                    const targetUrl = selectedEmp.recruitment_url || selectedEmp.website;
-                                                    if (targetUrl) {
-                                                        setValue("externalApplyUrl", targetUrl);
-                                                    }
-
-                                                    // 4. Auto-select application method if still default
-                                                    const currentMethod = watch("applicationMethod");
-                                                    if (currentMethod === "one_tap") {
-                                                        if (selectedEmp.recruitment_url) {
-                                                            setValue("applicationMethod", "external_url");
-                                                        } else if (selectedEmp.recruitment_email) {
-                                                            setValue("applicationMethod", "email");
-                                                        }
-                                                    }
-                                                }
-                                            }}
-                                            inputClass={inputClass}
-                                        />
-                                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Search existing employers or instantly create a new CRM lead.</p>
+                                                    }}
+                                                    inputClass={inputClass}
+                                                />
+                                                <p className="text-[11px] text-slate-500 dark:text-slate-400">Search existing employers or instantly create a new CRM lead.</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
+                                </>
+                            )}
                         </div>
                     )}
                 </div>

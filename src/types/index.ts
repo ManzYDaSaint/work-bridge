@@ -100,6 +100,16 @@ export interface Employer {
     logo_url?: string;
     logoUrl?: string;
     recruiterVerified?: boolean;
+    recruitment_email?: string | null;
+    recruitmentEmail?: string | null;
+    recruitment_url?: string | null;
+    recruitmentUrl?: string | null;
+    default_application_method?: string | null;
+    defaultApplicationMethod?: string | null;
+    default_apply_phone?: string | null;
+    defaultApplyPhone?: string | null;
+    default_apply_whatsapp?: string | null;
+    defaultApplyWhatsapp?: string | null;
     default_scheduling_link?: string;
     defaultSchedulingLink?: string;
     _count?: {
