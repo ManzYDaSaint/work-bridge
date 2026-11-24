@@ -12,18 +12,38 @@ export default function PWARegister() {
     const userContext = useOptionalUser();
     const user = userContext?.user;
 
-    // Step 1: Register service worker on mount
+    // Step 1: Handle Service Worker lifecycle based on user role
     useEffect(() => {
         if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
-        navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch((err) => {
-            console.error("[SW] Registration failed:", err);
-        });
-    }, []);
+        // If the user is an EMPLOYER, keep service worker active (useful for desktop PWA notifications)
+        if (user?.role === "EMPLOYER") {
+            navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch((err) => {
+                console.error("[SW] Employer registration failed:", err);
+            });
+            return;
+        }
 
-    // Step 2: Subscribe to push when user logs in
+        // For JOB_SEEKER, ADMIN, or logged-out users:
+        // Safely unregister any existing service worker and purge cached assets so they don't get stuck with stale web caches
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+            for (const registration of registrations) {
+                registration.unregister().catch(() => {});
+            }
+        });
+
+        if ("caches" in window) {
+            caches.keys().then((keys) => {
+                keys.forEach((key) => {
+                    caches.delete(key).catch(() => {});
+                });
+            });
+        }
+    }, [user?.role]);
+
+    // Step 2: Subscribe to push strictly when EMPLOYER logs in
     useEffect(() => {
-        if (!user?.id) return;
+        if (!user?.id || user.role !== "EMPLOYER") return;
         if (!("PushManager" in window)) return;
         if (!("serviceWorker" in navigator)) return;
 
@@ -60,7 +80,7 @@ export default function PWARegister() {
         };
 
         subscribeToPush();
-    }, [user?.id]);
+    }, [user?.id, user?.role]);
 
     return null;
 }

@@ -1,16 +1,16 @@
 {
-  "id": "/",
-  "name": "Aganyu",
-  "short_name": "Aganyu",
-  "description": "A modern job board operated by Aganyu Technologies LTD, connecting remote, hybrid, and on-site talent.",
+  "id": "/dashboard/employer",
+  "name": "Aganyu Recruiter",
+  "short_name": "Aganyu Recruiter",
+  "description": "Talent acquisition & ATS management platform for employers and hiring managers.",
   "lang": "en",
   "dir": "ltr",
-  "start_url": "/?source=pwa",
+  "start_url": "/dashboard/employer",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#f6f1e8",
-  "theme_color": "#16324f",
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#059669",
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -29,6 +29,29 @@
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Review Applicants",
+      "short_name": "Applicants",
+      "description": "Review and track candidate application pipelines",
+      "url": "/dashboard/employer/applications",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Discover Talent",
+      "short_name": "Discover",
+      "description": "Semantic AI search across candidate profiles",
+      "url": "/dashboard/employer/discover",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Post a Job",
+      "short_name": "Post Job",
+      "description": "Create and publish a new job opening",
+      "url": "/dashboard/employer/jobs/new",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

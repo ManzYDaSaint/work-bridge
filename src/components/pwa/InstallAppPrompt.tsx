@@ -1,49 +1,55 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, X, Share } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Download, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useOptionalUser } from "@/context/UserContext";
 
-const DISMISS_KEY = "wb_install_prompt_dismissed_until";
+const DISMISS_KEY = "wb_employer_pwa_dismissed_until";
 
 export default function InstallAppPrompt() {
+    const pathname = usePathname();
+    const userContext = useOptionalUser();
+    const user = userContext?.user;
+
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [showPrompt, setShowPrompt] = useState(false);
-    const [isIOS, setIsIOS] = useState(false);
 
     useEffect(() => {
-        // 1. Don't show if already running as an installed app
-        const isStandAloneMatch = window.matchMedia("(display-mode: standalone)").matches;
-        const isIOSStandalone = (window.navigator as any).standalone === true;
-        if (isStandAloneMatch || isIOSStandalone) return;
+        // STRICT RULE: Only show desktop PWA prompt to EMPLOYER accounts
+        // while they are actively navigating employer dashboard workspace.
+        if (!user || user.role !== "EMPLOYER") {
+            setShowPrompt(false);
+            return;
+        }
 
-        // 2. Don't show if user dismissed recently (7-day cooldown)
+        if (!pathname?.startsWith("/dashboard/employer")) {
+            setShowPrompt(false);
+            return;
+        }
+
+        // 1. Don't show if already running as an installed standalone app
+        const isStandAloneMatch = window.matchMedia("(display-mode: standalone)").matches;
+        if (isStandAloneMatch) return;
+
+        // 2. Only target desktop / larger screens for Employers (width >= 1024px)
+        if (window.innerWidth < 1024) return;
+
+        // 3. Don't show if user dismissed recently (14-day cooldown)
         const dismissedUntil = localStorage.getItem(DISMISS_KEY);
         if (dismissedUntil && Date.now() < parseInt(dismissedUntil)) return;
 
-        // 3. Detect iOS Safari (no beforeinstallprompt support)
-        const ua = window.navigator.userAgent.toLowerCase();
-        const iosDevice = /iphone|ipad|ipod/.test(ua);
-        const isSafari = /safari/.test(ua) && !/chrome/.test(ua);
-        setIsIOS(iosDevice);
-
-        if (iosDevice && isSafari) {
-            // Show iOS guidance hint after a brief delay
-            const timer = setTimeout(() => setShowPrompt(true), 4000);
-            return () => clearTimeout(timer);
-        }
-
-        // 4. Handle Android/Chrome/Desktop beforeinstallprompt
+        // 4. Handle Desktop Chrome/Edge beforeinstallprompt
         const handlePrompt = (e: Event) => {
             e.preventDefault();
             setDeferredPrompt(e);
-            // Brief delay so it doesn't immediately fire on page load
-            setTimeout(() => setShowPrompt(true), 2000);
+            setTimeout(() => setShowPrompt(true), 3000);
         };
 
         window.addEventListener("beforeinstallprompt", handlePrompt);
         return () => window.removeEventListener("beforeinstallprompt", handlePrompt);
-    }, []);
+    }, [user?.role, user?.id, pathname]);
 
     const handleInstall = async () => {
         if (!deferredPrompt) return;
@@ -57,9 +63,9 @@ export default function InstallAppPrompt() {
 
     const handleDismiss = () => {
         setShowPrompt(false);
-        // Set a 7-day cooldown before showing again
-        const sevenDays = Date.now() + 7 * 24 * 60 * 60 * 1000;
-        localStorage.setItem(DISMISS_KEY, String(sevenDays));
+        // Set a 14-day cooldown before showing again to avoid recruiter annoyance
+        const fourteenDays = Date.now() + 14 * 24 * 60 * 60 * 1000;
+        localStorage.setItem(DISMISS_KEY, String(fourteenDays));
     };
 
     return (
@@ -79,67 +85,38 @@ export default function InstallAppPrompt() {
                         {/* Header strip */}
                         <div className="flex items-center justify-between px-5 pt-5 pb-3">
                             <div className="flex items-center gap-3">
-                                {/* App icon */}
-                                { }
                                 <img
                                     src="/icons/icon-192.png"
                                     alt="Aganyu icon"
-                                    className="w-12 h-12 rounded-2xl shadow-lg"
+                                    className="w-10 h-10 rounded-xl shadow-md"
                                 />
                                 <div>
-                                    <p className="text-sm font-black leading-none">Aganyu</p>
-                                    <p className="text-[11px] text-slate-400 mt-0.5">Free · No App Store needed</p>
+                                    <p className="text-sm font-bold leading-none text-white">Aganyu Recruiter Desktop</p>
+                                    <p className="text-[11px] text-slate-400 mt-1">Dedicated ATS workspace for hiring managers</p>
                                 </div>
                             </div>
-                            {/* Fat-finger friendly dismiss button — 44x44px minimum touch target */}
                             <button
                                 onClick={handleDismiss}
                                 aria-label="Dismiss install prompt"
-                                className="w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition-all shrink-0"
+                                className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition-all shrink-0"
                             >
-                                <X className="w-5 h-5" />
+                                <X className="w-4 h-4 text-slate-300" />
                             </button>
                         </div>
 
                         {/* Body */}
-                        <div className="px-5 pb-5 space-y-4">
-                            <p className="text-sm text-slate-300 leading-relaxed">
-                                {isIOS
-                                    ? "Add Aganyu to your Home Screen for an app-like experience — no App Store required."
-                                    : "Install Aganyu on your device for faster access, offline job browsing, and real-time notifications."}
+                        <div className="px-5 pb-5 space-y-3">
+                            <p className="text-xs text-slate-300 leading-relaxed">
+                                Install Aganyu on your desktop for 1-click access to candidate applications, scorecards, and talent pools.
                             </p>
 
-                            {isIOS ? (
-                                // iOS step-by-step instructions
-                                <div className="bg-white/5 rounded-2xl p-4 space-y-3 border border-white/10">
-                                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">How to install on iOS</p>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-blue-500/20 rounded-xl flex items-center justify-center shrink-0">
-                                            <Share className="w-4 h-4 text-blue-400" />
-                                        </div>
-                                        <p className="text-sm text-slate-200">Tap the <strong>Share</strong> button at the bottom of Safari</p>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-blue-500/20 rounded-xl flex items-center justify-center shrink-0">
-                                            <span className="text-blue-400 text-lg font-black leading-none">+</span>
-                                        </div>
-                                        <p className="text-sm text-slate-200">Select <strong>"Add to Home Screen"</strong> from the menu</p>
-                                    </div>
-                                </div>
-                            ) : (
-                                // Android/Chrome install button — full width, tall enough for thumbs
-                                <button
-                                    onClick={handleInstall}
-                                    className="w-full h-14 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white text-sm font-black rounded-2xl transition-all flex items-center justify-center gap-2.5 shadow-lg shadow-blue-900/40"
-                                >
-                                    <Download className="w-5 h-5" />
-                                    Install App — It&apos;s Free
-                                </button>
-                            )}
-
-                            <p className="text-center text-[11px] text-slate-600">
-                                You won&apos;t be asked again for 7 days
-                            </p>
+                            <button
+                                onClick={handleInstall}
+                                className="w-full h-10 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-900/30"
+                            >
+                                <Download className="w-4 h-4" />
+                                Install Desktop App
+                            </button>
                         </div>
                     </div>
                 </motion.div>

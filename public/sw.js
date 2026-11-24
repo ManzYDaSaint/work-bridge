@@ -1,9 +1,5 @@
-const CACHE_NAME = "aganyu-v3";
+const CACHE_NAME = "aganyu-recruiter-v4";
 const STATIC_ASSETS = [
-    "/",
-    "/jobs",
-    "/manifest.json",
-    "/offline.html",
     "/favicon.ico",
     "/icons/icon-192.png",
     "/icons/icon-512.png",
@@ -11,7 +7,7 @@ const STATIC_ASSETS = [
     "/logo.svg",
 ];
 
-// 1. Install - Cache Shell
+// 1. Install - Cache Shell Icons
 self.addEventListener("install", (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
@@ -19,7 +15,7 @@ self.addEventListener("install", (event) => {
     self.skipWaiting();
 });
 
-// 2. Activate - Cleanup old caches
+// 2. Activate - Evict all legacy caches (v1, v2, v3, seeker caches)
 self.addEventListener("activate", (event) => {
     event.waitUntil(
         caches.keys().then((keys) =>
@@ -33,7 +29,7 @@ self.addEventListener("activate", (event) => {
     event.waitUntil(self.clients.claim());
 });
 
-// 3. Fetch - Smart Caching
+// 3. Fetch - Network-first for dynamic content, cache-only for static icons
 self.addEventListener("fetch", (event) => {
     const { request } = event;
     const url = new URL(request.url);
@@ -41,24 +37,8 @@ self.addEventListener("fetch", (event) => {
     // Skip non-GET requests and API calls
     if (request.method !== "GET") return;
 
-    // Do not cache API routes - allow direct browser network requests
-    if (url.origin === self.location.origin && url.pathname.startsWith("/api/")) {
-        return;
-    }
-
-    // Strategy for Public Job Listings Data (Stale-While-Revalidate)
-    if (url.origin === self.location.origin && url.pathname === "/jobs") {
-        event.respondWith(
-            caches.open(CACHE_NAME).then((cache) => {
-                return cache.match(request).then((cachedResponse) => {
-                    const fetchPromise = fetch(request).then((networkResponse) => {
-                        cache.put(request, networkResponse.clone());
-                        return networkResponse;
-                    });
-                    return cachedResponse || fetchPromise;
-                });
-            })
-        );
+    // Do not cache API routes, SSR dashboard routes, or HTML documents
+    if (url.origin === self.location.origin && (url.pathname.startsWith("/api/") || url.pathname.startsWith("/dashboard/"))) {
         return;
     }
 
