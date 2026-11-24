@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, [data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
-  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: "Plus Jakarta Sans", var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --color-primary: #16324f;
