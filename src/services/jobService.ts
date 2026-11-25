@@ -447,24 +447,33 @@ export const jobService = {
 
         if (error) throw error;
 
-        // Sync embedding fire-and-forget — must not block job creation response
-        import("@/lib/sync-embeddings").then(({ syncJobEmbedding }) => {
-            syncJobEmbedding(data.id, data).catch((err) =>
-                console.error("[JOB_SERVICE] Background embedding sync failed:", err)
-            );
-        }).catch((err) => console.error("[JOB_SERVICE] Failed to import sync-embeddings:", err));
+        // Fire-and-forget background pipeline: Domain Classification → Match Dispatch
+        (async () => {
+            try {
+                const { classifyDomainForRecord } = await import("@/lib/agents/domain-classifier-agent");
+                await classifyDomainForRecord({
+                    target: "JOB",
+                    recordId: data.id,
+                    qualification: data.qualification ?? null,
+                    title: data.title,
+                    currentDomainId: data.domain_id ?? null,
+                });
+            } catch (err) {
+                console.error("[JOB_SERVICE] Background domain classification failed:", err);
+            }
 
-        // Fire-and-forget: run full match dispatch for both Premium (WhatsApp) and Free (Email) instantly.
-        import("@/lib/agents/match-dispatch-agent").then(({ runMatchDispatchAgent }) => {
-            runMatchDispatchAgent({ jobId: data.id, forceImmediateEmail: true }).catch((err) =>
-                console.error("[JOB_SERVICE] Match dispatch agent failed:", err)
-            );
-        }).catch((err) => console.error("[JOB_SERVICE] Failed to import match-dispatch-agent:", err));
+            try {
+                const { runMatchDispatchAgent } = await import("@/lib/agents/match-dispatch-agent");
+                await runMatchDispatchAgent({ jobId: data.id, forceImmediateEmail: true });
+            } catch (err) {
+                console.error("[JOB_SERVICE] Match dispatch agent failed:", err);
+            }
 
-        // Also fire legacy in-app notification bells for premium seekers (non-blocking).
-        triggerMatchNotifications(data.id).catch((err) =>
-            console.error("[JOB_SERVICE] Background match notification failed:", err)
-        );
+            // Also fire legacy in-app notification bells for premium seekers (non-blocking).
+            triggerMatchNotifications(data.id).catch((err) =>
+                console.error("[JOB_SERVICE] Background match notification failed:", err)
+            );
+        })();
 
         (revalidateTag as any)("jobs");
         (revalidateTag as any)(`jobs_${employerId}`);

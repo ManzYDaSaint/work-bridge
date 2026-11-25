@@ -299,32 +299,20 @@ export const POST = withAudit(async (request: Request) => {
             },
         });
 
-        // 6. Sequential background pipeline — each step awaits the previous one.
-        //    Runs entirely after the HTTP response is returned (fire-and-forget IIFE).
+        // 6. Sequential background pipeline — Domain Classification → Match Dispatch.
+        //    Runs after the HTTP response is returned. Embeddings are deferred to cron/manual.
         //
-        //    Step A → Embed job for vector search
-        //    Step B → Domain Classifier (Gemini AI, writes domain_id back to jobs row)
-        //    Step C → Match Dispatch Agent (finds domain-matched seekers, dispatches
+        //    Step 1 → Domain Classifier (Gemini AI, writes domain_id back to jobs row)
+        //    Step 2 → Match Dispatch Agent (finds domain-matched seekers, dispatches
         //             Premium via WhatsApp and Free via Email immediately)
         (async () => {
             const jobId = finalJob.id;
 
-            // ── Step A: Sync semantic embedding ─────────────────────────────────
-            // Must complete before dispatch so vector-based candidate lookup works.
-            try {
-                console.log(`[Admin Job POST] Step A — Syncing embedding for job ${jobId}`);
-                const { syncJobEmbedding } = await import("@/lib/sync-embeddings");
-                await syncJobEmbedding(jobId, finalJob);
-                console.log(`[Admin Job POST] Step A complete — embedding synced for job ${jobId}`);
-            } catch (err) {
-                console.error("[Admin Job POST] Step A — Embedding sync failed (non-fatal, continuing):", err);
-            }
-
-            // ── Step B: Domain Classification ────────────────────────────────────
+            // ── Step 1: Domain Classification ────────────────────────────────────
             // Awaited so domain_id is written to the jobs row before matching runs.
             // Falls back gracefully if Gemini is unavailable.
             try {
-                console.log(`[Admin Job POST] Step B — Classifying domain for job ${jobId}`);
+                console.log(`[Admin Job POST] Step 1 — Classifying domain for job ${jobId}`);
                 const { classifyDomainForRecord } = await import("@/lib/agents/domain-classifier-agent");
                 const classifyResult = await classifyDomainForRecord({
                     target: "JOB",
@@ -334,30 +322,30 @@ export const POST = withAudit(async (request: Request) => {
                     currentDomainId: finalJob.domain_id ?? null,
                 });
                 console.log(
-                    `[Admin Job POST] Step B complete — domain: "${classifyResult.domainName ?? "unresolved"}"`,
+                    `[Admin Job POST] Step 1 complete — domain: "${classifyResult.domainName ?? "unresolved"}"`,
                     classifyResult.skipped ? "(skipped — already set)" : ""
                 );
             } catch (err) {
-                console.error("[Admin Job POST] Step B — Domain classification failed (non-fatal, continuing):", err);
+                console.error("[Admin Job POST] Step 1 — Domain classification failed (non-fatal, continuing):", err);
             }
 
-            // ── Step C: Match Dispatch ───────────────────────────────────────────
+            // ── Step 2: Match Dispatch ───────────────────────────────────────────
             // Runs only after domain_id is guaranteed to be set on the job row.
             // Premium seekers → WhatsApp queued instantly.
             // Free seekers    → Email sent immediately (forceImmediateEmail: true).
             try {
-                console.log(`[Admin Job POST] Step C — Running match dispatch for job ${jobId}`);
+                console.log(`[Admin Job POST] Step 2 — Running match dispatch for job ${jobId}`);
                 const { runMatchDispatchAgent } = await import("@/lib/agents/match-dispatch-agent");
                 const dispatchSummary = await runMatchDispatchAgent({
                     jobId,
                     forceImmediateEmail: true,
                 });
                 console.log(
-                    `[Admin Job POST] Step C complete — dispatched ${dispatchSummary.premiumDispatched} Premium (WhatsApp),`,
+                    `[Admin Job POST] Step 2 complete — dispatched ${dispatchSummary.premiumDispatched} Premium (WhatsApp),`,
                     `${dispatchSummary.freeDispatched} Free (Email) out of ${dispatchSummary.totalEvaluated} evaluated`
                 );
             } catch (err) {
-                console.error("[Admin Job POST] Step C — Match dispatch failed (non-fatal):", err);
+                console.error("[Admin Job POST] Step 2 — Match dispatch failed (non-fatal):", err);
             }
         })();
 
