@@ -246,11 +246,14 @@ export function JobPostingForm({
                     )}
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800">
                     <button
                         type="button"
                         onClick={() => setSourcingOpen((o) => !o)}
-                        className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-800 dark:text-slate-200 bg-slate-50/80 dark:bg-slate-900/50 hover:bg-slate-100/80 dark:hover:bg-slate-800/50 transition-colors"
+                        className={cn(
+                            "flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-800 dark:text-slate-200 bg-slate-50/80 dark:bg-slate-900/50 hover:bg-slate-100/80 dark:hover:bg-slate-800/50 transition-colors rounded-2xl",
+                            sourcingOpen && "rounded-b-none"
+                        )}
                     >
                         Application settings & sourcing
                         {sourcingOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}

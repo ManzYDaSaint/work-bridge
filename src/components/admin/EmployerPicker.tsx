@@ -259,25 +259,23 @@ export function EmployerPicker({ value, companyName, onChange, inputClass }: Emp
                             ))}
                         </div>
                     ) : (
-                        <div className="p-3 text-center text-xs text-slate-500">
-                            No existing employer found matching &ldquo;{query}&rdquo;.
+                        <div className="p-4 text-center space-y-3">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                No existing employer found matching &ldquo;<span className="font-semibold text-slate-700 dark:text-slate-200">{query.trim()}</span>&rdquo;.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setCreateForm((prev) => ({ ...prev, companyName: query.trim() }));
+                                    setShowCreateModal(true);
+                                    setOpen(false);
+                                }}
+                                className="inline-flex items-center justify-center gap-1.5 py-2 px-3.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition"
+                            >
+                                <Plus size={14} /> + New Employer Lead
+                            </button>
                         </div>
                     )}
-
-                    {/* Quick Add Lead Button */}
-                    <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setCreateForm((prev) => ({ ...prev, companyName: query.trim() }));
-                                setShowCreateModal(true);
-                                setOpen(false);
-                            }}
-                            className="w-full py-2 px-3 rounded-lg text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 flex items-center justify-center gap-1.5 transition"
-                        >
-                            <Plus size={14} /> Create &ldquo;{query.trim() || "New Company"}&rdquo; as CRM Lead
-                        </button>
-                    </div>
                 </div>
             )}
 
