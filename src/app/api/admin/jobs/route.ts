@@ -285,6 +285,8 @@ export const POST = withAudit(async (request: Request) => {
         if (slugError) throw slugError;
 
         // 5. Audit & Mission Control (before background pipeline kicks off)
+        const matchedDomainName = resolvedJobDomains.length > 0 ? resolvedJobDomains[0] : null;
+
         await emitSystemEvent({
             category: "JOB",
             severity: "SUCCESS",
@@ -296,8 +298,50 @@ export const POST = withAudit(async (request: Request) => {
                 assignedEmployerId,
                 displayCompanyName: finalJob.display_company_name,
                 postingType: finalJob.posting_type,
+                domainId: finalJob.domain_id,
+                domainName: matchedDomainName,
+                domainSource: finalJob.domain_source,
             },
         });
+
+        // If domain was resolved synchronously via keyword matching, emit DOMAIN_CLASSIFIED event for visibility
+        if (finalJob.domain_id && matchedDomainName) {
+            await emitSystemEvent({
+                category: "SYSTEM",
+                severity: "SUCCESS",
+                event: "DOMAIN_CLASSIFIED",
+                message: `[DomainClassifier] JOB ${finalJob.id} → domain "${matchedDomainName}" (keyword_match)`,
+                metadata: {
+                    target: "JOB",
+                    recordId: finalJob.id,
+                    domainId: finalJob.domain_id,
+                    domainName: matchedDomainName,
+                    isNewDomain: false,
+                    qualificationText: jobQualText,
+                    source: "keyword_match",
+                },
+            });
+
+            // Cache in qualification_mappings so it is recognized across the entire platform and admin dashboard
+            if (finalJob.qualification) {
+                const { invalidateQualificationMappingsCache } = await import("@/lib/mapping-cache");
+                try {
+                    await supabase
+                        .from("qualification_mappings")
+                        .upsert(
+                            {
+                                raw_qualification: finalJob.qualification.trim(),
+                                domain_id: finalJob.domain_id,
+                                is_confirmed: true,
+                            },
+                            { onConflict: "raw_qualification" }
+                        );
+                    invalidateQualificationMappingsCache();
+                } catch (err) {
+                    console.warn("[Admin Job POST] Failed to cache qualification mapping:", err);
+                }
+            }
+        }
 
         // 6. Sequential background pipeline — Domain Classification → Match Dispatch.
         //    Runs after the HTTP response is returned. Embeddings are deferred to cron/manual.

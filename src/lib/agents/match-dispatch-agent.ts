@@ -30,6 +30,8 @@ export interface MatchDispatchOptions {
 export interface MatchDispatchSummary {
   jobId: string;
   jobTitle: string;
+  domainId?: string | null;
+  domainName?: string | null;
   totalEvaluated: number;
   premiumMatches: number;
   premiumDispatched: number;
@@ -49,6 +51,8 @@ export async function runMatchDispatchAgent(
   const summary: MatchDispatchSummary = {
     jobId,
     jobTitle: "",
+    domainId: null,
+    domainName: null,
     totalEvaluated: 0,
     premiumMatches: 0,
     premiumDispatched: 0,
@@ -83,12 +87,25 @@ export async function runMatchDispatchAgent(
       return summary;
     }
 
+    const domainInfo = Array.isArray(job.qualification_domains)
+      ? job.qualification_domains[0]
+      : (job.qualification_domains as any);
+    const domainName = domainInfo?.name || null;
+
+    summary.domainId = job.domain_id || null;
+    summary.domainName = domainName;
+
     await emitSystemEvent({
       category: "MATCHING",
       severity: "INFO",
       event: "MATCH_DISPATCH_AGENT_STARTED",
-      message: `[MatchDispatchAgent] Starting evaluation for "${job.title}" (${job.id})`,
-      metadata: { jobId, title: job.title },
+      message: `[MatchDispatchAgent] Starting evaluation for "${job.title}" (${job.id})${domainName ? ` [Domain: ${domainName}]` : ""}`,
+      metadata: {
+        jobId,
+        title: job.title,
+        domainId: job.domain_id || null,
+        domainName,
+      },
     });
 
     // ─── Auto-classify job if domain_id is missing (fire-and-forget) ─────────

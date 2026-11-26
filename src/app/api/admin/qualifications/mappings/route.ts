@@ -72,7 +72,7 @@ export async function GET() {
   while (hasMore) {
     const { data: jobs, error: jobsError } = await supabase
       .from("jobs")
-      .select("id, title, qualification, status, created_at")
+      .select("id, title, qualification, domain_id, status, created_at")
       .eq("status", "ACTIVE")
       .not("qualification", "is", null)
       .order("created_at", { ascending: false })
@@ -87,7 +87,7 @@ export async function GET() {
       const key = normalizeKey(raw);
       // Qualification is unmapped if it is not in mapping table, OR if domain_id is null/unclassified
       const domainId = mappedDomainMap.get(key);
-      if (mappedDomainMap.has(key) && domainId) continue;
+      if ((mappedDomainMap.has(key) && domainId) || job.domain_id) continue;
 
       const existing = grouped.get(key) ?? { raw_qualification: raw, job_count: 0, sample_jobs: [] };
       existing.job_count += 1;

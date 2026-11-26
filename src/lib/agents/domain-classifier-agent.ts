@@ -262,6 +262,12 @@ export async function classifyDomainForRecord(
   try {
     // ── Step 1: Skip if domain already assigned ───────────────────────────
     if (input.currentDomainId) {
+      // If a qualification text is provided on this record, ensure it is cached in qualification_mappings
+      if (input.qualification) {
+        cacheMapping(supabase, input.qualification.trim(), input.currentDomainId).catch((err) =>
+          console.warn("[DomainAgent] Skip-path cache mapping failed:", err)
+        );
+      }
       return {
         skipped: true,
         domainId: input.currentDomainId,

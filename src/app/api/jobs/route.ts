@@ -223,13 +223,60 @@ export async function POST(request: Request) {
         }).catch((err) => console.error("CRM automation import failed:", err));
 
         // Emit Mission Control event for admin visibility
+        const matchedDomainName = resolvedJobDomains.length > 0 ? resolvedJobDomains[0] : null;
+
         await emitSystemEvent({
             category: "JOB",
             severity: "SUCCESS",
             event: "JOB_CREATED",
             message: `Job ${createdJob.id} posted by employer ${auth.userId}`,
-            metadata: { employerId: auth.userId, jobId: createdJob.id }
+            metadata: {
+                employerId: auth.userId,
+                jobId: createdJob.id,
+                domainId: createdJob.domain_id,
+                domainName: matchedDomainName,
+                domainSource: createdJob.domain_source,
+            }
         });
+
+        // If domain was resolved synchronously via keyword matching, emit DOMAIN_CLASSIFIED event for visibility
+        if (createdJob.domain_id && matchedDomainName) {
+            await emitSystemEvent({
+                category: "SYSTEM",
+                severity: "SUCCESS",
+                event: "DOMAIN_CLASSIFIED",
+                message: `[DomainClassifier] JOB ${createdJob.id} → domain "${matchedDomainName}" (keyword_match)`,
+                metadata: {
+                    target: "JOB",
+                    recordId: createdJob.id,
+                    domainId: createdJob.domain_id,
+                    domainName: matchedDomainName,
+                    isNewDomain: false,
+                    qualificationText: jobQualText,
+                    source: "keyword_match",
+                },
+            });
+
+            // Cache in qualification_mappings so it is recognized across the entire platform and admin dashboard
+            if (createdJob.qualification) {
+                const { invalidateQualificationMappingsCache } = await import("@/lib/mapping-cache");
+                try {
+                    await supabase
+                        .from("qualification_mappings")
+                        .upsert(
+                            {
+                                raw_qualification: createdJob.qualification.trim(),
+                                domain_id: createdJob.domain_id,
+                                is_confirmed: true,
+                            },
+                            { onConflict: "raw_qualification" }
+                        );
+                    invalidateQualificationMappingsCache();
+                } catch (err) {
+                    console.warn("[Job POST] Failed to cache qualification mapping:", err);
+                }
+            }
+        }
 
         const publicSlug = buildPublicJobSlug(createdJob.title, createdJob.id);
         const { data, error } = await supabase
